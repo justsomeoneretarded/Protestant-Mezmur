@@ -17,6 +17,10 @@ on:
         description: Separate vocals with Demucs before transcription (slower, CPU)
         type: boolean
         default: true
+      message_id:
+        description: Replay a specific message ID without changing progress (leave blank for next batch)
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -59,11 +63,13 @@ jobs:
           path: |
             .model-cache/
             ~/.cache/torch/hub/checkpoints/
-          key: mezmur-models-${{ runner.os }}-${{ runner.arch }}-large-v3-htdemucs-v1
+          key: mezmur-models-${{ runner.os }}-${{ runner.arch }}-ethio-asr-htdemucs-v2
       - name: Install FFmpeg and Ethiopic font
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg fonts-noto-core fontconfig
+      - name: Install CPU inference runtime
+        run: pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu
       - name: Install pipeline
         run: pip install -e '.[test]'
       - name: Run tests
@@ -81,10 +87,11 @@ jobs:
           BATCH_SIZE: ${{ inputs.batch_size }}
           RESOLUTION: ${{ inputs.resolution }}
           SEPARATE: ${{ inputs.separate_vocals }}
+          MESSAGE_ID: ${{ inputs.message_id }}
         run: |
           separation=--no-separate-vocals
           if [ "$SEPARATE" = "true" ]; then separation=--separate-vocals; fi
-          mezmur --batch-size "$BATCH_SIZE" --height "$RESOLUTION" "$separation"
+          mezmur --batch-size "$BATCH_SIZE" --height "$RESOLUTION" "$separation" --message-id "${MESSAGE_ID:-0}"
       - name: Upload videos, lyrics, and descriptions
         id: upload
         if: ${{ !cancelled() && (steps.generate.outcome == 'success' || steps.generate.outcome == 'failure') }}

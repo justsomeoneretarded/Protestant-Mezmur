@@ -8,7 +8,8 @@ import shutil
 from .common import duration, required, write_json
 from .lyrics import make_cues, write_lyrics
 from .render import render
-from .telegram import client, download, resolve_channel, select, song_info
+from .quality import TranscriptionQualityError
+from .telegram import client, download, is_song, resolve_channel, select, song_info
 from .transcribe import MODEL, separate, transcribe
 
 KEYWORDS = ["Protestant mezmur", "Amharic mezmur lyrics", "Ethiopian gospel music",
@@ -42,7 +43,13 @@ async def process(args):
         after = state["channels"].get(key, {}).get("last_message_id", 0)
         if not isinstance(after, int) or after < 0:
             raise ValueError("Invalid saved Telegram cursor")
-        messages = await select(telegram, entity, after, args.batch_size)
+        if args.message_id:
+            message = await telegram.get_messages(entity, ids=args.message_id)
+            if not message or not is_song(message):
+                raise ValueError("The replay message does not contain an accessible music audio file")
+            messages = [message]
+        else:
+            messages = await select(telegram, entity, after, args.batch_size)
         print(f"Selected {len(messages)} song(s) after message {after}", flush=True)
         completed = []
         for message in messages:
@@ -55,13 +62,25 @@ async def process(args):
             if seconds > args.max_duration:
                 raise ValueError(f"Message {message.id} exceeds --max-duration; cursor unchanged")
             vocal_audio = separate(audio, scratch) if args.separate_vocals else audio
-            words = transcribe(vocal_audio, seconds, scratch)
+            try:
+                words = transcribe(vocal_audio, seconds, scratch)
+            except TranscriptionQualityError:
+                diagnostic = output / f"failed-song-{message.id}"
+                diagnostic.mkdir(exist_ok=True)
+                for name in ["quality.json", "transcription.raw.json"]:
+                    if (scratch / name).exists():
+                        shutil.copy2(scratch / name, diagnostic / name)
+                raise
             cues = make_cues(words)
             lyrics = write_lyrics(scratch, cues, info["title"], seconds)
             render(audio, scratch, seconds, args.height)
             info.update({
                 "duration_seconds": seconds, "model": MODEL, "language": "am",
-                "transcription_engine": "faster-whisper", "device": "cpu", "compute_type": "int8",
+                "transcription_engine": "Ethio-ASR / Wav2Vec2-BERT CTC", "device": "cpu",
+                "compute_type": "float32", "model_license": "CC-BY-4.0",
+                "model_source": "https://huggingface.co/badrex/Ethio-ASR-amharic",
+                "first_lyric_seconds": words[0]["start"],
+                "background": "Generated scenic atlas, moving cameras, crossfades, reactive spectrum",
                 "vocal_separation": args.separate_vocals, "keywords": KEYWORDS,
                 "review_required": True,
                 "review_note": "Automatic singing transcription and word timings need human review.",
@@ -72,20 +91,23 @@ async def process(args):
             destination = output / f"song-{message.id}"
             destination.mkdir(exist_ok=False)
             for name in ["video.mp4", "lyrics.txt", "lyrics.srt", "lyrics.ass", "words.json",
-                         "transcription.raw.json", "metadata.json", "description.txt"]:
+                         "transcription.raw.json", "quality.json", "metadata.json", "description.txt"]:
                 shutil.copy2(scratch / name, destination / name)
             completed.append(info)
             # Stems and original channel media are temporary, never uploaded as artifacts.
             shutil.rmtree(scratch)
         if completed:
-            state["channels"][key] = {
-                "last_message_id": messages[-1].id,
-                "run_id": os.environ.get("GITHUB_RUN_ID", "local"),
-                "artifact_name": f"mezmur-{os.environ.get('GITHUB_RUN_ID', 'local')}-{os.environ.get('GITHUB_RUN_ATTEMPT', '1')}",
-            }
-            write_json(output / "manifest.json", {"songs": completed, "channel_id": key})
+            if not args.message_id:
+                state["channels"][key] = {
+                    "last_message_id": messages[-1].id,
+                    "run_id": os.environ.get("GITHUB_RUN_ID", "local"),
+                    "artifact_name": f"mezmur-{os.environ.get('GITHUB_RUN_ID', 'local')}-{os.environ.get('GITHUB_RUN_ATTEMPT', '1')}",
+                }
+            write_json(output / "manifest.json", {"songs": completed, "channel_id": key,
+                                                   "replay": bool(args.message_id)})
             # The workflow commits this candidate only AFTER a successful artifact upload.
-            write_json(Path(".runtime/pending.json"), state)
+            if not args.message_id:
+                write_json(Path(".runtime/pending.json"), state)
         if os.environ.get("GITHUB_OUTPUT"):
             with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
                 handle.write(f"has_output={'true' if completed else 'false'}\n")
@@ -98,10 +120,13 @@ def main():
     parser.add_argument("--batch-size", type=int, default=3, choices=range(1, 6))
     parser.add_argument("--height", type=int, default=1080, choices=[720, 1080])
     parser.add_argument("--max-duration", type=int, default=1800)
+    parser.add_argument("--message-id", type=int, default=0, help="Replay one message without changing progress")
     parser.add_argument("--separate-vocals", action=argparse.BooleanOptionalAction, default=True)
     args = parser.parse_args()
     if not 1 <= args.max_duration <= 7200:
         parser.error("--max-duration must be between 1 and 7200 seconds")
+    if args.message_id < 0:
+        parser.error("--message-id must be a positive message ID or zero for normal batches")
     asyncio.run(process(args))
 
 

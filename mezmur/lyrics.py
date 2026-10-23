@@ -19,9 +19,9 @@ def make_cues(words):
     cues, group = [], []
     for word in words:
         if group and (
-            len(group) >= 7
-            or len(" ".join(w["word"] for w in group + [word])) > 42
-            or word["end"] - group[0]["start"] > 6
+            len(group) >= 5
+            or len(" ".join(w["word"] for w in group + [word])) > 34
+            or word["end"] - group[0]["start"] > 5
             or word["start"] - group[-1]["end"] > 0.8
         ):
             cues.append(Cue(group[0]["start"], group[-1]["end"], group))
@@ -47,14 +47,14 @@ def safe_ass(text):
     return " ".join(str(text).replace("\\", "").replace("{", "").replace("}", "").split())
 
 
-def font_path():
+def font_path(family="Noto Serif Ethiopic:style=Bold"):
     import subprocess
 
     path = subprocess.check_output(
-        ["fc-match", "-f", "%{file}", "Noto Sans Ethiopic"], text=True,
+        ["fc-match", "-f", "%{file}", family], text=True,
     ).strip()
     if "Ethiopic" not in path:
-        raise RuntimeError("Install fonts-noto-core: Noto Sans Ethiopic is required")
+        raise RuntimeError("Install fonts-noto-core: Noto Serif Ethiopic is required")
     return path
 
 
@@ -85,18 +85,18 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Lyrics,Noto Sans Ethiopic,76,&H009AE8A7,&H00FFFFFF,&H00171413,&H88000000,0,0,0,0,100,100,0,0,1,2,1,5,130,130,60,1
-Style: Title,Noto Sans Ethiopic,42,&H00DDDAD9,&H00DDDAD9,&H00171413,&H88000000,0,0,0,0,100,100,0,0,1,1,0,8,160,160,110,1
+Style: Lyrics,Noto Serif Ethiopic,86,&H00A3E4FF,&H00FFFFFF,&H400B0B0B,&H80000000,1,0,0,0,100,100,0,0,1,2.5,2,5,130,130,60,1
+Style: Title,Noto Sans Ethiopic,38,&H10FFFFFF,&H10FFFFFF,&H400B0B0B,&H80000000,0,0,0,0,100,100,0,0,1,1.5,1,8,160,160,85,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
     title = safe_ass(title)
-    title_size = fitted_size(title, font, 42, 1580)
+    title_size = fitted_size(title, font_path("Noto Sans Ethiopic"), 38, 1580)
     events = [f"Dialogue: 0,0:00:00.00,{timestamp(seconds, True)},Title,,0,0,0,,{{\\fs{title_size}}}{title}"]
     for cue in cues:
-        size = fitted_size(safe_ass(cue.text), font, 76, 1640)
-        parts = [f"{{\\fs{size}}}"]
+        size = fitted_size(safe_ass(cue.text), font, 86, 1640)
+        parts = [f"{{\\fs{size}\\fad(80,120)}}"]
         cursor = round(cue.start * 100)
         for word in cue.words:
             start, end = round(word["start"] * 100), round(word["end"] * 100)

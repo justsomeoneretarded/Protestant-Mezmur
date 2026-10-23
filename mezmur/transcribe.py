@@ -1,14 +1,17 @@
 """Transcribe short overlapping chunks; all timestamps stay on the source timeline."""
 import math
-from dataclasses import asdict
 from functools import lru_cache
 from pathlib import Path
 
+from .audio import read_audio
 from .common import run, write_json
+from .quality import TranscriptionQualityError, assess, repeated_character_word
 
-MODEL = "large-v3"
-CORE_SECONDS = 240
-OVERLAP_SECONDS = 4
+MODEL = "badrex/Ethio-ASR-amharic"
+CORE_SECONDS = 20
+OVERLAP_SECONDS = 2
+SAMPLE_RATE = 16000
+MIN_WORD_CONFIDENCE = 0.35
 
 
 def chunks(seconds):
@@ -31,7 +34,10 @@ def merge_words(results, seconds):
             # Each word belongs to one core interval, even when audio chunks overlap.
             midpoint = (start + end) / 2
             if result["core_start"] <= midpoint < result["core_end"]:
-                words.append({"word": text, "start": max(0, start), "end": min(seconds, end)})
+                word = {"word": text, "start": max(0, start), "end": min(seconds, end)}
+                if "probability" in item:
+                    word["probability"] = float(item["probability"])
+                words.append(word)
     words.sort(key=lambda word: word["start"])
     clean = []
     for word in words:
@@ -46,42 +52,72 @@ def merge_words(results, seconds):
 
 @lru_cache(maxsize=1)
 def load_model():
-    from faster_whisper import WhisperModel
+    import torch
+    from transformers import AutoModelForCTC, AutoProcessor
 
-    return WhisperModel(
-        MODEL, device="cpu", compute_type="int8", cpu_threads=2, num_workers=1,
-        download_root=".model-cache/whisper",
-    )
+    torch.set_num_threads(2)
+    processor = AutoProcessor.from_pretrained(MODEL, cache_dir=".model-cache/ethio-asr")
+    model = AutoModelForCTC.from_pretrained(
+        MODEL, cache_dir=".model-cache/ethio-asr", use_safetensors=True,
+    ).eval()
+    return processor, model
+
+
+def decode_words(processor, logits, seconds):
+    """Native CTC frame offsets locate words; blank frames leave music uncaptioned."""
+    probabilities = logits.softmax(-1)
+    ids = logits.argmax(-1)
+    decoded = processor.tokenizer.decode(ids.tolist(), output_word_offsets=True)
+    step = seconds / len(ids)
+    words, rejected = [], []
+    blank = processor.tokenizer.pad_token_id
+    for item in decoded.word_offsets:
+        start, end = int(item["start_offset"]), int(item["end_offset"])
+        active = ids[start:end] != blank
+        scores = probabilities[start:end].max(-1).values[active]
+        confidence = float(scores.mean()) if len(scores) else 0.0
+        word = {"word": item["word"].strip(), "start": start * step,
+                "end": min(seconds, end * step), "probability": confidence}
+        # A long hiss in the instrumental intro must not become a lyric.
+        if confidence < MIN_WORD_CONFIDENCE or repeated_character_word(word["word"]):
+            rejected.append(word)
+        elif word["word"]:
+            words.append(word)
+    return {"language": "am", "text": decoded.text, "words": words,
+            "rejected_words": rejected, "frame_seconds": step}
 
 
 def transcribe(audio: Path, seconds: float, folder: Path):
-    model = load_model()
+    import torch
+
+    processor, model = load_model()
+    samples = read_audio(audio, SAMPLE_RATE)
     results = []
     for index, (core_start, core_end, start, end) in enumerate(chunks(seconds)):
-        chunk = folder / f"chunk-{index}.wav"
-        run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-ss", str(start), "-i", str(audio),
-             "-t", str(end - start), "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le", str(chunk)])
+        chunk = samples[round(start * SAMPLE_RATE):round(end * SAMPLE_RATE)]
         print(f"Transcribing chunk {index + 1} locally ({core_start:.0f}-{core_end:.0f}s)", flush=True)
-        try:
-            segments, info = model.transcribe(
-                str(chunk), language="am", task="transcribe", beam_size=5,
-                temperature=0, word_timestamps=True, condition_on_previous_text=False,
-                # Speech VAD can discard held notes and soft singing.
-                vad_filter=False,
-            )
-            # Inference is lazy: consume the iterator before deleting its audio.
-            segments = [asdict(segment) for segment in segments]
-            response = {
-                "language": info.language, "language_probability": info.language_probability,
-                "segments": segments,
-                "words": [word for segment in segments for word in (segment.get("words") or [])],
-            }
-            results.append({"offset": start, "core_start": core_start, "core_end": core_end,
-                            "response": response})
-        finally:
-            chunk.unlink(missing_ok=True)
+        inputs = processor(chunk, sampling_rate=SAMPLE_RATE, return_tensors="pt")
+        with torch.inference_mode():
+            logits = model(**inputs).logits[0]
+        response = decode_words(processor, logits, len(chunk) / SAMPLE_RATE)
+        results.append({"offset": start, "core_start": core_start, "core_end": core_end,
+                        "response": response})
     write_json(folder / "transcription.raw.json", results)
-    return merge_words(results, seconds)
+    try:
+        words = merge_words(results, seconds)
+    except ValueError:
+        words = []
+    quality = assess(words)
+    if seconds >= 60 and len(words) < max(5, int(seconds / 30)):
+        quality["passed"] = False
+        quality["reasons"].append("Too few clear words for the song duration; review the source and vocals")
+    quality["low_confidence_word_count"] = sum(w.get("probability", 1) < 0.60 for w in words)
+    quality["discarded_word_count"] = sum(len(r["response"].get("rejected_words", [])) for r in results)
+    quality["timing_method"] = "Native CTC acoustic frame offsets"
+    write_json(folder / "quality.json", quality)
+    if not quality["passed"]:
+        raise TranscriptionQualityError("; ".join(quality["reasons"]))
+    return words
 
 
 def separate(audio: Path, folder: Path) -> Path:

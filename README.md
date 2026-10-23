@@ -4,7 +4,7 @@ Manually turn the next three songs from a Telegram channel into Amharic lyric
 videos using GitHub Actions. Each run starts after the last completed batch.
 The first run begins with the oldest available audio messages in channel history.
 The configured source is [@amharicprotestantmezmurss](https://t.me/amharicprotestantmezmurss).
-Transcription runs locally with open-source Whisper weights and faster-whisper.
+Transcription runs locally with the Amharic-specific Ethio-ASR model.
 No hosted speech service, paid transcription API, or transcription API key is used.
 
 ## What you download
@@ -14,7 +14,7 @@ Under **Actions > Generate Mezmur Videos > a run > Artifacts**, download
 
 | File | Contents |
 | --- | --- |
-| `video.mp4` | 1080p or 720p, moving color field, audio waveform, Amharic karaoke lyrics, original music mix |
+| `video.mp4` | 1080p or 720p, moving scenic backgrounds, crossfades, reactive spectrum, Amharic karaoke lyrics, original music mix |
 | `lyrics.txt` | Plain UTF-8 lyrics |
 | `lyrics.srt` | Timed lyrics for editors and video platforms |
 | `lyrics.ass` | Styled lyrics with word highlighting |
@@ -22,6 +22,7 @@ Under **Actions > Generate Mezmur Videos > a run > Artifacts**, download
 | `words.json` | Word timestamps in seconds relative to the original audio |
 | `transcription.raw.json` | Original recognizer results for reviewing transcription |
 | `metadata.json` | Source message ID, title, model, keywords and review status |
+| `quality.json` | Repetition checks, uncertain-word count, first detected lyric time and review status |
 
 The artifact also contains `manifest.json`. Downloads expire after 30 days;
 download them before expiration. Videos are not automatically published.
@@ -38,7 +39,7 @@ download them before expiration. Videos are not automatically published.
    # Linux/macOS:
    source .venv/bin/activate
    # Windows PowerShell: .venv\Scripts\Activate.ps1
-   pip install -e .
+   pip install Telethon==1.42.0
    python scripts/telegram_session.py
    ```
 
@@ -71,30 +72,48 @@ download them before expiration. Videos are not automatically published.
 
 ## Transcription and synchronization
 
-The recognizer is **Whisper large-v3**, executed locally through the open-source
-[faster-whisper](https://github.com/SYSTRAN/faster-whisper) library and CTranslate2.
-Whisper supports Amharic (`am`); we force that language and compute word and
-segment timestamps. CPU inference uses INT8 quantization, two threads and one
-model instance reused across songs. No model has been benchmarked on your channel
-yet, so this is a practical multilingual baseline rather than a measured claim
-about accuracy on sung mezmur.
+The recognizer is **[Ethio-ASR Amharic](https://huggingface.co/badrex/Ethio-ASR-amharic)**,
+a 600M-parameter Wav2Vec2-BERT CTC model specialized for Amharic. Its authors report
+22.37% word error rate on the WAXAL Amharic speech test set. That is a speech
+benchmark, not a mezmur/singing accuracy guarantee. The model is licensed
+CC-BY-4.0 by the Ethio-ASR team; see their model card for attribution and the
+[research paper](https://arxiv.org/abs/2603.23654).
+
+The previous generic Whisper large-v3 implementation produced repeated-character
+hallucinations on the first real channel song and has been replaced. The new
+model was probed on that actual recording, including its instrumental intro;
+it produces varied Amharic words, but some words still require correction.
+Recognition uses CPU PyTorch, two threads, float32 and one cached model instance.
 
 The public model weights download from Hugging Face on first use (several GB).
-GitHub Actions caches them in `.model-cache/whisper` and caches Demucs weights
+GitHub Actions caches them in `.model-cache/ethio-asr` and caches Demucs weights
 separately. Cache eviction can cause a fresh download. Audio stays on the runner
 during recognition; downloading weights does not send your songs to a speech API.
 
 Demucs `htdemucs` separates vocals on the GitHub CPU runner before transcription
 by default. The original music, not the separated stem, goes into the final video.
 Separation is timeline-preserving. You can turn it off in the Run workflow form.
-Audio is transcribed in four-minute chunks with four-second overlaps. Each chunk
-is mono 16 kHz PCM. Speech VAD is disabled to avoid dropping sustained or soft
-singing, and previous-text conditioning is disabled to reduce repetition loops.
-Word timestamps are shifted back onto the full song timeline, then grouped into
-short lyric lines.
-Lyrics disappear during detected gaps instead of remaining across instrumental
-sections. Background motion and waveform are generated locally by FFmpeg;
-Noto Sans Ethiopic supplies the glyphs.
+Audio is transcribed in 20-second chunks with two-second overlaps. Each chunk is
+mono 16 kHz PCM. The CTC tokenizer supplies acoustic frame offsets for words;
+we convert those positions to time and restore the full-song offset. Blank
+frames stay uncaptioned. Low-confidence words and obvious repeated-character
+hissing are rejected, rather than assigning the intro artificial lyric timings.
+First detected lyric time is recorded in `quality.json` and `metadata.json`.
+Confidence values are model scores, not a promise that a word is correct.
+
+Obvious character/word collapse fails the batch before rendering or saving
+progress. Failure artifacts contain `failed-song-ID/quality.json` and raw
+transcription diagnostics. Checks are deliberately narrow; plausible-looking
+wrong words can still pass, so every output requires lyric review.
+
+The bundled, generated scenic artwork contains highland mountains, a skyscraper
+skyline, a winding road through red earth and a desert. Continuous camera pans,
+20-second scene changes and two-second crossfades animate it locally in FFmpeg;
+the spectrum and waveform react to the actual music. These are generated still
+scenes with camera motion, not live footage or an interactive video. No image API
+is used during workflow runs. The center is shaded for contrast, with bold Noto
+Serif Ethiopic lyrics, white upcoming words, warm-gold karaoke highlighting and
+short fades. Lyrics stay absent until the first detected word.
 
 Singing, choirs, strong reverb and accompaniment can produce incorrect words,
 hallucinations or inaccurate timings, including after separation. These are
@@ -111,8 +130,7 @@ This replaces `video.mp4` in that folder. Use the original audio rather than the
 already subtitled MP4. `lyrics.srt` is also available for your editor. Editing the
 ASS file does not automatically update the separate TXT/SRT/description files.
 
-References: [faster-whisper](https://github.com/SYSTRAN/faster-whisper),
-[Whisper languages](https://github.com/openai/whisper/blob/main/whisper/tokenizer.py),
+References: [Ethio-ASR model](https://huggingface.co/badrex/Ethio-ASR-amharic),
 [Demucs](https://github.com/facebookresearch/demucs),
 [Telethon history](https://docs.telethon.dev/en/stable/modules/client.html#telethon.client.messages.MessageMethods.iter_messages).
 
@@ -135,13 +153,16 @@ References: [faster-whisper](https://github.com/SYSTRAN/faster-whisper),
 - A state-save error leaves the artifact available; fix the write permissions
   before rerunning. Do not delete the state branch unless you intend to restart
   all channels. Never store sessions or keys on that branch.
+- To regenerate a previously processed song, enter its Telegram message ID in
+  **Run workflow > message_id**. For the first failed transcription, use `2`.
+  Replay generates a new artifact and does not change any channel's bookmark.
 - Deleted or inaccessible older messages cannot be recovered. New edits to
   already processed messages do not cause reprocessing. A repost with a new
   message ID counts as a new song. No-new-songs runs finish without an artifact.
 
 ## Limits and troubleshooting
 
-GitHub hosted runners use CPU. Full large-v3 inference, Demucs and 1080p rendering
+GitHub hosted runners use CPU. Ethio-ASR inference, Demucs and 1080p rendering
 may take substantial time, potentially longer than the audio duration. There is
 no GPU or fast turnaround guarantee. The job timeout is 330 minutes. Choose 720p,
 a smaller batch, or disable separation to reduce runtime. Default limits are
@@ -162,17 +183,20 @@ Only process music you have permission to republish.
 
 ## Development
 
-Install FFmpeg, Fontconfig and Noto Sans Ethiopic (`fonts-noto-core` on Ubuntu), then:
+Install FFmpeg, Fontconfig and Noto Serif/Sans Ethiopic (`fonts-noto-core` on Ubuntu), then:
 
 ```sh
+pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu
 pip install -e '.[test]'
 pytest -q
 ```
 
 Tests cover chronological selection/resume, subtitle timing, chunk boundaries,
-state conflicts, and a real FFmpeg render with Amharic text, audio and moving
-pixels. Tests use synthetic audio and mocked services, not a live Telegram
-account or a claim of measured Amharic transcription accuracy.
+state conflicts, replay without cursor changes, repeated-character rejection,
+instrumental blank-frame timing and a real scenic FFmpeg render with Amharic
+text and audio. Unit tests use synthetic audio and mocked inference; the manual
+model probe used the real first channel recording. Neither is a measured singing
+accuracy benchmark.
 
 For a local production run, export the three Telegram secrets above plus
 `TELEGRAM_CHANNEL=@amharicprotestantmezmurss`,

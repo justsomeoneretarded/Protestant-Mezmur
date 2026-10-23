@@ -4,17 +4,17 @@ from mezmur.transcribe import chunks, merge_words
 
 def test_chunk_overlap_keeps_one_owner_and_absolute_times():
     results = [
-        {"offset": 0, "core_start": 0, "core_end": 240,
-         "response": {"words": [{"word": "first", "start": 238, "end": 239},
-                                  {"word": "next", "start": 241, "end": 242}]}},
-        {"offset": 236, "core_start": 240, "core_end": 300,
-         "response": {"words": [{"word": "first", "start": 2, "end": 3},
-                                  {"word": "next", "start": 5, "end": 6}]}},
+        {"offset": 0, "core_start": 0, "core_end": 20,
+         "response": {"words": [{"word": "first", "start": 18, "end": 19},
+                                  {"word": "next", "start": 21, "end": 22}]}},
+        {"offset": 18, "core_start": 20, "core_end": 30,
+         "response": {"words": [{"word": "first", "start": 0, "end": 1},
+                                  {"word": "next", "start": 3, "end": 4}]}},
     ]
-    words = merge_words(results, 300)
+    words = merge_words(results, 30)
     assert [w["word"] for w in words] == ["first", "next"]
-    assert words[1]["start"] == 241
-    assert list(chunks(300)) == [(0, 240, 0, 244), (240, 300, 236, 300)]
+    assert words[1]["start"] == 21
+    assert list(chunks(30)) == [(0, 20, 0, 22), (20, 30, 18, 30)]
 
 
 def test_lyrics_do_not_cover_instrumental_gap(tmp_path):
