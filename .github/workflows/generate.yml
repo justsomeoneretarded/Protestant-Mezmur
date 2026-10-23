@@ -34,7 +34,7 @@ jobs:
       TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
       TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
       TELEGRAM_SESSION: ${{ secrets.TELEGRAM_SESSION }}
-      TELEGRAM_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL }}
+      TELEGRAM_CHANNEL: ${{ vars.TELEGRAM_CHANNEL || '@amharicprotestantmezmurss' }}
       OMP_NUM_THREADS: '2'
       MKL_NUM_THREADS: '2'
     steps:
@@ -47,7 +47,7 @@ jobs:
       - name: Validate required secrets
         shell: bash
         run: |
-          for key in TELEGRAM_API_ID TELEGRAM_API_HASH TELEGRAM_SESSION TELEGRAM_CHANNEL; do
+          for key in TELEGRAM_API_ID TELEGRAM_API_HASH TELEGRAM_SESSION; do
             if [ -z "${!key}" ]; then
               echo "::error::Missing repository secret: $key"
               exit 1

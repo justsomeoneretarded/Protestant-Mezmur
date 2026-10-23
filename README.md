@@ -3,6 +3,7 @@
 Manually turn the next three songs from a Telegram channel into Amharic lyric
 videos using GitHub Actions. Each run starts after the last completed batch.
 The first run begins with the oldest available audio messages in channel history.
+The configured source is [@amharicprotestantmezmurss](https://t.me/amharicprotestantmezmurss).
 Transcription runs locally with open-source Whisper weights and faster-whisper.
 No hosted speech service, paid transcription API, or transcription API key is used.
 
@@ -46,14 +47,19 @@ download them before expiration. Videos are not automatically published.
    Run this helper locally, never in an Actions log. A session grants access to
    your Telegram account; do not commit or share it. Telegram's Devices settings
    can revoke it.
-3. Under **Settings > Secrets and variables > Actions**, add these four repository secrets:
+3. Under **Settings > Secrets and variables > Actions > Secrets**, add these three repository secrets:
 
    | Secret | Value |
    | --- | --- |
    | `TELEGRAM_API_ID` | Telegram application numeric ID |
    | `TELEGRAM_API_HASH` | Telegram application hash |
    | `TELEGRAM_SESSION` | String printed by the local helper |
-   | `TELEGRAM_CHANNEL` | Public `@channelusername` or joined private channel ID such as `-1001234567890` |
+
+   The channel is public configuration, not a secret. The workflow defaults to
+   `@amharicprotestantmezmurss`; no channel setting is required for this source.
+   To change it, use the **Variables** tab to create a repository variable named
+   `TELEGRAM_CHANNEL`, containing a public `@channelusername` or joined private
+   channel ID such as `-1001234567890`.
 
 4. Allow GitHub Actions in repository settings. The workflow requests
    `contents: write` so its built-in `GITHUB_TOKEN` can save progress. An
@@ -168,7 +174,8 @@ state conflicts, and a real FFmpeg render with Amharic text, audio and moving
 pixels. Tests use synthetic audio and mocked services, not a live Telegram
 account or a claim of measured Amharic transcription accuracy.
 
-For a local production run, export the four Telegram secrets above plus
+For a local production run, export the three Telegram secrets above plus
+`TELEGRAM_CHANNEL=@amharicprotestantmezmurss`,
 `GITHUB_REPOSITORY=owner/repo` and `GH_TOKEN` with repository write permission:
 
 ```sh
