@@ -10,7 +10,7 @@ requires-python = ">=3.11"
 dependencies = ["Telethon==1.42.0", "requests==2.32.5", "Pillow==11.3.0"]
 
 [project.optional-dependencies]
-vocals = ["demucs==4.0.1"]
+vocals = ["demucs==4.0.1", "soundfile==0.13.1"]
 test = ["pytest==8.4.2", "responses==0.25.8", "PyYAML==6.0.3"]
 
 [project.scripts]
