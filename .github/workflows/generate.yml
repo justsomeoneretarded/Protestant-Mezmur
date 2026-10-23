@@ -35,7 +35,6 @@ jobs:
       TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
       TELEGRAM_SESSION: ${{ secrets.TELEGRAM_SESSION }}
       TELEGRAM_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL }}
-      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       OMP_NUM_THREADS: '2'
       MKL_NUM_THREADS: '2'
     steps:
@@ -48,12 +47,19 @@ jobs:
       - name: Validate required secrets
         shell: bash
         run: |
-          for key in TELEGRAM_API_ID TELEGRAM_API_HASH TELEGRAM_SESSION TELEGRAM_CHANNEL GROQ_API_KEY; do
+          for key in TELEGRAM_API_ID TELEGRAM_API_HASH TELEGRAM_SESSION TELEGRAM_CHANNEL; do
             if [ -z "${!key}" ]; then
               echo "::error::Missing repository secret: $key"
               exit 1
             fi
           done
+      - name: Cache open-source model weights
+        uses: actions/cache@v4
+        with:
+          path: |
+            .model-cache/
+            ~/.cache/torch/hub/checkpoints/
+          key: mezmur-models-${{ runner.os }}-${{ runner.arch }}-large-v3-htdemucs-v1
       - name: Install FFmpeg and Ethiopic font
         run: |
           sudo apt-get update

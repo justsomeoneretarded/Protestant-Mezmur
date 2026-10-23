@@ -25,7 +25,6 @@ def description(info, lyrics):
 async def process(args):
     # A failed/no-op local rerun must not leave an old candidate available to save.
     Path(".runtime/pending.json").unlink(missing_ok=True)
-    required("GROQ_API_KEY")
     snapshot = json.loads(Path(".runtime/snapshot.json").read_text())
     state = snapshot["state"]
     output = Path("output")
@@ -62,6 +61,7 @@ async def process(args):
             render(audio, scratch, seconds, args.height)
             info.update({
                 "duration_seconds": seconds, "model": MODEL, "language": "am",
+                "transcription_engine": "faster-whisper", "device": "cpu", "compute_type": "int8",
                 "vocal_separation": args.separate_vocals, "keywords": KEYWORDS,
                 "review_required": True,
                 "review_note": "Automatic singing transcription and word timings need human review.",

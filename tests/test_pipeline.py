@@ -13,7 +13,6 @@ from mezmur.common import write_json
 @pytest.fixture
 def setup_pipeline(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("GROQ_API_KEY", "fake")
     monkeypatch.setenv("TELEGRAM_CHANNEL", "@test")
     write_json(Path(".runtime/snapshot.json"), {"head": None, "state": {"version": 1, "channels": {}}})
 

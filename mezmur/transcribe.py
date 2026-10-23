@@ -1,14 +1,12 @@
 """Transcribe short overlapping chunks; all timestamps stay on the source timeline."""
 import math
+from dataclasses import asdict
+from functools import lru_cache
 from pathlib import Path
 
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
+from .common import run, write_json
 
-from .common import required, run, write_json
-
-MODEL = "whisper-large-v3"
+MODEL = "large-v3"
 CORE_SECONDS = 240
 OVERLAP_SECONDS = 4
 
@@ -46,32 +44,42 @@ def merge_words(results, seconds):
     return clean
 
 
+@lru_cache(maxsize=1)
+def load_model():
+    from faster_whisper import WhisperModel
+
+    return WhisperModel(
+        MODEL, device="cpu", compute_type="int8", cpu_threads=2, num_workers=1,
+        download_root=".model-cache/whisper",
+    )
+
+
 def transcribe(audio: Path, seconds: float, folder: Path):
-    session = requests.Session()
-    session.headers["Authorization"] = f"Bearer {required('GROQ_API_KEY')}"
-    session.mount("https://", HTTPAdapter(max_retries=Retry(
-        total=5, backoff_factor=3, status_forcelist=[429, 500, 502, 503, 504],
-        allowed_methods=["POST"], respect_retry_after_header=True,
-    )))
+    model = load_model()
     results = []
     for index, (core_start, core_end, start, end) in enumerate(chunks(seconds)):
         chunk = folder / f"chunk-{index}.wav"
         run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-ss", str(start), "-i", str(audio),
              "-t", str(end - start), "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le", str(chunk)])
-        with chunk.open("rb") as handle:
-            response = session.post(
-                "https://api.groq.com/openai/v1/audio/transcriptions",
-                files={"file": (chunk.name, handle, "audio/wav")},
-                data=[("model", MODEL), ("language", "am"), ("temperature", "0"),
-                      ("response_format", "verbose_json"),
-                      ("timestamp_granularities[]", "word"), ("timestamp_granularities[]", "segment")],
-                timeout=(30, 300),
+        print(f"Transcribing chunk {index + 1} locally ({core_start:.0f}-{core_end:.0f}s)", flush=True)
+        try:
+            segments, info = model.transcribe(
+                str(chunk), language="am", task="transcribe", beam_size=5,
+                temperature=0, word_timestamps=True, condition_on_previous_text=False,
+                # Speech VAD can discard held notes and soft singing.
+                vad_filter=False,
             )
-        # Do not log response bodies, which can contain private source content.
-        response.raise_for_status()
-        results.append({"offset": start, "core_start": core_start, "core_end": core_end,
-                        "response": response.json()})
-        chunk.unlink()
+            # Inference is lazy: consume the iterator before deleting its audio.
+            segments = [asdict(segment) for segment in segments]
+            response = {
+                "language": info.language, "language_probability": info.language_probability,
+                "segments": segments,
+                "words": [word for segment in segments for word in (segment.get("words") or [])],
+            }
+            results.append({"offset": start, "core_start": core_start, "core_end": core_end,
+                            "response": response})
+        finally:
+            chunk.unlink(missing_ok=True)
     write_json(folder / "transcription.raw.json", results)
     return merge_words(results, seconds)
 

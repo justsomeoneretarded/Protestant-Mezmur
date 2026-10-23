@@ -6,4 +6,5 @@ __pycache__/
 *.session*
 output/
 .runtime/
+.model-cache/
 dist/

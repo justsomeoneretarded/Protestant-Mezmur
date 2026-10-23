@@ -3,6 +3,8 @@
 Manually turn the next three songs from a Telegram channel into Amharic lyric
 videos using GitHub Actions. Each run starts after the last completed batch.
 The first run begins with the oldest available audio messages in channel history.
+Transcription runs locally with open-source Whisper weights and faster-whisper.
+No hosted speech service, paid transcription API, or transcription API key is used.
 
 ## What you download
 
@@ -44,8 +46,7 @@ download them before expiration. Videos are not automatically published.
    Run this helper locally, never in an Actions log. A session grants access to
    your Telegram account; do not commit or share it. Telegram's Devices settings
    can revoke it.
-3. Obtain a Groq API key at <https://console.groq.com/keys>.
-4. Under **Settings > Secrets and variables > Actions**, add these repository secrets:
+3. Under **Settings > Secrets and variables > Actions**, add these four repository secrets:
 
    | Secret | Value |
    | --- | --- |
@@ -53,30 +54,38 @@ download them before expiration. Videos are not automatically published.
    | `TELEGRAM_API_HASH` | Telegram application hash |
    | `TELEGRAM_SESSION` | String printed by the local helper |
    | `TELEGRAM_CHANNEL` | Public `@channelusername` or joined private channel ID such as `-1001234567890` |
-   | `GROQ_API_KEY` | Your Groq API key |
 
-5. Allow GitHub Actions in repository settings. The workflow requests
+4. Allow GitHub Actions in repository settings. The workflow requests
    `contents: write` so its built-in `GITHUB_TOKEN` can save progress. An
    organization policy restricting writes or branch creation must permit
    the `mezmur-state` branch. No personal GitHub token is needed.
-6. Open **Actions > Generate Mezmur Videos > Run workflow** on the default branch.
-   Start with one song to check recognition quality and your account's API quota,
+5. Open **Actions > Generate Mezmur Videos > Run workflow** on the default branch.
+   Start with one song to check recognition quality and CPU processing time,
    then use the default batch of three.
 
 ## Transcription and synchronization
 
-The default recognizer is **Whisper large-v3**, served by Groq. Whisper supports
-Amharic (`am`); we force that language and request word and segment timestamps.
-Groq recommends the full large-v3 model for accuracy-sensitive multilingual work.
-This is a practical hosted baseline, not a claim that it beats every Amharic
-model on sung mezmur. No model has been benchmarked on your channel yet.
+The recognizer is **Whisper large-v3**, executed locally through the open-source
+[faster-whisper](https://github.com/SYSTRAN/faster-whisper) library and CTranslate2.
+Whisper supports Amharic (`am`); we force that language and compute word and
+segment timestamps. CPU inference uses INT8 quantization, two threads and one
+model instance reused across songs. No model has been benchmarked on your channel
+yet, so this is a practical multilingual baseline rather than a measured claim
+about accuracy on sung mezmur.
+
+The public model weights download from Hugging Face on first use (several GB).
+GitHub Actions caches them in `.model-cache/whisper` and caches Demucs weights
+separately. Cache eviction can cause a fresh download. Audio stays on the runner
+during recognition; downloading weights does not send your songs to a speech API.
 
 Demucs `htdemucs` separates vocals on the GitHub CPU runner before transcription
 by default. The original music, not the separated stem, goes into the final video.
 Separation is timeline-preserving. You can turn it off in the Run workflow form.
 Audio is transcribed in four-minute chunks with four-second overlaps. Each chunk
-is mono 16 kHz PCM and below Groq's 25 MB free-tier upload limit. Word timestamps
-are shifted back onto the full song timeline, then grouped into short lyric lines.
+is mono 16 kHz PCM. Speech VAD is disabled to avoid dropping sustained or soft
+singing, and previous-text conditioning is disabled to reduce repetition loops.
+Word timestamps are shifted back onto the full song timeline, then grouped into
+short lyric lines.
 Lyrics disappear during detected gaps instead of remaining across instrumental
 sections. Background motion and waveform are generated locally by FFmpeg;
 Noto Sans Ethiopic supplies the glyphs.
@@ -96,7 +105,7 @@ This replaces `video.mp4` in that folder. Use the original audio rather than the
 already subtitled MP4. `lyrics.srt` is also available for your editor. Editing the
 ASS file does not automatically update the separate TXT/SRT/description files.
 
-References: [Groq speech-to-text](https://console.groq.com/docs/speech-to-text),
+References: [faster-whisper](https://github.com/SYSTRAN/faster-whisper),
 [Whisper languages](https://github.com/openai/whisper/blob/main/whisper/tokenizer.py),
 [Demucs](https://github.com/facebookresearch/demucs),
 [Telethon history](https://docs.telethon.dev/en/stable/modules/client.html#telethon.client.messages.MessageMethods.iter_messages).
@@ -126,19 +135,22 @@ References: [Groq speech-to-text](https://console.groq.com/docs/speech-to-text),
 
 ## Limits and troubleshooting
 
-GitHub hosted runners use CPU. Demucs and 1080p rendering may take substantial
-time, especially for long songs. The job timeout is 330 minutes. Choose 720p,
+GitHub hosted runners use CPU. Full large-v3 inference, Demucs and 1080p rendering
+may take substantial time, potentially longer than the audio duration. There is
+no GPU or fast turnaround guarantee. The job timeout is 330 minutes. Choose 720p,
 a smaller batch, or disable separation to reduce runtime. Default limits are
 250 MiB and 30 minutes per song; an oversized song stops the batch and leaves
 progress unchanged. Adjust `--max-duration` or the download limit deliberately
 if your channel has longer recordings. The pipeline processes one song at a time
 and removes stems and source files after rendering to limit disk use.
 
-Groq receives audio (the vocal stem if separation is enabled). API charges and
-rate limits depend on your plan; GitHub Actions minutes/storage may also cost
-money. HTTP 429 and transient server failures are retried with backoff. Persistent
-quota failures stop the batch without advancing progress. A public channel URL
-is not a substitute for Telegram login: the Bot API cannot read old channel
+There are no transcription service charges or speech API quotas. GitHub Actions
+minutes, artifact storage and model cache storage still follow your GitHub plan's
+limits and pricing. Model download or inference failures stop the batch without
+advancing progress. Telegram still requires its free API ID, hash and user session
+to access channel history; replacing the speech API does not replace Telegram
+authentication. A public channel URL is not a substitute for Telegram login:
+the Bot API cannot read old channel
 history. Numeric private channel IDs must belong to the logged-in user's dialogs.
 Only process music you have permission to republish.
 
@@ -156,7 +168,7 @@ state conflicts, and a real FFmpeg render with Amharic text, audio and moving
 pixels. Tests use synthetic audio and mocked services, not a live Telegram
 account or a claim of measured Amharic transcription accuracy.
 
-For a local production run, export the five secrets above plus
+For a local production run, export the four Telegram secrets above plus
 `GITHUB_REPOSITORY=owner/repo` and `GH_TOKEN` with repository write permission:
 
 ```sh
