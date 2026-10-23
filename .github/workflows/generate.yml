@@ -1,0 +1,102 @@
+name: Generate Mezmur Videos
+
+on:
+  workflow_dispatch:
+    inputs:
+      batch_size:
+        description: Number of songs (oldest unprocessed first)
+        type: choice
+        options: ['3', '1', '2', '4', '5']
+        default: '3'
+      resolution:
+        description: Video resolution
+        type: choice
+        options: ['1080', '720']
+        default: '1080'
+      separate_vocals:
+        description: Separate vocals with Demucs before transcription (slower, CPU)
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mezmur-channel-progress
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
+      TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
+      TELEGRAM_SESSION: ${{ secrets.TELEGRAM_SESSION }}
+      TELEGRAM_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Validate required secrets
+        shell: bash
+        run: |
+          for key in TELEGRAM_API_ID TELEGRAM_API_HASH TELEGRAM_SESSION TELEGRAM_CHANNEL GROQ_API_KEY; do
+            if [ -z "${!key}" ]; then
+              echo "::error::Missing repository secret: $key"
+              exit 1
+            fi
+          done
+      - name: Install FFmpeg and Ethiopic font
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-noto-core fontconfig
+      - name: Install pipeline
+        run: pip install -e '.[test]'
+      - name: Run tests
+        run: pytest -q
+      - name: Install vocal separation
+        if: inputs.separate_vocals
+        run: |
+          pip install torch==2.5.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cpu
+          pip install -e '.[vocals]'
+      - name: Load durable progress
+        run: python -m mezmur.state load
+      - name: Generate next songs
+        id: generate
+        env:
+          BATCH_SIZE: ${{ inputs.batch_size }}
+          RESOLUTION: ${{ inputs.resolution }}
+          SEPARATE: ${{ inputs.separate_vocals }}
+        run: |
+          separation=--no-separate-vocals
+          if [ "$SEPARATE" = "true" ]; then separation=--separate-vocals; fi
+          mezmur --batch-size "$BATCH_SIZE" --height "$RESOLUTION" "$separation"
+      - name: Upload videos, lyrics, and descriptions
+        id: upload
+        if: ${{ !cancelled() && (steps.generate.outcome == 'success' || steps.generate.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: mezmur-${{ github.run_id }}-${{ github.run_attempt }}
+          path: output/
+          if-no-files-found: ignore
+          retention-days: 30
+          compression-level: 0
+      - name: Save progress after successful upload
+        if: ${{ success() && steps.generate.outputs.has_output == 'true' && steps.upload.outputs.artifact-id != '' }}
+        run: python -m mezmur.state save
+      - name: Run summary
+        if: always()
+        run: |
+          echo 'Download the mezmur artifact on this run for the videos, lyrics and descriptions.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Progress advances only when the entire batch and artifact upload succeed. Review automatic lyrics before publishing.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Remove temporary sessions and source media
+        if: always()
+        run: rm -rf .runtime

@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "protestant-mezmur"
+version = "0.1.0"
+description = "Resumable Telegram to Amharic lyric-video pipeline"
+requires-python = ">=3.11"
+dependencies = ["Telethon==1.42.0", "requests==2.32.5", "Pillow==11.3.0"]
+
+[project.optional-dependencies]
+vocals = ["demucs==4.0.1"]
+test = ["pytest==8.4.2", "responses==0.25.8", "PyYAML==6.0.3"]
+
+[project.scripts]
+mezmur = "mezmur.pipeline:main"
+
+[tool.setuptools.packages.find]
+include = ["mezmur*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
