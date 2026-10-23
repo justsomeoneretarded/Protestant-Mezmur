@@ -16,7 +16,7 @@ def render(audio: Path, folder: Path, seconds: float, height=1080):
     filters = (
         background
         + f"[0:a]aformat=channel_layouts=mono,showwaves=s={width}x{height // 6}:"
-        "mode=cline:rate=24:colors=0x94d6b0:scale=sqrt,format=rgba,colorchannelmixer=aa=0.5[wave];"
+        "mode=cline:rate=24:colors=0x94d6b0:scale=sqrt:draw=full,format=rgba,colorchannelmixer=aa=0.8[wave];"
         + f"[bg][wave]overlay=0:H-h-{height // 12}:shortest=1,"
         "ass=lyrics.ass[v]"
     )
