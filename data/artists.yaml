@@ -1,0 +1,12 @@
+# Canonical artist names. Add your own: the pipeline prefers these spellings for titles,
+# descriptions, tags and thumbnails. `photo` may point to a file under artists/ in this repo.
+artists:
+  - latin: Addisalem Assefa
+    amharic: አዲስዓለም አሰፋ
+    aliases: [Addisalem Asefa, አዲስአለም አሰፋ]
+  - latin: Yishak Sedik
+    amharic: ይስሐቅ ሰድቅ
+    aliases: [Yishak Sedik Official, ይስሐቅ ሰዲቅ, Yisehak Sedik]
+  - latin: Tesfaye Gabiso
+    amharic: ተስፋዬ ጋቢሶ
+    aliases: [Pastor Tesfaye Gabiso]

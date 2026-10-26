@@ -4,112 +4,254 @@ on:
   workflow_dispatch:
     inputs:
       batch_size:
-        description: Number of songs (oldest unprocessed first)
+        description: How many new songs (oldest unprocessed first; each renders in parallel)
         type: choice
-        options: ['3', '1', '2', '4', '5']
+        options: ['3', '1', '2', '4', '5', '6', '8', '10']
         default: '3'
+      message_ids:
+        description: Re-make specific Telegram message IDs, comma-separated (progress is not changed)
+        type: string
+        default: ''
+      separator:
+        description: Vocal isolation model used to time the lyrics
+        type: choice
+        options:
+          - UVR-MDX-NET-Voc_FT.onnx
+          - vocals_mel_band_roformer.ckpt
+          - htdemucs_ft.yaml
+          - none
+        default: UVR-MDX-NET-Voc_FT.onnx
       resolution:
-        description: Video resolution
+        description: Video height
         type: choice
         options: ['1080', '720']
         default: '1080'
-      separate_vocals:
-        description: Separate vocals with Demucs before transcription (slower, CPU)
-        type: boolean
-        default: true
-      message_id:
-        description: Replay a specific message ID without changing progress (leave blank for next batch)
-        type: string
-        default: ''
+  push:
+    branches: [main]
+    paths: ['corrections/**']
+  workflow_call:
+    inputs:
+      batch_size: {type: string, default: '3'}
+      message_ids: {type: string, default: ''}
+      separator: {type: string, default: UVR-MDX-NET-Voc_FT.onnx}
+      resolution: {type: string, default: '1080'}
+      debug: {type: string, default: ''}
 
 permissions:
   contents: write
 
 concurrency:
-  group: mezmur-channel-progress
+  group: mezmur-generate
   cancel-in-progress: false
 
+env:
+  PYTHON_VERSION: '3.11'
+  MEZMUR_MODEL_CACHE: ${{ github.workspace }}/.model-cache
+
 jobs:
-  generate:
+  fetch:
+    name: Fetch songs from Telegram
     runs-on: ubuntu-24.04
-    timeout-minutes: 330
+    timeout-minutes: 30
+    outputs:
+      ids: ${{ steps.fetch.outputs.ids }}
+      has_songs: ${{ steps.fetch.outputs.has_songs }}
     env:
       GH_TOKEN: ${{ github.token }}
       TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
       TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
       TELEGRAM_SESSION: ${{ secrets.TELEGRAM_SESSION }}
       TELEGRAM_CHANNEL: ${{ vars.TELEGRAM_CHANNEL || '@amharicprotestantmezmurss' }}
-      OMP_NUM_THREADS: '2'
-      MKL_NUM_THREADS: '2'
+      LYRICS_CHANNELS: ${{ vars.LYRICS_CHANNELS }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Check secrets
+        shell: bash
+        run: |
+          for key in TELEGRAM_API_ID TELEGRAM_API_HASH TELEGRAM_SESSION; do
+            [ -n "${!key}" ] || { echo "::error::Missing repository secret: $key"; exit 1; }
+          done
+      - name: Which songs?
+        id: which
+        shell: bash
+        env:
+          INPUT_IDS: ${{ inputs.message_ids }}
+        run: |
+          ids="$INPUT_IDS"
+          if [ -z "$ids" ] && [ "${{ github.event_name }}" = "push" ]; then
+            ids=$(git diff --name-only HEAD~1 HEAD -- corrections | sed -n 's#corrections/\([0-9]\+\)\.txt#\1#p' | paste -sd, -)
+            echo "Corrections changed for: ${ids:-none}"
+          fi
+          echo "ids=$ids" >> "$GITHUB_OUTPUT"
+      - name: Install
+        run: pip install -e .
+      - name: Load progress
+        run: python -m mezmur.state load
+      - name: Download songs, nearby posts, photos; search lyrics channels
+        id: fetch
+        if: github.event_name != 'push' || steps.which.outputs.ids != '' || inputs.batch_size != ''
+        run: |
+          python -m mezmur.fetch --batch-size "${{ inputs.batch_size || '3' }}" --message-ids "${{ steps.which.outputs.ids }}" --output inputs
+      - uses: actions/upload-artifact@v4
+        if: steps.fetch.outputs.has_songs == 'true'
+        with:
+          name: inputs-${{ github.run_id }}
+          path: inputs/
+          retention-days: 2
+          compression-level: 0
+
+  song:
+    name: Song ${{ matrix.id }}
+    needs: fetch
+    if: needs.fetch.outputs.has_songs == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix:
+        id: ${{ fromJSON(needs.fetch.outputs.ids) }}
+    env:
+      PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+      PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+      OMP_NUM_THREADS: '4'
+      MEZMUR_DEBUG: ${{ inputs.debug }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
           cache-dependency-path: pyproject.toml
-      - name: Validate required secrets
-        shell: bash
+      - name: FFmpeg (static build with libass + x264)
         run: |
-          for key in TELEGRAM_API_ID TELEGRAM_API_HASH TELEGRAM_SESSION; do
-            if [ -z "${!key}" ]; then
-              echo "::error::Missing repository secret: $key"
-              exit 1
-            fi
-          done
-      - name: Cache open-source model weights
+          mkdir -p "$RUNNER_TEMP/ffmpeg"
+          curl -sSL https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz \
+            | tar xJ -C "$RUNNER_TEMP/ffmpeg" --strip-components=1
+          echo "$RUNNER_TEMP/ffmpeg/bin" >> "$GITHUB_PATH"
+      - name: Model cache
         uses: actions/cache@v4
         with:
-          path: |
-            .model-cache/
-            ~/.cache/torch/hub/checkpoints/
-          key: mezmur-models-${{ runner.os }}-${{ runner.arch }}-ethio-asr-htdemucs-v2
-      - name: Install FFmpeg and Ethiopic font
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg fonts-noto-core fontconfig
-      - name: Install CPU inference runtime
-        run: pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu
-      - name: Install pipeline
-        run: pip install -e '.[test]'
-      - name: Run tests
-        run: pytest -q
-      - name: Install vocal separation
-        if: inputs.separate_vocals
+          path: .model-cache
+          key: mezmur-models-v3-${{ inputs.separator || 'UVR-MDX-NET-Voc_FT.onnx' }}
+          restore-keys: mezmur-models-v3-
+      - name: Install
         run: |
           pip install torch==2.5.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cpu
-          pip install -e '.[vocals]'
-      - name: Load durable progress
-        run: python -m mezmur.state load
-      - name: Generate next songs
-        id: generate
-        env:
-          BATCH_SIZE: ${{ inputs.batch_size }}
-          RESOLUTION: ${{ inputs.resolution }}
-          SEPARATE: ${{ inputs.separate_vocals }}
-          MESSAGE_ID: ${{ inputs.message_id }}
+          pip install -e '.[render]'
+          python -c "from transformers import AutoProcessor, AutoModelForCTC; import cv2, onnxruntime; print('render env OK')"
+      - name: Install vocal separator (isolated)
+        if: (inputs.separator || 'UVR-MDX-NET-Voc_FT.onnx') != 'none'
         run: |
-          separation=--no-separate-vocals
-          if [ "$SEPARATE" = "true" ]; then separation=--separate-vocals; fi
-          mezmur --batch-size "$BATCH_SIZE" --height "$RESOLUTION" "$separation" --message-id "${MESSAGE_ID:-0}"
-      - name: Upload videos, lyrics, and descriptions
-        id: upload
-        if: ${{ !cancelled() && (steps.generate.outcome == 'success' || steps.generate.outcome == 'failure') }}
-        uses: actions/upload-artifact@v4
+          python -m venv "$RUNNER_TEMP/sep"
+          "$RUNNER_TEMP/sep/bin/pip" install -q torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu
+          "$RUNNER_TEMP/sep/bin/pip" install -q "audio-separator[cpu]>=0.39"
+          echo "AUDIO_SEPARATOR_BIN=$RUNNER_TEMP/sep/bin/audio-separator" >> "$GITHUB_ENV"
+      - name: Start private search engine (SearXNG, for lyrics and photos)
+        continue-on-error: true
+        run: |
+          docker run -d --name searxng -p 8888:8080 -v "$PWD/.github/searxng:/etc/searxng" \
+            -e SEARXNG_BASE_URL=http://localhost:8888/ searxng/searxng:latest >/dev/null
+          for i in $(seq 1 40); do
+            if curl -sf "http://localhost:8888/search?q=mezmur&format=json" >/dev/null; then
+              echo "SEARXNG_URL=http://localhost:8888" >> "$GITHUB_ENV"; echo "SearXNG ready"; break
+            fi
+            sleep 2
+          done
+      - uses: actions/download-artifact@v4
         with:
-          name: mezmur-${{ github.run_id }}-${{ github.run_attempt }}
-          path: output/
-          if-no-files-found: ignore
-          retention-days: 30
-          compression-level: 0
-      - name: Save progress after successful upload
-        if: ${{ success() && steps.generate.outputs.has_output == 'true' && steps.upload.outputs.artifact-id != '' }}
-        run: python -m mezmur.state save
-      - name: Run summary
-        if: always()
+          name: inputs-${{ github.run_id }}
+          path: inputs
+      - name: Make video, lyrics, thumbnails and upload kit
+        shell: bash
         run: |
-          echo 'Download the mezmur artifact on this run for the videos, lyrics and descriptions.' >> "$GITHUB_STEP_SUMMARY"
-          echo 'Progress advances only when the entire batch and artifact upload succeed. Review automatic lyrics before publishing.' >> "$GITHUB_STEP_SUMMARY"
-      - name: Remove temporary sessions and source media
+          out="output/song-${{ matrix.id }}"; mkdir -p "$out"
+          set +e
+          python -m mezmur.song --input "inputs/song-${{ matrix.id }}" --output "$out" \
+            --work ".runtime/work" --separator "${{ inputs.separator || 'UVR-MDX-NET-Voc_FT.onnx' }}" \
+            --height "${{ inputs.resolution || '1080' }}" 2>&1 | tee "$out/run.log"
+          code=${PIPESTATUS[0]}
+          if [ "$code" != 0 ]; then
+            echo "::error title=Song ${{ matrix.id }} failed::$(tail -n 12 "$out/run.log" | tr '\n' ' ' | cut -c1-900)"
+          fi
+          exit $code
+      - name: Summary
         if: always()
-        run: rm -rf .runtime
+        run: python -m mezmur.summary "output/song-${{ matrix.id }}" >> "$GITHUB_STEP_SUMMARY" || true
+      - name: Upload the YouTube kit (only what you upload)
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: mezmur-${{ matrix.id }}-run${{ github.run_id }}
+          path: |
+            output/song-${{ matrix.id }}/video.mp4
+            output/song-${{ matrix.id }}/thumbnail.jpg
+            output/song-${{ matrix.id }}/thumbnail-b.jpg
+            output/song-${{ matrix.id }}/thumbnail-c.jpg
+            output/song-${{ matrix.id }}/title.txt
+            output/song-${{ matrix.id }}/description.txt
+            output/song-${{ matrix.id }}/tags.txt
+            output/song-${{ matrix.id }}/pinned_comment.txt
+            output/song-${{ matrix.id }}/captions/
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 0
+      - name: Tell Telegram the video is ready
+        if: success() || failure()
+        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_NOTIFY_CHAT: ${{ vars.TELEGRAM_NOTIFY_CHAT || '@MyApplication_aman' }}
+        run: |
+          python -m mezmur.notify --folder "output/song-${{ matrix.id }}" --message-id "${{ matrix.id }}" \
+            --status "${{ job.status }}" --retention-days 3
+      - name: Upload the log (only if this song failed)
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: log-${{ matrix.id }}-run${{ github.run_id }}
+          path: output/song-${{ matrix.id }}/run.log
+          if-no-files-found: ignore
+          retention-days: 3
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bg-${{ matrix.id }}-${{ github.run_id }}
+          path: output/song-${{ matrix.id }}/backgrounds.json
+          retention-days: 2
+
+  finalize:
+    name: Save progress
+    needs: [fetch, song]
+    if: success() && needs.fetch.outputs.has_songs == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install requests PyYAML
+      - uses: actions/download-artifact@v4
+        with:
+          name: inputs-${{ github.run_id }}
+          path: inputs
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: bg-*-${{ github.run_id }}
+          path: bg
+      - name: Record completed batch
+        run: python -m mezmur.finalize --plan inputs/plan.json --backgrounds bg
+      - name: Where are my files?
+        run: |
+          echo "### Download each song from this run's **Artifacts** (mezmur-<message id>-run…)" >> "$GITHUB_STEP_SUMMARY"
+          echo "Inside: video.mp4, thumbnail.jpg (+ -b, -c), title.txt, description.txt, tags.txt, pinned_comment.txt, captions/" >> "$GITHUB_STEP_SUMMARY"
+          echo "Anything to check before publishing is listed per song above." >> "$GITHUB_STEP_SUMMARY"

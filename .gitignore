@@ -5,6 +5,8 @@ __pycache__/
 .env
 *.session*
 output/
+inputs/
+bg/
 .runtime/
 .model-cache/
 dist/

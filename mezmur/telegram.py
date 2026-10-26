@@ -44,16 +44,19 @@ async def select(client, entity, after: int, count: int):
 
 
 def song_info(message):
-    title, artist = "", ""
+    """Raw Telegram fields; names.resolve() turns them into clean titles/artists."""
+    title, artist, filename, seconds = "", "", "", 0
     for attribute in message.document.attributes:
         title = getattr(attribute, "title", "") or title
         artist = getattr(attribute, "performer", "") or artist
-    if not title:
-        title = ((message.raw_text or "").splitlines() or [""])[0].strip()
+        filename = getattr(attribute, "file_name", "") or filename
+        seconds = getattr(attribute, "duration", 0) or seconds
     return {
         "message_id": message.id,
-        "title": (title or f"Mezmur {message.id}")[:160],
-        "artist": artist[:120],
+        "title": (title or "")[:200],
+        "performer": (artist or "")[:160],
+        "filename": filename[:200],
+        "duration": seconds,
     }
 
 
