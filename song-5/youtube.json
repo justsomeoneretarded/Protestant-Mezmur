@@ -1,0 +1,103 @@
+{
+  "titles": [
+    "Yishak Sedik kebur adera ክቡር አደራ ይስሐቅ ሰድቅ lyrics | Amharic Mezmur",
+    "ክቡር አደራ - ይስሐቅ ሰድቅ | Kebur Adera - Yishak Sedik | Mezmur Lyrics ግጥም",
+    "Yishak Sedik - Kebur Adera (ክቡር አደራ) ይስሐቅ ሰድቅ | New Amharic Protestant Mezmur Lyrics"
+  ],
+  "recommended_title": "Yishak Sedik kebur adera ክቡር አደራ ይስሐቅ ሰድቅ lyrics | Amharic Mezmur",
+  "description_file": "description.txt",
+  "tags": [
+    "ክቡር አደራ",
+    "Kebur Adera",
+    "ይስሐቅ ሰድቅ",
+    "Yishak Sedik",
+    "Kebur Adera lyrics",
+    "ክቡር አደራ ግጥም",
+    "Yishak Sedik Kebur Adera",
+    "ይስሐቅ ሰድቅ ክቡር አደራ",
+    "Yishak Sedik mezmur",
+    "Yishak Sedik new song",
+    "ይስሐቅ ሰድቅ መዝሙር",
+    "Kebur Adera Yishak Sedik lyrics",
+    "amharic mezmur",
+    "protestant mezmur",
+    "ethiopian gospel song",
+    "amharic worship song",
+    "mezmur lyrics",
+    "amharic mezmur lyrics",
+    "new amharic mezmur",
+    "ethiopian protestant mezmur",
+    "የፕሮቴስታንት መዝሙር",
+    "አዲስ መዝሙር",
+    "የአምልኮ መዝሙር",
+    "መዝሙር ግጥም"
+  ],
+  "category": "Music (10)",
+  "language": "Amharic",
+  "chapters": [
+    {
+      "start": 0.0,
+      "label": "Intro"
+    },
+    {
+      "start": 25.841159878247772,
+      "label": "Verse 1 • ስንኝ 1"
+    },
+    {
+      "start": 77.54335424250031,
+      "label": "Instrumental • ሙዚቃ"
+    },
+    {
+      "start": 91.84403345048325,
+      "label": "Verse 2 • ስንኝ 2"
+    },
+    {
+      "start": 116.18503658842727,
+      "label": "Instrumental • ሙዚቃ"
+    },
+    {
+      "start": 139.7661198380821,
+      "label": "Verse 3 • ስንኝ 3"
+    },
+    {
+      "start": 167.1273110643906,
+      "label": "Verse 4 • ስንኝ 4"
+    },
+    {
+      "start": 184.84808257499685,
+      "label": "Verse 5 • ስንኝ 5"
+    },
+    {
+      "start": 209.84917104932848,
+      "label": "Verse 6 • ስንኝ 6"
+    },
+    {
+      "start": 257.7712574369273,
+      "label": "Verse 7 • ስንኝ 7"
+    }
+  ],
+  "thumbnails": [
+    "thumbnail.jpg",
+    "thumbnail-b.jpg",
+    "thumbnail-c.jpg"
+  ],
+  "captions": [
+    {
+      "file": "captions/am.srt",
+      "language": "Amharic"
+    },
+    {
+      "file": "captions/am-Latn.srt",
+      "language": "Amharic (romanized, optional)"
+    }
+  ],
+  "end_screen_from": null,
+  "made_for_kids": false,
+  "review": {
+    "needs_review": true,
+    "reasons": [
+      "No published lyrics could be verified for this song — the words are an automatic transcription. Fix them in corrections/5.txt and re-run.",
+      "Edit correction-template.txt and commit it as corrections/5.txt to re-make this video with the right words (timing is redone automatically)."
+    ]
+  }
+}

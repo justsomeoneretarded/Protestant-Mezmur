@@ -1,0 +1,84 @@
+{
+  "message_id": 2,
+  "names": {
+    "title_am": "ሰባሪው ጌታ ከፊቴ ወቶአል",
+    "title_latin": "Sebariw Geta Kefite Wetoal",
+    "artist_am": "አዲስዓለም አሰፋ",
+    "artist_latin": "Addisalem Assefa",
+    "evidence": [
+      "Sebariw Geta Kefite Wetoal",
+      "Addisalem Assefa"
+    ],
+    "artist_known": true,
+    "album": "Sebariw Geta Kefite Wotoal",
+    "learned": {
+      "title_am": {
+        "from": "titles",
+        "similarity": 1.0,
+        "count": 2
+      }
+    }
+  },
+  "duration_seconds": 293.36,
+  "loudness_before": {
+    "input_i": -11.63,
+    "input_tp": 1.44,
+    "input_lra": 8.0
+  },
+  "lyrics_mode": "lyrics-aligned",
+  "lyrics_source": "site:mezmuroch.com https://mezmuroch.com/lyrics/addisalem-assefa/zemen-meta",
+  "artist_photo": "youtube video xM8tcbngVVU",
+  "backgrounds": [
+    {
+      "id": "nasa:JPL-20210701-WHATSUf-0001-Whats-Up-July-2021",
+      "credit": "What's Up: July 2021 Skywatching Tips from NASA  — NASA (public domain)",
+      "page": "https://images.nasa.gov/details/JPL-20210701-WHATSUf-0001-Whats-Up-July-2021",
+      "url": "https://images-assets.nasa.gov/video/JPL-20210701-WHATSUf-0001-Whats-Up-July-2021/JPL-20210701-WHATSUf-0001-Whats-Up-July-2021~medium.mp4",
+      "query": "milky way"
+    },
+    {
+      "id": "mixkit:4701-1080",
+      "url": "https://assets.mixkit.co/videos/4701/4701-1080.mp4",
+      "credit": "Video from Mixkit (mixkit.co, free licence)",
+      "page": "https://mixkit.co/free-stock-video/hands/",
+      "query": "worship hands raised"
+    },
+    {
+      "id": "commons:104812154",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/e/e5/Kostivere_karstiala%2C_Kostivere_karst_area%2C_spring_2021.webm?utm_source=commons.wikimedia.org&utm_campaign=api&utm_content=original",
+      "credit": "Kostivere karstiala, Kostivere karst area, spring 2021.webm — Sillerkiil (CC0)",
+      "page": "https://commons.wikimedia.org/wiki/File:Kostivere_karstiala,_Kostivere_karst_area,_spring_2021.webm",
+      "query": "spring nature"
+    },
+    {
+      "id": "commons:147798846",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/e/eb/Total_Solar_Eclipse_2024_FINAL_TRIMMED.webm?utm_source=commons.wikimedia.org&utm_campaign=api&utm_content=original",
+      "credit": "Total Solar Eclipse 2024 FINAL TRIMMED.webm — Wikimedia Commons (CC BY-SA 4.0)",
+      "page": "https://commons.wikimedia.org/wiki/File:Total_Solar_Eclipse_2024_FINAL_TRIMMED.webm",
+      "query": "sky clouds timelapse"
+    },
+    {
+      "id": "commons:164728681",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/6/6f/Sunset_on_severe_storms_over_the_Southern_Great_Plains_%28CIRA_2019-04-18%29.webm?utm_source=commons.wikimedia.org&utm_campaign=api&utm_content=original",
+      "credit": "Sunset on severe storms over the Southern Great Plains (CIRA 2019-04-18).webm — GOES imagery: CSU/CIRA &amp; NOAA (Public domain)",
+      "page": "https://commons.wikimedia.org/wiki/File:Sunset_on_severe_storms_over_the_Southern_Great_Plains_(CIRA_2019-04-18).webm",
+      "query": "ocean sunset"
+    }
+  ],
+  "tempo_bpm": 105.9,
+  "timings_seconds": {
+    "master": 17.8,
+    "separation": 345.1,
+    "acoustic_model": 216.5,
+    "lyrics_search": 24.6,
+    "alignment": 13.6,
+    "photos": 4.3,
+    "footage": 154.0,
+    "render": 552.4
+  },
+  "review": {
+    "needs_review": false,
+    "reasons": []
+  },
+  "model": "badrex/Ethio-ASR-amharic"
+}

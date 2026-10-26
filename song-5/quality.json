@@ -1,0 +1,210 @@
+{
+  "mode": "transcription",
+  "candidates": [
+    {
+      "source": "telegram:joined chat tikvahethiopia",
+      "url": "https://t.me/tikvahethiopia/82332",
+      "similarity": {
+        "trigram_recall": 0.146,
+        "trigram_precision": 0.06,
+        "word_recall": 0.078,
+        "score": 0.105
+      },
+      "phrases": 0,
+      "matched": 0,
+      "null": 73,
+      "matched_share": 0.0,
+      "mean_deficit": null,
+      "complete_share": 0.0,
+      "gain_per_vocal_frame": 0.001,
+      "score": 58.006,
+      "lines_used": 0,
+      "lines_total": 11,
+      "lines_share": 0.0,
+      "seconds": 1.4,
+      "accepted": false
+    },
+    {
+      "source": "telegram:joined chat NatnaelMekonnen21",
+      "url": "https://t.me/NatnaelMekonnen21/45722",
+      "similarity": {
+        "trigram_recall": 0.121,
+        "trigram_precision": 0.05,
+        "word_recall": 0.104,
+        "score": 0.101
+      },
+      "phrases": 0,
+      "matched": 0,
+      "null": 73,
+      "matched_share": 0.0,
+      "mean_deficit": null,
+      "complete_share": 0.0,
+      "gain_per_vocal_frame": 0.001,
+      "score": 56.679,
+      "lines_used": 0,
+      "lines_total": 13,
+      "lines_share": 0.0,
+      "seconds": 1.5,
+      "accepted": false
+    },
+    {
+      "source": "telegram:joined chat NatnaelMekonnen21",
+      "url": "https://t.me/NatnaelMekonnen21/26700",
+      "similarity": {
+        "trigram_recall": 0.143,
+        "trigram_precision": 0.039,
+        "word_recall": 0.078,
+        "score": 0.1
+      },
+      "phrases": 0,
+      "matched": 0,
+      "null": 73,
+      "matched_share": 0.0,
+      "mean_deficit": null,
+      "complete_share": 0.0,
+      "gain_per_vocal_frame": 0.0,
+      "score": 55.809,
+      "lines_used": 0,
+      "lines_total": 12,
+      "lines_share": 0.0,
+      "seconds": 3.0,
+      "accepted": false
+    },
+    {
+      "source": "telegram:joined chat SSport_Ethiopia",
+      "url": "https://t.me/SSport_Ethiopia/266132",
+      "similarity": {
+        "trigram_recall": 0.119,
+        "trigram_precision": 0.046,
+        "word_recall": 0.091,
+        "score": 0.094
+      },
+      "phrases": 0,
+      "matched": 0,
+      "null": 73,
+      "matched_share": 0.0,
+      "mean_deficit": null,
+      "complete_share": 0.0,
+      "gain_per_vocal_frame": 0.0,
+      "score": 54.529,
+      "lines_used": 0,
+      "lines_total": 21,
+      "lines_share": 0.0,
+      "seconds": 1.9,
+      "accepted": false
+    },
+    {
+      "source": "telegram:joined chat NatnaelMekonnen21",
+      "url": "https://t.me/NatnaelMekonnen21/47322",
+      "similarity": {
+        "trigram_recall": 0.119,
+        "trigram_precision": 0.069,
+        "word_recall": 0.052,
+        "score": 0.085
+      },
+      "phrases": 2,
+      "matched": 2,
+      "null": 73,
+      "matched_share": 0.013,
+      "mean_deficit": 0.111,
+      "complete_share": 0.0,
+      "gain_per_vocal_frame": 0.003,
+      "score": 62.989,
+      "lines_used": 1,
+      "lines_total": 9,
+      "lines_share": 0.111,
+      "seconds": 1.2,
+      "accepted": false
+    },
+    {
+      "source": "telegram:joined chat NatnaelMekonnen21",
+      "url": "https://t.me/NatnaelMekonnen21/48809",
+      "similarity": {
+        "trigram_recall": 0.094,
+        "trigram_precision": 0.062,
+        "word_recall": 0.065,
+        "score": 0.077
+      },
+      "phrases": 0,
+      "matched": 0,
+      "null": 73,
+      "matched_share": 0.0,
+      "mean_deficit": null,
+      "complete_share": 0.0,
+      "gain_per_vocal_frame": 0.0,
+      "score": 54.529,
+      "lines_used": 0,
+      "lines_total": 8,
+      "lines_share": 0.0,
+      "seconds": 1.0,
+      "accepted": false
+    },
+    {
+      "source": "telegram:joined chat tikvahethiopia",
+      "url": "https://t.me/tikvahethiopia/106785",
+      "similarity": {
+        "trigram_recall": 0.11,
+        "trigram_precision": 0.06,
+        "word_recall": 0.039,
+        "score": 0.075
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:joined chat 4-3-3 ስፖርት በኢትዮጵያ™",
+      "url": "",
+      "similarity": {
+        "trigram_recall": 0.079,
+        "trigram_precision": 0.047,
+        "word_recall": 0.078,
+        "score": 0.072
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:joined chat Addis_Reporter",
+      "url": "https://t.me/Addis_Reporter/10937",
+      "similarity": {
+        "trigram_recall": 0.1,
+        "trigram_precision": 0.054,
+        "word_recall": 0.026,
+        "score": 0.065
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:joined chat ethio_mereja",
+      "url": "https://t.me/ethio_mereja/24014",
+      "similarity": {
+        "trigram_recall": 0.1,
+        "trigram_precision": 0.054,
+        "word_recall": 0.026,
+        "score": 0.065
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:joined chat NatnaelMekonnen21",
+      "url": "https://t.me/NatnaelMekonnen21/36632",
+      "similarity": {
+        "trigram_recall": 0.064,
+        "trigram_precision": 0.066,
+        "word_recall": 0.026,
+        "score": 0.051
+      },
+      "rejected": "text mismatch"
+    }
+  ],
+  "lrc_check": null,
+  "alignment": {},
+  "phrases": [],
+  "draft_text": "መጫ አ ላምተኝና ት ና ከደመሙት ጋራ አ ትዛመዱ ከቷ ትላመዱ ስትሰሩ ስትከናወኑ ከማይወዱ ቃ ብረዱ እየለቀ ስወ ግዱ ሰይጣን ያቃተውን በሰው እዳተጎዱ አፋ ታ ችን ለማ መ ንሀድ መ ና ይርቁመ በ ቃሉ መ ታ ደስ ለመዳናችን ነው የመንፈሱ መውቀስ ምስ ነፈሬ ለጠማ ቀደስ ርቅማማላ ይህ ዋ ህ ያረጋው እግዚአብሔ ርና ክ ብር ነ መልክ የሚታየው ዋ ጋ እግዚአብሔር ነ ሰማ ይና ክ ብር ነ ህይወት የሚታየው የጠንትጋ ደልተርክ ታ ችውን ታሪክ ሆኗ ተው ት ያ ለፈው ሁሉ አልፏ እ ስኬ ዛሬ በዘፀተ ድብደባማ ተከሰዙ የ ተሸለው ክብር ቀር እንደተ ደርሱ የተላንት እስረኛ ሆኖ ታልቅሱ ይ ጅወት ከዚያቤ እየተገ ት ቆመ ነገር የሞላ ት! ደ ማ ቶኪያ እንዳይኖረ በመሸጥ መሸቀጥ ስናራክሳ ት አቃለን ስንኖር እንዳላሰር ቀት ዋጋ በመስጠ ት ንጠብ ቃ ት በአክብሮት አክብር ያ ዛት ት ህይወት ከእግዚአብ ገር የሞላ ት ተ ንዳ ይኖረ ሆ ነሳን መሸገጥ ስናራክዛ አቃለን ስን ረንዳን አሰር ቅ ዋጋ በመስጠ ት እንጠብ ቀ በአክብሮት አክብር ዛ ቦራ ደራ ት ከ ቦራደራ ራ ደራ ።",
+  "draft_word_count": 161,
+  "review": {
+    "needs_review": true,
+    "reasons": [
+      "No published lyrics could be verified for this song — the words are an automatic transcription. Fix them in corrections/5.txt and re-run.",
+      "Edit correction-template.txt and commit it as corrections/5.txt to re-make this video with the right words (timing is redone automatically)."
+    ]
+  }
+}

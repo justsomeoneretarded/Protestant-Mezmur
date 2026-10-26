@@ -1,0 +1,83 @@
+{
+  "titles": [
+    "Addisalem Assefa sebariw geta kefite wetoal ሰባሪው ጌታ ከፊቴ ወቶአል አዲስዓለም አሰፋ lyrics | Amharic Mezmur",
+    "ሰባሪው ጌታ ከፊቴ ወቶአል - አዲስዓለም አሰፋ | Sebariw Geta Kefite Wetoal - Addisalem Assefa | Mezmur Lyrics ግጥም",
+    "Addisalem Assefa - Sebariw Geta Kefite Wetoal (ሰባሪው ጌታ ከፊቴ ወቶአል) አዲስዓለም አሰፋ"
+  ],
+  "recommended_title": "Addisalem Assefa sebariw geta kefite wetoal ሰባሪው ጌታ ከፊቴ ወቶአል አዲስዓለም አሰፋ lyrics | Amharic Mezmur",
+  "description_file": "description.txt",
+  "tags": [
+    "ሰባሪው ጌታ ከፊቴ ወቶአል",
+    "Sebariw Geta Kefite Wetoal",
+    "አዲስዓለም አሰፋ",
+    "Addisalem Assefa",
+    "Sebariw Geta Kefite Wetoal lyrics",
+    "ሰባሪው ጌታ ከፊቴ ወቶአል ግጥም",
+    "Addisalem Assefa Sebariw Geta Kefite Wetoal",
+    "አዲስዓለም አሰፋ ሰባሪው ጌታ ከፊቴ ወቶአል",
+    "Addisalem Assefa mezmur",
+    "Addisalem Assefa new song",
+    "አዲስዓለም አሰፋ መዝሙር",
+    "Sebariw Geta Kefite Wotoal",
+    "Sebariw Geta Kefite Wetoal Addisalem Assefa lyrics",
+    "amharic mezmur",
+    "protestant mezmur",
+    "ethiopian gospel song",
+    "amharic worship song",
+    "mezmur lyrics",
+    "አዲስ መዝሙር"
+  ],
+  "category": "Music (10)",
+  "language": "Amharic",
+  "chapters": [
+    {
+      "start": 0.0,
+      "label": "Intro"
+    },
+    {
+      "start": 19.159668308562857,
+      "label": "Chorus • አዝማች"
+    },
+    {
+      "start": 55.319080702890645,
+      "label": "Verse 1 • ስንኝ 1"
+    },
+    {
+      "start": 100.49833821925279,
+      "label": "Instrumental • ሙዚቃ"
+    },
+    {
+      "start": 118.03802513976002,
+      "label": "Chorus • አዝማች"
+    },
+    {
+      "start": 185.9968957935642,
+      "label": "Verse 2 • ስንኝ 2"
+    },
+    {
+      "start": 204.23659268475592,
+      "label": "Chorus • አዝማች"
+    }
+  ],
+  "thumbnails": [
+    "thumbnail.jpg",
+    "thumbnail-b.jpg",
+    "thumbnail-c.jpg"
+  ],
+  "captions": [
+    {
+      "file": "captions/am.srt",
+      "language": "Amharic"
+    },
+    {
+      "file": "captions/am-Latn.srt",
+      "language": "Amharic (romanized, optional)"
+    }
+  ],
+  "end_screen_from": null,
+  "made_for_kids": false,
+  "review": {
+    "needs_review": false,
+    "reasons": []
+  }
+}

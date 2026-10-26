@@ -1,0 +1,610 @@
+{
+  "mode": "lyrics-aligned",
+  "candidates": [
+    {
+      "source": "lrclib",
+      "url": "https://lrclib.net/api/get/14020327",
+      "similarity": {
+        "trigram_recall": 0.331,
+        "trigram_precision": 0.281,
+        "word_recall": 0.526,
+        "score": 0.389
+      },
+      "phrases": 41,
+      "matched": 41,
+      "null": 12,
+      "matched_share": 0.81,
+      "mean_deficit": 0.283,
+      "complete_share": 0.78,
+      "gain_per_vocal_frame": 0.237,
+      "score": 789.182,
+      "lines_used": 34,
+      "lines_total": 46,
+      "lines_share": 0.739,
+      "seconds": 3.2,
+      "accepted": true
+    },
+    {
+      "source": "site:mezmuroch.com",
+      "url": "https://mezmuroch.com/lyrics/addisalem-assefa/zemen-meta",
+      "similarity": {
+        "trigram_recall": 0.328,
+        "trigram_precision": 0.283,
+        "word_recall": 0.526,
+        "score": 0.388
+      },
+      "phrases": 40,
+      "matched": 40,
+      "null": 13,
+      "matched_share": 0.815,
+      "mean_deficit": 0.272,
+      "complete_share": 0.8,
+      "gain_per_vocal_frame": 0.238,
+      "score": 794.557,
+      "lines_used": 23,
+      "lines_total": 28,
+      "lines_share": 0.821,
+      "seconds": 2.1,
+      "accepted": true
+    },
+    {
+      "source": "site:mezmuroch.com",
+      "url": "https://mezmuroch.com/lyrics/addisalem-assefa/zemen-meta",
+      "similarity": {
+        "trigram_recall": 0.117,
+        "trigram_precision": 0.346,
+        "word_recall": 0.196,
+        "score": 0.19
+      },
+      "phrases": 14,
+      "matched": 14,
+      "null": 56,
+      "matched_share": 0.355,
+      "mean_deficit": 0.231,
+      "complete_share": 0.571,
+      "gain_per_vocal_frame": 0.104,
+      "score": 322.259,
+      "lines_used": 4,
+      "lines_total": 4,
+      "lines_share": 1.0,
+      "seconds": 0.6,
+      "accepted": false
+    },
+    {
+      "source": "site:mezmuroch.com",
+      "url": "https://mezmuroch.com/lyrics/addisalem-assefa/yetebekut-gieta",
+      "similarity": {
+        "trigram_recall": 0.092,
+        "trigram_precision": 0.1,
+        "word_recall": 0.175,
+        "score": 0.123
+      },
+      "phrases": 8,
+      "matched": 8,
+      "null": 80,
+      "matched_share": 0.043,
+      "mean_deficit": 0.191,
+      "complete_share": 0.0,
+      "gain_per_vocal_frame": 0.011,
+      "score": -9.281,
+      "lines_used": 2,
+      "lines_total": 37,
+      "lines_share": 0.054,
+      "seconds": 2.5,
+      "accepted": false
+    },
+    {
+      "source": "site:mezmuroch.com",
+      "url": "https://mezmuroch.com/lyrics/addisalem-assefa/yetebekut-gieta",
+      "similarity": {
+        "trigram_recall": 0.092,
+        "trigram_precision": 0.098,
+        "word_recall": 0.175,
+        "score": 0.122
+      },
+      "phrases": 8,
+      "matched": 8,
+      "null": 80,
+      "matched_share": 0.043,
+      "mean_deficit": 0.191,
+      "complete_share": 0.0,
+      "gain_per_vocal_frame": 0.011,
+      "score": -9.281,
+      "lines_used": 2,
+      "lines_total": 36,
+      "lines_share": 0.056,
+      "seconds": 2.5,
+      "accepted": false
+    },
+    {
+      "source": "web:legeta316.com",
+      "url": "https://legeta316.com/lyrics/siwed-gieta--69a1ecb4cb1454b2c3a8ac5f",
+      "similarity": {
+        "trigram_recall": 0.052,
+        "trigram_precision": 0.082,
+        "word_recall": 0.082,
+        "score": 0.069
+      },
+      "phrases": 0,
+      "matched": 0,
+      "null": 81,
+      "matched_share": 0.0,
+      "mean_deficit": null,
+      "complete_share": 0.0,
+      "gain_per_vocal_frame": 0.004,
+      "score": -32.002,
+      "lines_used": 0,
+      "lines_total": 37,
+      "lines_share": 0.0,
+      "seconds": 2.4,
+      "accepted": false
+    }
+  ],
+  "lrc_check": null,
+  "alignment": {
+    "phrases": 40,
+    "matched": 40,
+    "null": 13,
+    "matched_share": 0.8145526613816535,
+    "mean_deficit": 0.27207499999999996,
+    "complete_share": 0.8,
+    "gain_per_vocal_frame": 0.23821114430213605,
+    "score": 794.5574914159007,
+    "lines_used": 23,
+    "lines_total": 28,
+    "completion": {
+      "filled_lines": 18,
+      "completed_lines": 2,
+      "estimated_words": 21,
+      "recognised_in_gaps": 88
+    }
+  },
+  "phrases": [
+    {
+      "start": 19.96,
+      "end": 23.48,
+      "line": 0,
+      "words": [
+        0,
+        4
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.145
+    },
+    {
+      "start": 24.48,
+      "end": 28.0,
+      "line": 1,
+      "words": [
+        5,
+        9
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.118
+    },
+    {
+      "start": 28.96,
+      "end": 32.64,
+      "line": 2,
+      "words": [
+        10,
+        16
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.347
+    },
+    {
+      "start": 33.48,
+      "end": 37.32,
+      "line": 3,
+      "words": [
+        17,
+        21
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.215
+    },
+    {
+      "start": 37.96,
+      "end": 41.48,
+      "line": 0,
+      "words": [
+        0,
+        4
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.263
+    },
+    {
+      "start": 42.48,
+      "end": 46.0,
+      "line": 1,
+      "words": [
+        5,
+        9
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.094
+    },
+    {
+      "start": 46.96,
+      "end": 49.52,
+      "line": 2,
+      "words": [
+        10,
+        14
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.215
+    },
+    {
+      "start": 51.48,
+      "end": 55.32,
+      "line": 3,
+      "words": [
+        17,
+        21
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.112
+    },
+    {
+      "start": 55.92,
+      "end": 60.24,
+      "line": 4,
+      "words": [
+        22,
+        25
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.178
+    },
+    {
+      "start": 65.0,
+      "end": 68.28,
+      "line": 6,
+      "words": [
+        30,
+        33
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.25
+    },
+    {
+      "start": 75.04,
+      "end": 76.36,
+      "line": 8,
+      "words": [
+        41,
+        42
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.16
+    },
+    {
+      "start": 81.28,
+      "end": 83.44,
+      "line": 9,
+      "words": [
+        46,
+        47
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.119
+    },
+    {
+      "start": 94.04,
+      "end": 95.64,
+      "line": 11,
+      "words": [
+        57,
+        59
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.576
+    },
+    {
+      "start": 118.84,
+      "end": 124.56,
+      "line": 12,
+      "words": [
+        63,
+        69
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.232
+    },
+    {
+      "start": 125.72,
+      "end": 131.48,
+      "line": 13,
+      "words": [
+        70,
+        75
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.139
+    },
+    {
+      "start": 132.32,
+      "end": 138.44,
+      "line": 14,
+      "words": [
+        76,
+        83
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.38
+    },
+    {
+      "start": 139.16,
+      "end": 145.0,
+      "line": 15,
+      "words": [
+        84,
+        91
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.256
+    },
+    {
+      "start": 145.84,
+      "end": 151.52,
+      "line": 12,
+      "words": [
+        63,
+        69
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.199
+    },
+    {
+      "start": 152.68,
+      "end": 158.48,
+      "line": 13,
+      "words": [
+        70,
+        75
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.131
+    },
+    {
+      "start": 159.28,
+      "end": 165.44,
+      "line": 14,
+      "words": [
+        76,
+        83
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.263
+    },
+    {
+      "start": 166.16,
+      "end": 172.0,
+      "line": 15,
+      "words": [
+        84,
+        91
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.246
+    },
+    {
+      "start": 173.0,
+      "end": 175.36,
+      "line": 16,
+      "words": [
+        92,
+        95
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.337
+    },
+    {
+      "start": 176.36,
+      "end": 178.72,
+      "line": 16,
+      "words": [
+        92,
+        95
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.355
+    },
+    {
+      "start": 179.76,
+      "end": 182.08,
+      "line": 16,
+      "words": [
+        92,
+        95
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.34
+    },
+    {
+      "start": 183.12,
+      "end": 185.48,
+      "line": 16,
+      "words": [
+        92,
+        95
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.325
+    },
+    {
+      "start": 186.8,
+      "end": 190.72,
+      "line": 17,
+      "words": [
+        96,
+        101
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.349
+    },
+    {
+      "start": 191.32,
+      "end": 194.48,
+      "line": 18,
+      "words": [
+        102,
+        106
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.39
+    },
+    {
+      "start": 195.88,
+      "end": 199.52,
+      "line": 19,
+      "words": [
+        109,
+        112
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.111
+    },
+    {
+      "start": 200.36,
+      "end": 204.08,
+      "line": 20,
+      "words": [
+        113,
+        117
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.351
+    },
+    {
+      "start": 205.04,
+      "end": 207.48,
+      "line": 21,
+      "words": [
+        118,
+        122
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.483
+    },
+    {
+      "start": 208.4,
+      "end": 210.8,
+      "line": 22,
+      "words": [
+        123,
+        126
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.163
+    },
+    {
+      "start": 211.8,
+      "end": 214.2,
+      "line": 21,
+      "words": [
+        118,
+        122
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.5
+    },
+    {
+      "start": 215.16,
+      "end": 217.6,
+      "line": 22,
+      "words": [
+        123,
+        126
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.24
+    },
+    {
+      "start": 218.6,
+      "end": 222.08,
+      "line": 23,
+      "words": [
+        127,
+        131
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.273
+    },
+    {
+      "start": 223.08,
+      "end": 226.56,
+      "line": 23,
+      "words": [
+        127,
+        131
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.27
+    },
+    {
+      "start": 227.56,
+      "end": 231.08,
+      "line": 23,
+      "words": [
+        127,
+        131
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.268
+    },
+    {
+      "start": 232.08,
+      "end": 235.6,
+      "line": 23,
+      "words": [
+        127,
+        131
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.24
+    },
+    {
+      "start": 244.4,
+      "end": 246.68,
+      "line": 25,
+      "words": [
+        139,
+        140
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.262
+    },
+    {
+      "start": 257.16,
+      "end": 258.8,
+      "line": 27,
+      "words": [
+        150,
+        152
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.418
+    },
+    {
+      "start": 284.16,
+      "end": 285.8,
+      "line": 11,
+      "words": [
+        57,
+        59
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.57
+    }
+  ],
+  "draft_text": "ሞቴን በህይወት ቀይሮ ነገር ገለብት በጭንቴ ያሰፋ ከፍታን ለኔ ሊሰት አ ዘመን መጣ ፊቴ ፋሪስ ብየምትስፍ ዳ ሰብሬ የምወታበት ሞቲም በህይወት ቀይሮ ነገር የገነብት በጭንቀቴ ያሰፋ ከፍታን ለኔ ሊሰት አ ዘመን መጣ ከፊ ፋሪስ በየ ሰ የ ዳግም ላ ሰብሬ የወ በት ባሪው ክረምቱአ አምን የ ልምታ እ መ በሚያ አ ም ት የ ት እጅ ላይ የመችንበት የተናቴ አፍ የሚዘጋበት መ ት በ ማ ተርግ ና ብረሰ ከ ታዘ ኝ እግዚአብር ነው ረሹ ያለኝ ለት ንጋጋ ት የበታበት እጅን በአፊ ላይ የመጅንበት የተናቴ አፍ የሚዘጋበት ዘመን የመገብ በት በ ማስ ሸ የናሱ ጃፍ በርግ ው ል ሰ ከ ቢ እግዚያብሔር ነው ብረሽም ያለኝ እግዚብሔር ነው ብረሽም ያለኝ እግዚያብሔር ነው ብረሽም ያለኝ እግዚያብሔር ነው ብረሽም ያለ እግዚብሔር ነው ብረም ያነ በጋ ለ በደና ሰ አሻገረኝ ስ ማንኩራኮረ ታስሮ ጨነገ እኔ ግ ከባቡን ደስ የማን እንባ ባነዳ ደነም ጌታ! ዘመናስቆትሮ ያቆማል ፍታ የማን ሙንባ ባነዳ ደነም ጌታ ዘመናስቆትሮ ያጎማል ከፍታ ከፊ በንጌ ታ ማተሜን እየፈትራ ከፊ በንጌ ታ ማተሜን እየፈጥ ፊበን ታ ማተሜን እየፈት ከፊበንጌ ታ ተሜን እፈት አምን አ ም አምን የ ንምታ አ",
+  "draft_word_count": 174,
+  "review": {
+    "needs_review": false,
+    "reasons": []
+  }
+}

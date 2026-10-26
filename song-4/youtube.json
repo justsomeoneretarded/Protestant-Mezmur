@@ -1,0 +1,100 @@
+{
+  "titles": [
+    "Yishak Sedik temesgen ተመስገን ይስሐቅ ሰድቅ lyrics | Amharic Mezmur",
+    "ተመስገን - ይስሐቅ ሰድቅ | Temesgen - Yishak Sedik | Mezmur Lyrics ግጥም",
+    "Yishak Sedik - Temesgen (ተመስገን) ይስሐቅ ሰድቅ | New Amharic Protestant Mezmur Lyrics"
+  ],
+  "recommended_title": "Yishak Sedik temesgen ተመስገን ይስሐቅ ሰድቅ lyrics | Amharic Mezmur",
+  "description_file": "description.txt",
+  "tags": [
+    "ተመስገን",
+    "Temesgen",
+    "ይስሐቅ ሰድቅ",
+    "Yishak Sedik",
+    "Temesgen lyrics",
+    "ተመስገን ግጥም",
+    "Yishak Sedik Temesgen",
+    "ይስሐቅ ሰድቅ ተመስገን",
+    "Yishak Sedik mezmur",
+    "Yishak Sedik new song",
+    "ይስሐቅ ሰድቅ መዝሙር",
+    "Temesgen Yishak Sedik lyrics",
+    "amharic mezmur",
+    "protestant mezmur",
+    "ethiopian gospel song",
+    "amharic worship song",
+    "mezmur lyrics",
+    "amharic mezmur lyrics",
+    "new amharic mezmur",
+    "ethiopian protestant mezmur",
+    "የፕሮቴስታንት መዝሙር",
+    "አዲስ መዝሙር",
+    "የአምልኮ መዝሙር",
+    "መዝሙር ግጥም"
+  ],
+  "category": "Music (10)",
+  "language": "Amharic",
+  "chapters": [
+    {
+      "start": 0.0,
+      "label": "Intro"
+    },
+    {
+      "start": 44.241048086134825,
+      "label": "Verse 1 • ስንኝ 1"
+    },
+    {
+      "start": 159.6837157725135,
+      "label": "Verse 2 • ስንኝ 2"
+    },
+    {
+      "start": 179.0041653512019,
+      "label": "Chorus • አዝማች"
+    },
+    {
+      "start": 217.0050682317976,
+      "label": "Verse 3 • ስንኝ 3"
+    },
+    {
+      "start": 248.4057989135168,
+      "label": "Verse 4 • ስንኝ 4"
+    },
+    {
+      "start": 293.7668544460895,
+      "label": "Verse 5 • ስንኝ 5"
+    },
+    {
+      "start": 323.7675525496429,
+      "label": "Verse 6 • ስንኝ 6"
+    },
+    {
+      "start": 379.9688603302996,
+      "label": "Chorus • አዝማች"
+    },
+    {
+      "start": 419.38974738721475,
+      "label": "Outro"
+    }
+  ],
+  "thumbnails": [
+    "thumbnail.jpg",
+    "thumbnail-b.jpg",
+    "thumbnail-c.jpg"
+  ],
+  "captions": [
+    {
+      "file": "captions/am.srt",
+      "language": "Amharic"
+    },
+    {
+      "file": "captions/am-Latn.srt",
+      "language": "Amharic (romanized, optional)"
+    }
+  ],
+  "end_screen_from": "7:19",
+  "made_for_kids": false,
+  "review": {
+    "needs_review": false,
+    "reasons": []
+  }
+}

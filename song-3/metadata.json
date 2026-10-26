@@ -1,0 +1,100 @@
+{
+  "message_id": 3,
+  "names": {
+    "title_am": "የሌለው አቻ",
+    "title_latin": "Yelelew Acha",
+    "artist_am": "ይስሐቅ ሰድቅ",
+    "artist_latin": "Yishak Sedik",
+    "evidence": [
+      "የሌለው አቻ",
+      "Yelelew acha",
+      "ይስሐቅ ሰድቅ",
+      "Yishak Sedik",
+      "የሌለው",
+      "አቻ",
+      "Yelelew",
+      "acha",
+      "ይስሐቅ",
+      "ሰድቅ",
+      "Yishak",
+      "Sedik",
+      "ይስሐቅ ሰዲቅ",
+      "አቻ የሌለው",
+      "Join us"
+    ],
+    "artist_known": true,
+    "album": ""
+  },
+  "duration_seconds": 431.38,
+  "loudness_before": {
+    "input_i": -9.7,
+    "input_tp": 0.95,
+    "input_lra": 3.1
+  },
+  "lyrics_mode": "transcription",
+  "lyrics_source": "automatic transcription (no verified lyrics found)",
+  "artist_photo": "embedded cover art",
+  "backgrounds": [
+    {
+      "id": "nasa:GSFC_20080822_HST_m10233_WFC3_UnPack",
+      "credit": "HST SM4 WFC3 Installation EVA Unpacking — NASA (public domain)",
+      "page": "https://images.nasa.gov/details/GSFC_20080822_HST_m10233_WFC3_UnPack",
+      "url": "https://images-assets.nasa.gov/video/GSFC_20080822_HST_m10233_WFC3_UnPack/GSFC_20080822_HST_m10233_WFC3_UnPack~medium.mp4",
+      "query": "galaxy hubble"
+    },
+    {
+      "id": "commons:15729415",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/transcoded/2/24/2011-07-06-timelapse-sky.ogv/2011-07-06-timelapse-sky.ogv.1080p.vp9.webm",
+      "credit": "2011-07-06-timelapse-sky.ogv — Thomas Bresson (CC BY 3.0)",
+      "page": "https://commons.wikimedia.org/wiki/File:2011-07-06-timelapse-sky.ogv",
+      "query": "sky clouds timelapse"
+    },
+    {
+      "id": "mixkit:4119-1080",
+      "url": "https://assets.mixkit.co/videos/4119/4119-1080.mp4",
+      "credit": "Video from Mixkit (mixkit.co, free licence)",
+      "page": "https://mixkit.co/free-stock-video/sunset/",
+      "query": "majestic sky sunset"
+    },
+    {
+      "id": "commons:122490737",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/transcoded/b/be/Dschimels%2C_aerial_video.webm/Dschimels%2C_aerial_video.webm.1080p.vp9.webm",
+      "credit": "Dschimels, aerial video.webm — Capricorn4049 (CC BY-SA 4.0)",
+      "page": "https://commons.wikimedia.org/wiki/File:Dschimels,_aerial_video.webm",
+      "query": "mountains aerial"
+    },
+    {
+      "id": "mixkit:2213-1080",
+      "url": "https://assets.mixkit.co/videos/2213/2213-1080.mp4",
+      "credit": "Video from Mixkit (mixkit.co, free licence)",
+      "page": "https://mixkit.co/free-stock-video/nature/",
+      "query": "sheep meadow"
+    },
+    {
+      "id": "mixkit:6734-720",
+      "url": "https://assets.mixkit.co/videos/6734/6734-720.mp4",
+      "credit": "Video from Mixkit (mixkit.co, free licence)",
+      "page": "https://mixkit.co/free-stock-video/sunrise/",
+      "query": "calm lake sunrise"
+    }
+  ],
+  "tempo_bpm": 120.0,
+  "timings_seconds": {
+    "master": 15.8,
+    "separation": 511.6,
+    "acoustic_model": 343.0,
+    "lyrics_search": 155.9,
+    "alignment": 24.7,
+    "photos": 5.1,
+    "footage": 192.4,
+    "render": 889.2
+  },
+  "review": {
+    "needs_review": true,
+    "reasons": [
+      "No published lyrics could be verified for this song — the words are an automatic transcription. Fix them in corrections/3.txt and re-run.",
+      "Edit correction-template.txt and commit it as corrections/3.txt to re-make this video with the right words (timing is redone automatically)."
+    ]
+  },
+  "model": "badrex/Ethio-ASR-amharic"
+}

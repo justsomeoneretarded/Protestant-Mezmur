@@ -1,0 +1,78 @@
+{
+  "message_id": 5,
+  "names": {
+    "title_am": "ክቡር አደራ",
+    "title_latin": "Kebur Adera",
+    "artist_am": "ይስሐቅ ሰድቅ",
+    "artist_latin": "Yishak Sedik",
+    "evidence": [
+      "ክቡር አደራ",
+      "Kebur Adera",
+      "ይስሐቅ ሰድቅ",
+      "Yishak Sedik",
+      "ክቡር",
+      "አደራ",
+      "Kebur",
+      "Adera",
+      "ይስሐቅ",
+      "ሰድቅ",
+      "Yishak",
+      "Sedik",
+      "ይስሐቅ ሰዲቅ",
+      "Join us"
+    ],
+    "artist_known": true,
+    "album": ""
+  },
+  "duration_seconds": 318.69,
+  "loudness_before": {
+    "input_i": -10.11,
+    "input_tp": 1.43,
+    "input_lra": 5.0
+  },
+  "lyrics_mode": "transcription",
+  "lyrics_source": "automatic transcription (no verified lyrics found)",
+  "artist_photo": "embedded cover art",
+  "backgrounds": [
+    {
+      "id": "commons:25079647",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/transcoded/6/62/Cheetahs_on_the_Edge_%28Director%27s_Cut%29.ogv/Cheetahs_on_the_Edge_%28Director%27s_Cut%29.ogv.1080p.vp9.webm",
+      "credit": "Cheetahs on the Edge (Director's Cut).ogv — Gregory Wilson (Director and cinematographer) (personal website) (CC BY 3.0)",
+      "page": "https://commons.wikimedia.org/wiki/File:Cheetahs_on_the_Edge_(Director%27s_Cut).ogv",
+      "query": "spring nature"
+    },
+    {
+      "id": "mixkit:1187-1080",
+      "url": "https://assets.mixkit.co/videos/1187/1187-1080.mp4",
+      "credit": "Video from Mixkit (mixkit.co, free licence)",
+      "page": "https://mixkit.co/free-stock-video/flowers/",
+      "query": "flowers field sunlight"
+    },
+    {
+      "id": "mixkit:41401-1080",
+      "url": "https://assets.mixkit.co/videos/41401/41401-1080.mp4",
+      "credit": "Video from Mixkit (mixkit.co, free licence)",
+      "page": "https://mixkit.co/free-stock-video/forest/",
+      "query": "light rays forest"
+    }
+  ],
+  "tempo_bpm": 81.8,
+  "timings_seconds": {
+    "master": 6.2,
+    "separation": 159.9,
+    "acoustic_model": 167.1,
+    "lyrics_search": 30.6,
+    "alignment": 10.4,
+    "photos": 4.8,
+    "footage": 135.4,
+    "render": 369.0
+  },
+  "review": {
+    "needs_review": true,
+    "reasons": [
+      "No published lyrics could be verified for this song — the words are an automatic transcription. Fix them in corrections/5.txt and re-run.",
+      "Edit correction-template.txt and commit it as corrections/5.txt to re-make this video with the right words (timing is redone automatically)."
+    ]
+  },
+  "model": "badrex/Ethio-ASR-amharic"
+}

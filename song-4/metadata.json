@@ -1,0 +1,71 @@
+{
+  "message_id": 4,
+  "names": {
+    "title_am": "ተመስገን",
+    "title_latin": "Temesgen",
+    "artist_am": "ይስሐቅ ሰድቅ",
+    "artist_latin": "Yishak Sedik",
+    "evidence": [
+      "ተመስገን",
+      "Temesgen",
+      "ይስሐቅ ሰድቅ",
+      "Yishak Sedik",
+      "ይስሐቅ",
+      "ሰድቅ",
+      "Yishak",
+      "Sedik",
+      "ይስሐቅ ሰዲቅ",
+      "Join us"
+    ],
+    "artist_known": true,
+    "album": ""
+  },
+  "duration_seconds": 459.29,
+  "loudness_before": {
+    "input_i": -9.91,
+    "input_tp": 0.87,
+    "input_lra": 4.0
+  },
+  "lyrics_mode": "lyrics-aligned",
+  "lyrics_source": "site:mezmuroch.com https://mezmuroch.com/lyrics/yishak-sedik/temesgen-2",
+  "artist_photo": "embedded cover art",
+  "backgrounds": [
+    {
+      "id": "commons:165951294",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/2/26/Grand_Canyon_Nat_Park-_Viewing_S_Rim_Sunset_00C_%28b-roll%29_%286223289529%29.webm?utm_source=commons.wikimedia.org&utm_campaign=api&utm_content=original",
+      "credit": "Grand Canyon Nat Park- Viewing S Rim Sunset 00C (b-roll) (6223289529).webm — Grand Canyon NPS (Public domain)",
+      "page": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_Nat_Park-_Viewing_S_Rim_Sunset_00C_(b-roll)_(6223289529).webm",
+      "query": "warm sunset"
+    },
+    {
+      "id": "commons:123217414",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/0/0d/Mountain_spring_20220903_165710.webm?utm_source=commons.wikimedia.org&utm_campaign=api&utm_content=original",
+      "credit": "Mountain spring 20220903 165710.webm — Orgio89 (CC BY-SA 4.0)",
+      "page": "https://commons.wikimedia.org/wiki/File:Mountain_spring_20220903_165710.webm",
+      "query": "spring nature"
+    },
+    {
+      "id": "commons:15729415",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/transcoded/2/24/2011-07-06-timelapse-sky.ogv/2011-07-06-timelapse-sky.ogv.1080p.vp9.webm",
+      "credit": "2011-07-06-timelapse-sky.ogv — Thomas Bresson (CC BY 3.0)",
+      "page": "https://commons.wikimedia.org/wiki/File:2011-07-06-timelapse-sky.ogv",
+      "query": "sky clouds timelapse"
+    }
+  ],
+  "tempo_bpm": 100.0,
+  "timings_seconds": {
+    "master": 15.8,
+    "separation": 514.8,
+    "acoustic_model": 338.3,
+    "lyrics_search": 27.3,
+    "alignment": 20.0,
+    "photos": 4.7,
+    "footage": 177.6,
+    "render": 881.4
+  },
+  "review": {
+    "needs_review": false,
+    "reasons": []
+  },
+  "model": "badrex/Ethio-ASR-amharic"
+}

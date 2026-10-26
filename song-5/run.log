@@ -1,0 +1,97 @@
+[5] ክቡር አደራ — ይስሐቅ ሰድቅ
+2026-10-26 15:49:43.166 - INFO - cli - Separator version 0.47.1 beginning with input path(s): .runtime/work/sep_input.wav
+[0;93m2026-10-26 15:49:44.125726152 [W:onnxruntime:Default, device_discovery.cc:95 GetPciBusId] Skipping pci_bus_id for PCI path at "/sys/devices/LNXSYSTM:00/LNXSYBUS:00/ACPI0004:00/MSFT1000:00/5620e0c7-8062-4dce-aeb7-520c7ef76171" because filename "5620e0c7-8062-4dce-aeb7-520c7ef76171" did not match expected pattern of [0-9a-f]+:[0-9a-f]+:[0-9a-f]+[.][0-9a-f]+[m
+2026-10-26 15:49:44.696 - INFO - separator - Separator version 0.47.1 instantiating with output_dir: .runtime/work/stems0, output_format: WAV
+2026-10-26 15:49:44.697 - INFO - separator - Using model directory from model_file_dir parameter: /home/runner/work/Protestant-Mezmur/Protestant-Mezmur/.model-cache/separator
+2026-10-26 15:49:44.697 - INFO - separator - Operating System: Linux #22-Ubuntu SMP Mon Jul 27 17:24:03 UTC 2026
+2026-10-26 15:49:44.697 - INFO - separator - System: Linux Node: runnervmtai0g Release: 6.17.0-1022-azure Machine: x86_64 Proc: x86_64
+2026-10-26 15:49:44.697 - INFO - separator - Python Version: 3.11.17
+2026-10-26 15:49:44.697 - INFO - separator - PyTorch Version: 2.14.1+cu130
+2026-10-26 15:49:44.705 - INFO - separator - FFmpeg installed: ffmpeg version N-128100-gceb466cbcd-20261026 Copyright (c) 2000-2026 the FFmpeg developers
+2026-10-26 15:49:44.706 - INFO - separator - ONNX Runtime CPU package installed with version: 1.31.0
+2026-10-26 15:49:44.707 - INFO - separator - No hardware acceleration could be configured, running in CPU mode
+2026-10-26 15:49:44.707 - INFO - separator - Loading model UVR-MDX-NET-Voc_FT.onnx...
+2026-10-26 15:49:44.745 - INFO - separator - Hash of model file /home/runner/work/Protestant-Mezmur/Protestant-Mezmur/.model-cache/separator/UVR-MDX-NET-Voc_FT.onnx is 77d07b2667ddf05b9e3175941b4454a0
+2026-10-26 15:49:46.011 - INFO - separator - Load model duration: 00:00:01
+2026-10-26 15:49:46.011 - INFO - separator - Processing file: .runtime/work/sep_input.wav
+2026-10-26 15:49:46.011 - INFO - separator - Starting separation process for audio_file_path: .runtime/work/sep_input.wav
+2026-10-26 15:49:46.011 - INFO - common_separator - Input audio subtype: PCM_16
+2026-10-26 15:49:46.011 - INFO - common_separator - Detected input bit depth: 16-bit
+  0%|          | 0/73 [00:00<?, ?it/s]  1%|▏         | 1/73 [00:02<02:28,  2.06s/it]  3%|▎         | 2/73 [00:04<02:26,  2.06s/it]  4%|▍         | 3/73 [00:06<02:18,  1.98s/it]  5%|▌         | 4/73 [00:07<02:14,  1.96s/it]  7%|▋         | 5/73 [00:09<02:13,  1.96s/it]  8%|▊         | 6/73 [00:11<02:12,  1.97s/it] 10%|▉         | 7/73 [00:13<02:08,  1.95s/it] 11%|█         | 8/73 [00:15<02:05,  1.93s/it] 12%|█▏        | 9/73 [00:17<02:04,  1.95s/it] 14%|█▎        | 10/73 [00:19<02:02,  1.95s/it] 15%|█▌        | 11/73 [00:21<02:01,  1.95s/it] 16%|█▋        | 12/73 [00:23<02:00,  1.97s/it] 18%|█▊        | 13/73 [00:25<01:56,  1.95s/it] 19%|█▉        | 14/73 [00:27<01:54,  1.94s/it] 21%|██        | 15/73 [00:29<01:51,  1.92s/it] 22%|██▏       | 16/73 [00:31<01:49,  1.91s/it] 23%|██▎       | 17/73 [00:33<01:46,  1.90s/it] 25%|██▍       | 18/73 [00:35<01:47,  1.95s/it] 26%|██▌       | 19/73 [00:37<01:45,  1.94s/it] 27%|██▋       | 20/73 [00:38<01:42,  1.93s/it] 29%|██▉       | 21/73 [00:40<01:40,  1.94s/it] 30%|███       | 22/73 [00:42<01:38,  1.93s/it] 32%|███▏      | 23/73 [00:44<01:36,  1.93s/it] 33%|███▎      | 24/73 [00:46<01:33,  1.92s/it] 34%|███▍      | 25/73 [00:48<01:31,  1.91s/it] 36%|███▌      | 26/73 [00:50<01:29,  1.91s/it] 37%|███▋      | 27/73 [00:52<01:27,  1.90s/it] 38%|███▊      | 28/73 [00:54<01:25,  1.90s/it] 40%|███▉      | 29/73 [00:56<01:23,  1.89s/it] 41%|████      | 30/73 [00:58<01:22,  1.93s/it] 42%|████▏     | 31/73 [01:00<01:20,  1.93s/it] 44%|████▍     | 32/73 [01:01<01:19,  1.93s/it] 45%|████▌     | 33/73 [01:03<01:16,  1.92s/it] 47%|████▋     | 34/73 [01:05<01:15,  1.93s/it] 48%|████▊     | 35/73 [01:07<01:13,  1.94s/it] 49%|████▉     | 36/73 [01:09<01:11,  1.93s/it] 51%|█████     | 37/73 [01:11<01:09,  1.94s/it] 52%|█████▏    | 38/73 [01:13<01:07,  1.93s/it] 53%|█████▎    | 39/73 [01:15<01:05,  1.93s/it] 55%|█████▍    | 40/73 [01:17<01:03,  1.94s/it] 56%|█████▌    | 41/73 [01:19<01:02,  1.94s/it] 58%|█████▊    | 42/73 [01:21<00:59,  1.93s/it] 59%|█████▉    | 43/73 [01:23<00:58,  1.94s/it] 60%|██████    | 44/73 [01:25<00:57,  1.97s/it] 62%|██████▏   | 45/73 [01:27<00:54,  1.96s/it] 63%|██████▎   | 46/73 [01:29<00:54,  2.00s/it] 64%|██████▍   | 47/73 [01:31<00:51,  1.98s/it] 66%|██████▌   | 48/73 [01:33<00:49,  1.96s/it] 67%|██████▋   | 49/73 [01:35<00:46,  1.94s/it] 68%|██████▊   | 50/73 [01:36<00:44,  1.93s/it] 70%|██████▉   | 51/73 [01:38<00:42,  1.92s/it] 71%|███████   | 52/73 [01:40<00:40,  1.92s/it] 73%|███████▎  | 53/73 [01:42<00:38,  1.90s/it] 74%|███████▍  | 54/73 [01:44<00:36,  1.90s/it] 75%|███████▌  | 55/73 [01:46<00:34,  1.91s/it] 77%|███████▋  | 56/73 [01:48<00:32,  1.90s/it] 78%|███████▊  | 57/73 [01:50<00:30,  1.89s/it] 79%|███████▉  | 58/73 [01:52<00:28,  1.90s/it] 81%|████████  | 59/73 [01:54<00:26,  1.89s/it] 82%|████████▏ | 60/73 [01:55<00:24,  1.89s/it] 84%|████████▎ | 61/73 [01:57<00:22,  1.88s/it] 85%|████████▍ | 62/73 [01:59<00:21,  1.92s/it] 86%|████████▋ | 63/73 [02:01<00:19,  1.93s/it] 88%|████████▊ | 64/73 [02:03<00:17,  1.92s/it] 89%|████████▉ | 65/73 [02:05<00:15,  1.93s/it] 90%|█████████ | 66/73 [02:07<00:13,  1.92s/it] 92%|█████████▏| 67/73 [02:09<00:11,  1.91s/it] 93%|█████████▎| 68/73 [02:11<00:09,  1.92s/it] 95%|█████████▍| 69/73 [02:13<00:07,  1.95s/it] 96%|█████████▌| 70/73 [02:15<00:05,  1.94s/it] 97%|█████████▋| 71/73 [02:17<00:03,  1.93s/it] 99%|█████████▊| 72/73 [02:19<00:01,  1.93s/it]100%|██████████| 73/73 [02:20<00:00,  1.91s/it]100%|██████████| 73/73 [02:20<00:00,  1.93s/it]
+  0%|          | 0/56 [00:00<?, ?it/s]  4%|▎         | 2/56 [00:00<00:03, 15.68it/s]  7%|▋         | 4/56 [00:00<00:03, 16.02it/s] 11%|█         | 6/56 [00:00<00:03, 15.95it/s] 14%|█▍        | 8/56 [00:00<00:03, 15.93it/s] 18%|█▊        | 10/56 [00:00<00:02, 16.06it/s] 21%|██▏       | 12/56 [00:00<00:02, 16.11it/s] 25%|██▌       | 14/56 [00:00<00:02, 16.12it/s] 29%|██▊       | 16/56 [00:00<00:02, 16.21it/s] 32%|███▏      | 18/56 [00:01<00:02, 16.31it/s] 36%|███▌      | 20/56 [00:01<00:02, 16.30it/s] 39%|███▉      | 22/56 [00:01<00:02, 16.35it/s] 43%|████▎     | 24/56 [00:01<00:01, 16.41it/s] 46%|████▋     | 26/56 [00:01<00:01, 16.42it/s] 50%|█████     | 28/56 [00:01<00:01, 16.33it/s] 54%|█████▎    | 30/56 [00:01<00:01, 16.23it/s] 57%|█████▋    | 32/56 [00:01<00:01, 16.18it/s] 61%|██████    | 34/56 [00:02<00:01, 16.10it/s] 64%|██████▍   | 36/56 [00:02<00:01, 16.14it/s] 68%|██████▊   | 38/56 [00:02<00:01, 16.02it/s] 71%|███████▏  | 40/56 [00:02<00:00, 16.00it/s] 75%|███████▌  | 42/56 [00:02<00:00, 16.07it/s] 79%|███████▊  | 44/56 [00:02<00:00, 16.08it/s] 82%|████████▏ | 46/56 [00:02<00:00, 16.09it/s] 86%|████████▌ | 48/56 [00:02<00:00, 16.14it/s] 89%|████████▉ | 50/56 [00:03<00:00, 16.16it/s] 93%|█████████▎| 52/56 [00:03<00:00, 16.19it/s] 96%|█████████▋| 54/56 [00:03<00:00, 16.19it/s]100%|██████████| 56/56 [00:03<00:00, 16.22it/s]100%|██████████| 56/56 [00:03<00:00, 16.17it/s]
+2026-10-26 15:52:20.822 - INFO - mdx_separator - Saving Vocals stem to sep_input_(Vocals)_UVR-MDX-NET-Voc_FT.wav...
+2026-10-26 15:52:20.822 - INFO - common_separator - Audio duration is 0.09 hours (318.69 seconds).
+2026-10-26 15:52:20.822 - INFO - common_separator - Using pydub for writing.
+2026-10-26 15:52:20.838 - INFO - common_separator - Writing output with 16-bit depth
+2026-10-26 15:52:21.745 - INFO - common_separator - Clearing input audio file paths, sources and stems...
+2026-10-26 15:52:21.746 - INFO - separator - Separation duration: 00:02:35
+2026-10-26 15:52:21.747 - INFO - cli - Separation complete! Output file(s): sep_input_(Vocals)_UVR-MDX-NET-Voc_FT.wav
+  vocals isolated with UVR-MDX-NET-Voc_FT.onnx
+  acoustic model 24/319s
+  acoustic model 120/319s
+  acoustic model 216/319s
+  acoustic model 312/319s
+  lrclib: 0 candidate(s)
+  lyrics sites: 0 candidate(s)
+  youtube descriptions: 0 candidate(s)
+search[auto] 'ክቡር አደራ ይስሐቅ ሰድቅ ግጥም': DDGSException
+search[auto] 'ክቡር አደራ ይስሐቅ ሰድቅ lyrics': DDGSException
+search[duckduckgo] '"ክቡር አደራ" መዝሙር ግጥም': DDGSException
+search[auto] 'Kebur Adera Yishak Sedik lyrics': DDGSException
+search[auto] 'ክቡር አደራ Yishak Sedik mezmuroch': DDGSException
+  web: 66 result(s), 0 lyric candidate(s)
+  candidate telegram:joined chat tikvahethiopia: sim=0.105 share=0.00 gain=0.00 lines=0/11 complete=0.00 -> no
+  candidate telegram:joined chat NatnaelMekonnen21: sim=0.101 share=0.00 gain=0.00 lines=0/13 complete=0.00 -> no
+  candidate telegram:joined chat NatnaelMekonnen21: sim=0.1 share=0.00 gain=0.00 lines=0/12 complete=0.00 -> no
+  candidate telegram:joined chat SSport_Ethiopia: sim=0.094 share=0.00 gain=0.00 lines=0/21 complete=0.00 -> no
+  candidate telegram:joined chat NatnaelMekonnen21: sim=0.085 share=0.01 gain=0.00 lines=1/9 complete=0.00 -> no
+  candidate telegram:joined chat NatnaelMekonnen21: sim=0.077 share=0.00 gain=0.00 lines=0/8 complete=0.00 -> no
+  photo embedded cover art: score 4.00 same=True faces=1
+  photo youtube video d9FznChzLR4: score 4.00 same=True faces=1
+  photo youtube video uGlVE6leomU: score 4.00 same=True faces=1
+  photo youtube channel Yishak Sedik Official: score 3.60 same=True faces=1
+  photo youtube video L0efltEeMD0: score 2.80 same=True faces=3
+  photo web image ethiopiangospelmusic.net: score 2.00 same=True faces=1
+[0;93m2026-10-26 15:55:55.181184442 [W:onnxruntime:Default, device_discovery.cc:95 GetPciBusId] Skipping pci_bus_id for PCI path at "/sys/devices/LNXSYSTM:00/LNXSYBUS:00/ACPI0004:00/MSFT1000:00/5620e0c7-8062-4dce-aeb7-520c7ef76171" because filename "5620e0c7-8062-4dce-aeb7-520c7ef76171" did not match expected pattern of [0-9a-f]+:[0-9a-f]+:[0-9a-f]+[.][0-9a-f]+[m
+  footage plan: 9 theme(s) with candidates
+  footage rejected (text on screen, score 2.463): clip0_0.mp4
+  footage rejected (text on screen, score 2.463): clip2_1.mp4
+  footage rejected (text on screen, score 0.012): clip1_0.mp4
+  footage rejected (text on screen, score 0.040): clip2_2.mp4
+  footage rejected (text on screen, score 3.988): clip0_1.mp4
+  footage rejected (text on screen, score 0.055): clip1_1.mp4
+  footage rejected (text on screen, score 0.059): clip3_0.mp4
+  footage rejected (text on screen, score 0.043): clip1_2.mp4
+  footage rejected (text on screen, score 2.190): clip3_1.mp4
+  footage rejected (text on screen, score 3.988): clip4_0.mp4
+  footage rejected (text on screen, score 3.988): clip5_0.mp4
+  footage rejected (text on screen, score 0.039): clip3_2.mp4
+  footage: 'spring nature' <- commons:25079647
+  footage: 'flowers field sunlight' <- mixkit:1187-1080
+[h264 @ 0x564f74fb2640] Invalid NAL unit size (47424 > 35804).
+[h264 @ 0x564f74fb2640] missing picture in access unit with size 35830
+[in#0/mov,mp4,m4a,3gp,3g2,mj2 @ 0x564f74bf3040] stream 0, offset 0x4c52d64: partial file
+[h264 @ 0x564f74dd1840] Invalid NAL unit size (47424 > 35804).
+[h264 @ 0x564f74dd1840] Error splitting the input into NAL units.
+[vist#0:0/h264 @ 0x564f74bf3580] [dec:h264 @ 0x564f74c064c0] Decoding error: Invalid data found when processing input
+  footage: 'light rays forest' <- mixkit:41401-1080
+  footage rejected (text on screen, score 0.091): clip7_0.mp4
+  footage rejected (text on screen, score 0.135): clip8_0.mp4
+  footage rejected (text on screen, score 0.074): clip7_1.mp4
+web: https://upload.wikimedia.org/wikipedia/commons/7/7a/Lesser_flamingos_courtship_display_dan failed: RetryError
+  footage rejected (text on screen, score 0.025): clip8_1.mp4
+[in#0/matroska,webm @ 0x5619be15b040] File ended prematurely
+  footage rejected (text on screen, score 0.083): clip8_2.mp4
+  artist photo has lettering (score 0.137); not used as a background
+  render 0/319s
+  render 30/319s
+  render 60/319s
+  render 90/319s
+  render 120/319s
+  render 150/319s
+  render 180/319s
+  render 210/319s
+  render 240/319s
+  render 270/319s
+  render 300/319s
+[5] done in 883s · transcription · {'master': 6.2, 'separation': 159.9, 'acoustic_model': 167.1, 'lyrics_search': 30.6, 'alignment': 10.4, 'photos': 4.8, 'footage': 135.4, 'render': 369.0}
