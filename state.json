@@ -2,9 +2,8 @@
   "version": 1,
   "channels": {
     "4335601101": {
-      "last_message_id": 3,
-      "run_id": "39957885714",
-      "artifact_name": "mezmur-39957885714-1"
+      "last_message_id": 6,
+      "run_id": "40375597051"
     }
   },
   "used_backgrounds": [
@@ -77,6 +76,8 @@
     "commons:123217414",
     "commons:25079647",
     "mixkit:1187-1080",
-    "mixkit:41401-1080"
+    "mixkit:41401-1080",
+    "nasa:JPL-20220201-WHATSUf-0001-Whats_Up_February_2022r",
+    "nasa:GSFC_20080822_HST_m10233_WFC2_Retract"
   ]
 }
