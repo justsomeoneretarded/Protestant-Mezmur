@@ -155,6 +155,27 @@ def youtube_search(query, channels=False):
     return out
 
 
+def youtube_description(video_id):
+    """Full description of a public video (lyric uploads often paste the lyrics there)."""
+    r = get("https://www.youtube.com/watch", params={"v": video_id, "hl": "en"}, max_bytes=4_000_000)
+    if r is None or r.status_code != 200:
+        return ""
+    r.encoding = "utf-8"
+    m = re.search(r"ytInitialPlayerResponse\s*=\s*(\{.+?\});\s*(?:var |</script>)", r.text, re.S)
+    if m:
+        try:
+            return (json.loads(m.group(1)).get("videoDetails") or {}).get("shortDescription", "") or ""
+        except ValueError:
+            pass
+    m = re.search(r'"shortDescription":"((?:[^"\\]|\\.)*)"', r.text)
+    if m:
+        try:
+            return json.loads(f'"{m.group(1)}"')
+        except ValueError:
+            return ""
+    return ""
+
+
 def youtube_thumbnail(video_id):
     for name in ["maxresdefault", "sddefault", "hqdefault"]:
         r = get(f"https://i.ytimg.com/vi/{video_id}/{name}.jpg")

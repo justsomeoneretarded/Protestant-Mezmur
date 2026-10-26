@@ -217,6 +217,32 @@ def from_sites(record, log=print):
     return out
 
 
+def from_youtube(record, videos=(), log=print, max_videos=8):
+    """Lyrics pasted into the descriptions of other channels' uploads of the same song."""
+    found = list(videos or [])
+    seen = {v.get("video_id") for v in found}
+    for q in [f"{record.get('title_am', '')} {record.get('artist_am', '')} ግጥም",
+              f"{record.get('title_latin') or record.get('title_am', '')} {record.get('artist_latin', '')} lyrics"]:
+        q = " ".join(q.split())
+        if len(q) < 4:
+            continue
+        for v in web.youtube_search(q):
+            if v.get("video_id") not in seen:
+                seen.add(v.get("video_id"))
+                found.append(v)
+    scored = sorted(found, key=lambda v: -title_match(v.get("title", ""), record))
+    out = []
+    for v in scored[:max_videos]:
+        if title_match(v.get("title", ""), record) < 0.6:
+            continue
+        text = web.youtube_description(v["video_id"])
+        for stanzas in extract_blocks(text, min_lines=4):
+            out.append(_candidate("youtube description", f"https://www.youtube.com/watch?v={v['video_id']}", stanzas,
+                                  title=v.get("title", "")[:100]))
+    log(f"  youtube descriptions: {len(out)} candidate(s)", flush=True)
+    return out
+
+
 def youtube_titles(record):
     q = " ".join(p for p in [record.get("title_am") or record.get("title_latin"), record.get("artist_latin") or record.get("artist_am")] if p)
     videos = web.youtube_search(q) if q else []
@@ -235,7 +261,7 @@ def dedupe(cands):
     return out
 
 
-def gather(record, message_id, telegram_data, corrections_dir, duration, log=print):
+def gather(record, message_id, telegram_data, corrections_dir, duration, log=print, videos=()):
     cands, titles, notes = [], [], {}
     corrected, overrides = read_correction(corrections_dir, message_id)
     if corrected:
@@ -250,6 +276,10 @@ def gather(record, message_id, telegram_data, corrections_dir, duration, log=pri
         cands += from_sites(record, log)
     except Exception as error:
         log(f"  lyrics sites failed: {error}", flush=True)
+    try:
+        cands += from_youtube(record, videos, log)
+    except Exception as error:
+        log(f"  youtube descriptions failed: {error}", flush=True)
     try:
         web_cands, titles = from_web(record, log)
         cands += web_cands

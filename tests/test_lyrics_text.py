@@ -29,3 +29,13 @@ def test_similarity_prefers_the_right_song():
     right = similarity("ሲወድ ጌታ እስከ መስቀል ነው\nፍቅሩ አይለካም ከቶ\nሃሌሉያ ክብር ለስሙ", draft)["score"]
     wrong = similarity("ተመስገን ጌታ ስላደረግህልኝ\nበረከትህ ብዙ ነው\nልቤ ደስ ይለዋል", draft)["score"]
     assert right > 0.7 > 0.3 > wrong
+
+
+def test_header_and_brackets_are_cleaned():
+    from mezmur.lyrics_text import balance_brackets, parse_lyrics, strip_header
+    record = {"title_am": "ክቡር አደራ", "artist_am": "ይስሐቅ ሰድቅ", "artist_latin": "Yishak Sedik"}
+    stanzas = parse_lyrics("ክቡር አደራ --- ይስሃቅ ሰዲቅ\nከጨለምተኝነትና ከጠመሙት ጋራ\nአትዛመዱ ከቶ አትላመዱ\nስትሰሩ ስትከናወኑ\n")
+    cleaned = strip_header(stanzas, record)
+    assert cleaned[0]["lines"][0] == "ከጨለምተኝነትና ከጠመሙት ጋራ"
+    assert balance_brackets("ታብሷል እምባዬ (ታብሷል") == "ታብሷል እምባዬ ታብሷል"
+    assert balance_brackets("(ይዤ ልምጣ) እኔም") == "(ይዤ ልምጣ) እኔም"

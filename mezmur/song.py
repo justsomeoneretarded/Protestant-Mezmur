@@ -254,7 +254,7 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     except Exception as error:
         log(f"  youtube search failed: {error}")
     record = names.learn_from_titles(record, [v["title"] for v in videos])
-    cands, titles, overrides, _ = gather(record, mid, tg, corrections, duration, log=log)
+    cands, titles, overrides, _ = gather(record, mid, tg, corrections, duration, log=log, videos=videos)
     record = names.learn_from_titles(record, titles)
     for k in ["title_am", "title_latin", "artist_am", "artist_latin"]:
         if overrides.get(k):
@@ -380,6 +380,13 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     render_video(renderer, master, work / "lyrics.ass", out / "video.mp4", preset=preset, log=log)
     timings["render"] = round(time.time() - t, 1)
 
+    if mode == "transcription":
+        header = "\n".join(f"{k}: {record.get(k, '')}" for k in ["title_am", "title_latin", "artist_am", "artist_latin"])
+        body = "\n".join(c["text"] for c in cues)
+        (out / "correction-template.txt").write_text(
+            f"---\n{header}\n---\n{body}\n", encoding="utf-8")
+        review["reasons"].append(f"Edit correction-template.txt and commit it as corrections/{mid}.txt to re-make "
+                                 "this video with the right words (timing is redone automatically).")
     # 11. Upload kit + diagnostics.
     credits = [c["credit"] for c in clip_records]
     review["needs_review"] = bool(review["reasons"]) or mode != "lyrics-aligned"
