@@ -1,0 +1,38 @@
+name: Probe (temporary)
+on:
+  push:
+    branches: [claude-probe-src]
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
+      TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
+      TELEGRAM_SESSION: ${{ secrets.TELEGRAM_SESSION }}
+      TELEGRAM_CHANNEL: ${{ vars.TELEGRAM_CHANNEL || '@amharicprotestantmezmurss' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: |
+          nproc; free -g; df -h / | tail -1; which ffmpeg ffprobe || true; ffmpeg -version 2>/dev/null | head -1 || true
+          fc-list | grep -ci ethiopic || true
+      - run: pip install Telethon==1.42.0 requests ddgs transformers==4.57.3 huggingface-hub==0.36.0 sentencepiece
+      - name: Static ffmpeg if missing
+        run: |
+          if ! which ffmpeg; then
+            curl -sL https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz | tar xJ
+            echo "$PWD/ffmpeg-master-latest-linux64-gpl/bin" >> "$GITHUB_PATH"
+          fi
+      - run: python probe/probe.py
+      - name: Publish results
+        if: always()
+        run: |
+          cd out
+          git init -q -b claude-probe-out
+          git config user.name probe; git config user.email probe@users.noreply.github.com
+          git add -A; git commit -qm "probe ${{ github.run_id }}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" claude-probe-out
