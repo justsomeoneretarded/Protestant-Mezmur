@@ -106,8 +106,8 @@ def _commons(query, used):
         url = sorted(derivs, key=lambda d: (d.get("height") != 1080, d.get("height", 0)))[0]["src"] if derivs else info.get("url")
         meta = info.get("extmetadata") or {}
         lic = (meta.get("LicenseShortName") or {}).get("value", "")
-        if not any(x in lic for x in ["CC0", "Public domain", "CC BY", "CC-BY"]):
-            continue
+        if not any(x in lic.lower() for x in ["cc0", "public domain", "pd"]):
+            continue  # only files that need no credit line (CC BY/BY-SA would require attribution)
         artist = (meta.get("Artist") or {}).get("value", "")
         import re
         artist = re.sub(r"<[^>]+>", "", artist).strip()[:80]

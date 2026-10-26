@@ -136,30 +136,24 @@ def hashtag(text):
 
 
 def description(m, stanzas, cues, chapters, credits, lyrics_source):
+    """YouTube description: title in both scripts, lyrics (Ge'ez + Latin letters), song/singer, hashtags.
+    (No chapters, no source/footage/model credits: every background used needs no attribution.)"""
     t_am, t_lat, a_am, a_lat = m.get("title_am", ""), m.get("title_latin", ""), m.get("artist_am", ""), m.get("artist_latin", "")
     head = " | ".join(p for p in [" - ".join(x for x in [t_am, a_am] if x), " - ".join(x for x in [t_lat, a_lat] if x)] if p)
     lines = [f"{head} (Lyrics • ግጥም)", ""]
     lines.append(f"🎵 {t_am or t_lat}{f' ({t_lat})' if t_am and t_lat else ''} by {a_am or a_lat}"
-                 f"{f' ({a_lat})' if a_am and a_lat else ''} — Amharic mezmur with synced lyrics and romanized (Latin) lyrics.")
+                 f"{f' ({a_lat})' if a_am and a_lat else ''}")
     if m.get("album"):
         lines.append(f"💿 Album: {m['album']}")
     lines.append("")
-    if chapters:
-        lines.append("⏱ Chapters")
-        lines += [f"{clock(c['start'])} {c['label']}" for c in chapters]
-        lines.append("")
     am_text = "\n\n".join("\n".join(s["lines"]) for s in stanzas) if stanzas else "\n".join(c["text"] for c in cues)
     rom_text = "\n\n".join("\n".join(romanize(l) for l in s["lines"]) for s in stanzas) if stanzas else \
         "\n".join(c["romanized"] for c in cues)
     lines += ["📝 ግጥም — Amharic lyrics", am_text, ""]
-    rom_block = ["🔤 Romanized lyrics", rom_text, ""]
+    rom_block = ["🔤 Lyrics", rom_text, ""]
     tail = ["🙏 Credits",
             f"Song: {t_am or t_lat}{f' / {t_lat}' if t_am and t_lat else ''}",
-            f"Singer: {a_am or a_lat}{f' / {a_lat}' if a_am and a_lat else ''}",
-            "All rights to the song belong to the artist and their label. Shared for worship and lyric reading.",
-            f"Lyrics text: {lyrics_source}"]
-    tail += [f"Background: {c}" for c in credits[:6]]
-    tail += ["Lyric timing: Ethio-ASR Amharic (CC BY 4.0, huggingface.co/badrex/Ethio-ASR-amharic)", ""]
+            f"Singer: {a_am or a_lat}{f' / {a_lat}' if a_am and a_lat else ''}", ""]
     tags_line = " ".join(t for t in [hashtag(a_lat or a_am), hashtag(t_lat or t_am), "#AmharicMezmur", "#MezmurLyrics",
                                      "#ProtestantMezmur", "#EthiopianGospel"] if t)
     for with_roman in (True, False):
@@ -197,7 +191,7 @@ def write_kit(folder, m, stanzas, cues, duration, chorus_lines, credits, lyrics_
     checklist = [f"# Upload: {ts[0] if ts else ''}", "",
                  "1. Upload `video.mp4` in YouTube Studio.",
                  "2. Title — pick one from `title.txt` (first is recommended).",
-                 "3. Description — paste `description.txt` (chapters are already inside).",
+                 "3. Description — paste `description.txt`.",
                  "4. Thumbnail — `thumbnail.jpg`. Use *Test & Compare* with `thumbnail-b.jpg` and `thumbnail-c.jpg`.",
                  "5. Tags — paste `tags.txt` (Show more → Tags).",
                  "6. Category: Music · Video language: Amharic · Not made for kids.",

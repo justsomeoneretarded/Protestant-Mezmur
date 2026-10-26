@@ -392,7 +392,7 @@ def _merge_split_lines(words, max_gap=4.0):
     out = [dict(w) for w in words]
     for i in range(1, len(out)):
         a, b = out[i - 1], out[i]
-        if (b["phrase"] != a["phrase"] and b["line"] == a["line"] and b["word_index"] == a["word_index"] + 1
+        if (b["phrase"] != a["phrase"] and b["line"] == a["line"] and b["word_index"] > a["word_index"]
                 and b["start"] - a["end"] <= max_gap):
             old = b["phrase"]
             for w in out[i:]:
@@ -413,3 +413,183 @@ def smooth_words(words, gap_fill=0.3, min_duration=0.12):
                 w["end"] = nxt["start"]
             w["end"] = min(w["end"], max(nxt["start"], w["start"] + 0.05))
     return out
+
+
+# ---------------------------------------------------------------------------------------------
+# Completing the alignment with the (verified) lyrics.
+#
+# Choirs, harmonies and heavy echo can make the acoustic model nearly deaf for a whole chorus
+# even though the vocal stem is clearly singing. When the lyrics have been verified, the lines
+# that are missing between two confidently placed lines must have been sung in that gap. They
+# are laid out over the gap's actual singing (vocal loudness), anchored on any fragments that
+# were recognised, and their words are marked ``estimated``.
+# ---------------------------------------------------------------------------------------------
+
+def _vocal_phrases(energy, frame_seconds, a, b, min_pause=0.35, min_len=0.4):
+    fa, fb = max(0, int(a / frame_seconds)), min(len(energy), int(b / frame_seconds))
+    seg = np.asarray(energy[fa:fb], dtype=bool)
+    out, start, quiet = [], None, 0
+    pause = max(1, int(min_pause / frame_seconds))
+    for i, v in enumerate(np.append(seg, [False] * (pause + 1))):
+        if v:
+            if start is None:
+                start = i
+            quiet = 0
+            last = i
+        elif start is not None:
+            quiet += 1
+            if quiet >= pause:
+                if (last + 1 - start) * frame_seconds >= min_len:
+                    out.append(((fa + start) * frame_seconds, (fa + last + 1) * frame_seconds))
+                start = None
+    return out
+
+
+def _lay_out(line_ids, lines, first_word, phrases, sec_per_char, phrase_id):
+    """Spread whole lines over vocal phrases in proportion to their length; returns words."""
+    lengths = [max(1, sum(len(w) for w in lines[l])) for l in line_ids]
+    total_chars = sum(lengths)
+    active = sum(b - a for a, b in phrases)
+    if not phrases or active <= 0:
+        return []
+
+    def at(fraction):  # map a fraction of the sung time to a clock time
+        target = fraction * active
+        for a, b in phrases:
+            if target <= b - a:
+                return a + target
+            target -= b - a
+        return phrases[-1][1]
+
+    starts = [p[0] for p in phrases]
+    out, done = [], 0
+    for k, l in enumerate(line_ids):
+        t0, t1 = at(done / total_chars), at((done + lengths[k]) / total_chars)
+        near = min(starts, key=lambda s: abs(s - t0))
+        if abs(near - t0) < 1.5 and near < t1 - 0.5:
+            t0 = near  # lines start where singing starts
+        t1 = min(t1, t0 + lengths[k] * sec_per_char * 1.6)
+        done += lengths[k]
+        cursor, span = t0, max(0.3, t1 - t0)
+        chars = lengths[k]
+        for j, word in enumerate(lines[l]):
+            d = span * max(1, len(word)) / chars
+            out.append({"word_index": int(first_word[l] + j), "line": int(l), "start": cursor,
+                        "end": cursor + d * 0.92, "phrase": phrase_id + k, "confidence": 0.0, "estimated": True})
+            cursor += d
+    return out
+
+
+def complete_with_lyrics(words, lines, energy, frame_seconds, duration, max_repeat=3):
+    """Fill lines the acoustic model missed and finish partially matched lines.
+
+    words: aligned words (word_index, line, start, end, phrase); lines: list of word lists.
+    Returns (words, info) where info counts what was estimated.
+    """
+    if not words or energy is None:
+        return words, {"filled_lines": 0, "completed_lines": 0, "estimated_words": 0}
+    first_word = np.concatenate(([0], np.cumsum([len(l) for l in lines])))[:-1]
+    n_lines = len(lines)
+    occ = {}
+    for w in words:
+        occ.setdefault(w["phrase"], []).append(w)
+    occs = sorted(occ.values(), key=lambda ws: ws[0]["start"])
+    full = [ws for ws in occs if len(ws) == len(lines[ws[0]["line"]])]
+    rates = [(ws[-1]["end"] - ws[0]["start"]) / max(1, sum(len(w) for w in lines[ws[0]["line"]])) for ws in full]
+    spc = float(np.median(rates)) if rates else 0.12
+    next_phrase = max(w["phrase"] for w in words) + 1
+    out = [dict(w) for w in words]
+    info = {"filled_lines": 0, "completed_lines": 0, "estimated_words": 0}
+
+    # 1) Gaps between confidently placed (complete) lines.
+    bounds = [(None, 0.0)] + [(ws[0]["line"], ws[-1]["end"]) for ws in full]
+    starts = [ws[0]["start"] for ws in full] + [duration]
+    lines_after = [(ws[0]["line"]) for ws in full] + [None]
+    for k in range(len(bounds)):
+        prev_line, gap_a = bounds[k]
+        next_line, gap_b = lines_after[k], starts[k]
+        if gap_b - gap_a < 3.0:
+            continue
+        first = 0 if prev_line is None else prev_line + 1
+        last = (next_line - 1) if (next_line is not None and next_line > first) else n_lines - 1
+        if next_line is not None and next_line <= first:
+            # Jumping back (e.g. into a chorus): what was missed is the rest of the current stanza
+            # run, which we cannot know exactly — only fill when the lyrics continue sequentially.
+            continue
+        missing = list(range(first, last + 1))
+        if not missing:
+            continue
+        phrases = _vocal_phrases(energy, frame_seconds, gap_a + 0.15, gap_b - 0.15)
+        active = sum(b - a for a, b in phrases)
+        need = sum(len(w) for l in missing for w in lines[l]) * spc
+        if active < 1.0 or need <= 0 or active < 0.45 * need:
+            continue
+        reps = 1
+        if next_line is None and active > 1.7 * need:  # a final chorus sung again and again
+            reps = int(min(max_repeat, round(active / need)))
+        elif active > 2.6 * need:
+            continue  # far more singing than these lines: something else is going on
+        texts = {" ".join(lines[l]) for l in missing}
+        in_gap = [w for w in out if gap_a <= w["start"] < gap_b and " ".join(lines[w["line"]]) in texts]
+        if reps == 1 and {w["line"] for w in in_gap} >= set(missing):
+            continue  # every missing line was partly recognised: keep real timings, finish them below
+        seq = missing * reps
+        # Drop recognised fragments of these lines (or identical repeats) in the gap; the layout replaces them.
+        out = [w for w in out if not (gap_a <= w["start"] < gap_b and " ".join(lines[w["line"]]) in texts)]
+        added = _lay_out(seq, lines, first_word, phrases, spc, next_phrase)
+        next_phrase += len(seq)
+        out += added
+        info["filled_lines"] += len(seq)
+        info["estimated_words"] += len(added)
+
+    # 2) Finish partially matched lines (outside filled gaps).
+    out.sort(key=lambda w: w["start"])
+    groups = {}
+    for w in out:
+        groups.setdefault(w["phrase"], []).append(w)
+    ordered = sorted(groups.values(), key=lambda ws: ws[0]["start"])
+    for idx, ws in enumerate(ordered):
+        l = ws[0]["line"]
+        have = {w["word_index"] - first_word[l] for w in ws}
+        if len(have) == len(lines[l]) or any(w.get("estimated") for w in ws):
+            continue
+        prev_end = ordered[idx - 1][-1]["end"] if idx else 0.0
+        next_start = ordered[idx + 1][0]["start"] if idx + 1 < len(ordered) else duration
+        lo, hi = min(have), max(have)
+        added = []
+        cursor = ws[0]["start"]
+        for j in range(lo - 1, -1, -1):  # leading words, backwards
+            d = max(0.15, len(lines[l][j]) * spc)
+            if cursor - d < prev_end + 0.05:
+                break
+            cursor -= d
+            added.append({"word_index": int(first_word[l] + j), "line": l, "start": cursor, "end": cursor + d * 0.92,
+                          "phrase": ws[0]["phrase"], "confidence": 0.0, "estimated": True})
+        cursor = ws[-1]["end"]
+        for j in range(hi + 1, len(lines[l])):  # trailing words
+            d = max(0.15, len(lines[l][j]) * spc)
+            if cursor + d > next_start - 0.05:
+                break
+            added.append({"word_index": int(first_word[l] + j), "line": l, "start": cursor + 0.04,
+                          "end": cursor + d * 0.92, "phrase": ws[0]["phrase"], "confidence": 0.0, "estimated": True})
+            cursor += d
+        # Inner holes: interpolate between neighbours.
+        known = sorted(ws, key=lambda w: w["word_index"])
+        for x, y in zip(known, known[1:]):
+            hole = list(range(x["word_index"] + 1, y["word_index"]))
+            if not hole:
+                continue
+            span_a, span_b = x["end"], y["start"]
+            if span_b - span_a < 0.1 * len(hole):
+                span_a, span_b = x["start"], y["end"]
+            step = (span_b - span_a) / (len(hole) + 1)
+            for m, gw in enumerate(hole, 1):
+                added.append({"word_index": int(gw), "line": l, "start": span_a + step * (m - 0.5),
+                              "end": span_a + step * (m + 0.4), "phrase": ws[0]["phrase"], "confidence": 0.0,
+                              "estimated": True})
+        if added:
+            out += added
+            info["completed_lines"] += 1
+            info["estimated_words"] += len(added)
+    out.sort(key=lambda w: (w["start"], w["word_index"]))
+    return out, info

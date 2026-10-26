@@ -14,7 +14,7 @@ import cv2
 import numpy as np
 
 from . import asr, audio, backgrounds, names, thumbnail, web
-from .align import Lyrics, align_lyrics, build_target, smooth_words
+from .align import Lyrics, align_lyrics, build_target, complete_with_lyrics, smooth_words
 from .common import duration as common_duration, write_json
 from .features import analyze
 from .geez import fold, romanize
@@ -180,6 +180,8 @@ def photo_candidates(work, inp, record, videos):
             log(f"  youtube photos failed: {error}")
         try:
             for i, im in enumerate(web.commons_images(artist, 4)):
+                if not any(x in (im.get("license") or "").lower() for x in ("cc0", "public domain", "pd")):
+                    continue  # thumbnails must not need a credit line
                 r = web.get(im["url"]) if im.get("url") else None
                 if r is not None and r.status_code == 200:
                     path = pdir / f"commons-{i}.jpg"
@@ -282,8 +284,14 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
         _, chosen, aligned, align_report, lines = best
         stanzas = chosen["stanzas"]
         flat = [word for line in lines for word in line]
+        aligned, filled = complete_with_lyrics(aligned, lines, energy, frame_s, duration)
+        align_report["completion"] = filled
         words = [{**w, "word": flat[w["word_index"]]} for w in aligned]
         words = smooth_words(words)
+        est = filled["estimated_words"] / max(1, len(words))
+        if est > 0.25:
+            review["reasons"].append(f"{est:.0%} of the word timings were estimated (the singing there was hard to "
+                                     "hear, e.g. choir parts). Spot-check those lines in the video.")
         chorus = chorus_lines_of(stanzas, aligned)
         lyrics_source = f"{chosen['source']} {chosen['url']}".strip()
         if not chosen["trusted"] and align_report["matched_share"] < 0.8:
