@@ -203,6 +203,15 @@ jobs:
           if-no-files-found: error
           retention-days: 3
           compression-level: 0
+      - name: Tell Telegram the video is ready
+        if: success() || failure()
+        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_NOTIFY_CHAT: ${{ vars.TELEGRAM_NOTIFY_CHAT || '@MyApplication_aman' }}
+        run: |
+          python -m mezmur.notify --folder "output/song-${{ matrix.id }}" --message-id "${{ matrix.id }}" \
+            --status "${{ job.status }}" --retention-days 3
       - name: Upload the log (only if this song failed)
         uses: actions/upload-artifact@v4
         if: failure()
