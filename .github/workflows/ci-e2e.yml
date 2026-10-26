@@ -1,0 +1,48 @@
+name: E2E (temporary)
+on:
+  push:
+    branches: [claude/mezmur-v2]
+permissions:
+  contents: write
+jobs:
+  gen:
+    uses: ./.github/workflows/generate.yml
+    with:
+      message_ids: '2,3'
+      batch_size: '1'
+    secrets: inherit
+  preview:
+    needs: gen
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mezmur-*
+          path: art
+      - name: Build previews
+        run: |
+          mkdir -p out
+          for d in art/*/song-*; do
+            id=$(basename "$d"); mkdir -p "out/$id"
+            cp "$d"/*.txt "$d"/*.json "$d"/*.md "$d"/*.jpg "$d"/lyrics.ass "out/$id/" 2>/dev/null || true
+            cp -r "$d/captions" "out/$id/" 2>/dev/null || true
+            if [ -f "$d/video.mp4" ]; then
+              dur=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$d/video.mp4")
+              ls -la "$d/video.mp4" > "out/$id/video_info.txt"; ffprobe -v error -show_streams "$d/video.mp4" | grep -E "codec_name|width|height|bit_rate|duration" >> "out/$id/video_info.txt"
+              for f in 0.06 0.15 0.25 0.35 0.45 0.55 0.7 0.85 0.97; do
+                t=$(python3 -c "print(round($dur*$f,2))")
+                ffmpeg -v error -y -ss "$t" -i "$d/video.mp4" -frames:v 1 -vf scale=960:-2 -q:v 4 "out/$id/frame_$f.jpg"
+              done
+              ffmpeg -v error -y -ss 30 -t 20 -i "$d/video.mp4" -vf scale=640:-2 -c:v libx264 -crf 30 -preset veryfast -c:a aac -b:a 64k "out/$id/clip.mp4" || true
+            fi
+            rm -f "out/$id/words.json"
+          done
+          ls -R out | head -80
+      - name: Publish
+        run: |
+          cd out
+          git init -q -b claude-probe-out
+          git config user.name probe; git config user.email probe@users.noreply.github.com
+          git add -A; git commit -qm "e2e ${{ github.run_id }}" || exit 0
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" claude-probe-out
