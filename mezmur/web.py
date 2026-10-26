@@ -63,8 +63,7 @@ def search(query, max_results=10):
         if href and href not in seen:
             seen.add(href)
             results.append({"title": item.get("title", ""), "url": href, "snippet": item.get("content", "")})
-    if len(results) >= max_results // 2:
-        return results[:max_results]
+    # Always also ask ddgs: the engines find different lyrics pages (song 5's came only from ddgs).
     try:
         from ddgs import DDGS
     except ImportError:
@@ -78,7 +77,7 @@ def search(query, max_results=10):
                     results.append({"title": item.get("title", ""), "url": href, "snippet": item.get("body", "")})
         except Exception as error:  # rate limits, no results
             print(f"search[{backend}] {query[:50]!r}: {error.__class__.__name__}", flush=True)
-        if len(results) >= max_results:
+        if len(results) >= 2 * max_results:
             break
         time.sleep(0.8)
     return results
@@ -205,7 +204,8 @@ def lrclib(track, artist="", duration=None):
 
 
 def commons_images(query, limit=8):
-    r = get("https://commons.wikimedia.org/w/api.php", params={
+    from .backgrounds import BOT_HEADERS
+    r = get("https://commons.wikimedia.org/w/api.php", headers=BOT_HEADERS, timeout=20, params={
         "action": "query", "generator": "search", "gsrsearch": f"{query} filetype:bitmap", "gsrnamespace": 6,
         "gsrlimit": limit, "prop": "imageinfo", "iiprop": "url|size|mime|extmetadata", "iiurlwidth": 1600,
         "format": "json"})

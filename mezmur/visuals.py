@@ -75,20 +75,42 @@ class VideoReader:
         return self.last
 
 
+PALETTES = [  # (deep background, glow 1, glow 2, light) in RGB — warm, worshipful colour schemes
+    [(18, 10, 38), (214, 120, 48), (120, 40, 110), (255, 220, 160)],   # dusk gold / plum
+    [(8, 20, 42), (40, 110, 190), (230, 170, 80), (255, 236, 190)],    # night blue / sunrise
+    [(26, 12, 20), (190, 70, 90), (240, 160, 70), (255, 214, 170)],    # crimson / amber
+    [(6, 26, 30), (40, 160, 150), (110, 70, 170), (210, 255, 240)],    # teal aurora
+    [(30, 22, 10), (200, 150, 60), (90, 60, 30), (255, 240, 200)],     # golden glory
+    [(12, 14, 34), (90, 80, 200), (220, 120, 160), (240, 225, 255)],   # violet dawn
+]
+
+
 def procedural(w, h, t, seed, energy):
-    """Soft moving light gradient used when no footage is available."""
+    """Generated background (always available): drifting colour glows, soft light rays from
+    above and slow breathing with the music. One palette per song seed."""
     rng = np.random.default_rng(seed)
-    palette = rng.choice([[(40, 22, 60), (210, 120, 40)], [(20, 40, 70), (230, 180, 90)],
-                          [(30, 20, 30), (200, 90, 120)], [(10, 30, 40), (90, 200, 190)]])
-    small_w, small_h = 160, 90
-    yy, xx = np.mgrid[0:small_h, 0:small_w] / np.array([small_h, small_w])[:, None, None]
-    cx = 0.5 + 0.3 * math.sin(t * 0.07 + seed)
-    cy = 0.45 + 0.2 * math.cos(t * 0.05 + seed * 2)
-    d = np.sqrt((xx - cx) ** 2 + ((yy - cy) * 0.6) ** 2)
-    glow = np.clip(1.2 - d * (2.2 - 0.6 * energy), 0, 1) ** 2
-    a, b = np.array(palette[0], float), np.array(palette[1], float)
-    img = a[None, None, :] * (1 - glow[..., None]) + b[None, None, :] * glow[..., None]
-    img = cv2.resize(img.astype(np.uint8), (w, h), interpolation=cv2.INTER_CUBIC)
+    bg, c1, c2, light = (np.array(c, np.float32) for c in PALETTES[int(rng.integers(len(PALETTES)))])
+    sw, sh = 192, 108
+    yy, xx = np.mgrid[0:sh, 0:sw].astype(np.float32)
+    xx /= sw
+    yy /= sh
+    img = np.broadcast_to(bg, (sh, sw, 3)).copy()
+    phases = rng.uniform(0, 2 * np.pi, 6)
+    for k, (col, size) in enumerate([(c1, 0.55), (c2, 0.45), (c1 * 0.6 + c2 * 0.4, 0.35)]):
+        cx = 0.5 + 0.32 * math.sin(t * (0.045 + 0.013 * k) + phases[k])
+        cy = 0.5 + 0.25 * math.cos(t * (0.037 + 0.011 * k) + phases[k + 3])
+        d2 = (xx - cx) ** 2 + ((yy - cy) * 0.75) ** 2
+        g = np.exp(-d2 / (2 * (size * (0.9 + 0.25 * energy)) ** 2 * 0.25))[..., None]
+        img = img * (1 - 0.85 * g) + col * 0.85 * g
+    # Soft rays fanning down from a light source above the frame.
+    ox = 0.5 + 0.18 * math.sin(t * 0.03 + phases[0])
+    ang = np.arctan2(xx - ox, yy + 0.35)
+    rays = (0.5 + 0.5 * np.sin(ang * 14 + t * 0.15 + phases[1])) ** 6
+    rays *= np.clip(1.15 - yy * 1.1, 0, 1) * (0.22 + 0.18 * energy)
+    img = img + light * rays[..., None] * 0.55
+    img = np.clip(img, 0, 255).astype(np.uint8)
+    img = cv2.GaussianBlur(img, (0, 0), 2.2)
+    img = cv2.resize(img, (w, h), interpolation=cv2.INTER_CUBIC)
     return img[..., ::-1].copy()
 
 

@@ -87,8 +87,10 @@ YouTube channel and the web, checking that the faces agree.
    | `PEXELS_API_KEY` | recommended | free key from <https://www.pexels.com/api/> — real HD nature/sky footage chosen from the lyrics' themes |
    | `PIXABAY_API_KEY` | optional | free key from <https://pixabay.com/api/docs/> — more footage |
 
-   Without footage keys the backgrounds come from Wikimedia Commons plus the bundled scenery,
-   which is slower and repeats more. Both keys are free; with them every video looks different.
+   Without footage keys the backgrounds come from free sources that need no key, in this order:
+   NASA's public-domain video library (sky, Earth, stars), Wikimedia Commons, and Mixkit. Clips
+   with burned-in text are rejected automatically, and footage search stops after 5 minutes. If
+   every site fails, the video still gets the bundled scenery plus generated light backgrounds.
 4. Optional **Variables:** `TELEGRAM_CHANNEL` (default `@amharicprotestantmezmurss`) and
    `LYRICS_CHANNELS` (comma-separated Telegram lyrics channels to search; a good default list is
    built in). Joining extra lyrics channels with your Telegram account also helps, because the
