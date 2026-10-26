@@ -7,7 +7,7 @@ permissions:
 jobs:
   probe:
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 60
     env:
       TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
       TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
@@ -20,7 +20,7 @@ jobs:
       - run: |
           nproc; free -g; df -h / | tail -1; which ffmpeg ffprobe || true; ffmpeg -version 2>/dev/null | head -1 || true
           fc-list | grep -ci ethiopic || true
-      - run: pip install Telethon==1.42.0 requests ddgs transformers==4.57.3 huggingface-hub==0.36.0 sentencepiece
+      - run: pip install torch==2.5.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cpu && pip install Telethon==1.42.0 requests ddgs 'audio-separator[cpu]'
       - name: Static ffmpeg if missing
         run: |
           if ! which ffmpeg; then
