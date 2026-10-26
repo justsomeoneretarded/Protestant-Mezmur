@@ -6,7 +6,7 @@ from html.parser import HTMLParser
 from .geez import ETHIOPIC, LATIN, clean, ethiopic_share, fold
 
 CHORUS = re.compile(r"^\s*[\(\[]?\s*(አዝ(ማች)?|አዝማቹ|ዝማሬ|chorus|ref(rain)?|ኮረስ)\s*[\)\]:.\-–—፦፥፡]*\s*", re.I)
-REPEAT = re.compile(r"[\(\[]?\s*(?:[x×*]\s*\d|\d\s*[x×*]|\d+\s*ጊዜ|ሁለት ጊዜ|//+|\\\\+)\s*[\)\]]?\s*$", re.I)
+REPEAT = re.compile(r"[\(\[]?\s*(?:[x×*]\s*[\d፩-፼]+|[\d፩-፼]+\s*[x×*]|[\d፩-፼]+\s*ጊዜ|ሁለት ጊዜ|//+|\\\\+)\s*[\)\]]?\s*$", re.I)
 NOISE = re.compile(r"(https?://\S+|www\.\S+|@\w+|#\S+|t\.me/\S+)", re.I)
 JUNK_LINE = re.compile(r"(join|subscribe|ሰብስክራይብ|ቻናል|channel|telegram|youtube|lyrics by|ግጥም\s*[:፡]|ዜማ\s*[:፡]|"
                        r"ዘማሪ\s*[:፡]|ቅንብር|copyright|©|share|ሼር|like|ላይክ|follow|ፎሎው|ተቀላቀሉ|ይቀላቀሉ)", re.I)

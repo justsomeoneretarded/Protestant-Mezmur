@@ -3,14 +3,16 @@ import os
 import subprocess
 from pathlib import Path
 
-DEFAULT_MODEL = "model_bs_roformer_ep_317_sdr_12.9755.ckpt"
-FALLBACKS = ["htdemucs_ft.yaml"]
+DEFAULT_MODEL = "vocals_mel_band_roformer.ckpt"
+FALLBACKS = ["UVR-MDX-NET-Voc_FT.onnx", "htdemucs_ft.yaml"]
 
 
 def _run(wav, out, model, log):
     cmd = ["audio-separator", str(wav), "-m", model, "--output_dir", str(out), "--single_stem", "Vocals",
            "--model_file_dir", os.environ.get("MEZMUR_MODEL_CACHE", ".model-cache") + "/separator",
            "--output_format", "WAV"]
+    if "roformer" in model.lower():
+        cmd += ["--mdxc_overlap", "2"]  # default 8 is ~4x slower on CPU for a tiny quality gain
     code = subprocess.run(cmd).returncode
     vocals = sorted(out.glob("*[Vv]ocals*.wav"))
     if code == 0 and vocals:

@@ -16,10 +16,11 @@ on:
         description: Vocal isolation model used to time the lyrics
         type: choice
         options:
-          - model_bs_roformer_ep_317_sdr_12.9755.ckpt
+          - vocals_mel_band_roformer.ckpt
+          - UVR-MDX-NET-Voc_FT.onnx
           - htdemucs_ft.yaml
           - none
-        default: model_bs_roformer_ep_317_sdr_12.9755.ckpt
+        default: vocals_mel_band_roformer.ckpt
       resolution:
         description: Video height
         type: choice
@@ -32,7 +33,7 @@ on:
     inputs:
       batch_size: {type: string, default: '3'}
       message_ids: {type: string, default: ''}
-      separator: {type: string, default: model_bs_roformer_ep_317_sdr_12.9755.ckpt}
+      separator: {type: string, default: vocals_mel_band_roformer.ckpt}
       resolution: {type: string, default: '1080'}
 
 permissions:
@@ -137,7 +138,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .model-cache
-          key: mezmur-models-v3-${{ inputs.separator || 'model_bs_roformer_ep_317_sdr_12.9755.ckpt' }}
+          key: mezmur-models-v3-${{ inputs.separator || 'vocals_mel_band_roformer.ckpt' }}
           restore-keys: mezmur-models-v3-
       - name: Install
         run: |
@@ -148,10 +149,18 @@ jobs:
           name: inputs-${{ github.run_id }}
           path: inputs
       - name: Make video, lyrics, thumbnails and upload kit
+        shell: bash
         run: |
-          python -m mezmur.song --input "inputs/song-${{ matrix.id }}" --output "output/song-${{ matrix.id }}" \
-            --work ".runtime/work" --separator "${{ inputs.separator || 'model_bs_roformer_ep_317_sdr_12.9755.ckpt' }}" \
-            --height "${{ inputs.resolution || '1080' }}"
+          out="output/song-${{ matrix.id }}"; mkdir -p "$out"
+          set +e
+          python -m mezmur.song --input "inputs/song-${{ matrix.id }}" --output "$out" \
+            --work ".runtime/work" --separator "${{ inputs.separator || 'vocals_mel_band_roformer.ckpt' }}" \
+            --height "${{ inputs.resolution || '1080' }}" 2>&1 | tee "$out/run.log"
+          code=${PIPESTATUS[0]}
+          if [ "$code" != 0 ]; then
+            echo "::error title=Song ${{ matrix.id }} failed::$(tail -n 12 "$out/run.log" | tr '\n' ' ' | cut -c1-900)"
+          fi
+          exit $code
       - name: Summary
         if: always()
         run: python -m mezmur.summary "output/song-${{ matrix.id }}" >> "$GITHUB_STEP_SUMMARY" || true

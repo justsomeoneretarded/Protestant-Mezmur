@@ -6,7 +6,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageDraw, ImageFilter
 
 from .features import Features, snap
 from .textdraw import Mixed, fit, shadow_text, gradient_text
@@ -14,10 +14,6 @@ from .textdraw import Mixed, fit, shadow_text, gradient_text
 FONTS = Path(__file__).parent / "assets" / "fonts"
 GOLD = (255, 214, 140)
 WHITE = (255, 255, 255)
-
-
-def font(name, size):
-    return ImageFont.truetype(str(FONTS / name), size)
 
 
 @dataclass
@@ -100,18 +96,6 @@ def rounded_rect(draw, box, radius, fill):
     draw.rounded_rectangle(box, radius=radius, fill=fill)
 
 
-def text_size(fnt, text):
-    box = fnt.getbbox(text)
-    return box[2] - box[0], box[3] - box[1]
-
-
-def fit_font(name, text, max_size, max_width, min_size=18):
-    size = max_size
-    while size > min_size and text_size(font(name, size), text)[0] > max_width:
-        size -= 2
-    return font(name, size)
-
-
 def circle_photo(img_bgr, size, ring=(255, 214, 140), ring_w=6):
     img = Image.fromarray(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)).convert("RGBA")
     side = min(img.size)
@@ -123,16 +107,6 @@ def circle_photo(img_bgr, size, ring=(255, 214, 140), ring_w=6):
     d.ellipse((0, 0, out.width - 1, out.height - 1), fill=ring + (255,))
     out.paste(img, (ring_w, ring_w), mask)
     return out
-
-
-def shadowed_text(canvas, xy, text, fnt, fill, shadow=(0, 0, 0, 170), offset=3, blur=6, anchor="la", stroke=0):
-    layer = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
-    d = ImageDraw.Draw(layer)
-    d.text((xy[0] + offset, xy[1] + offset), text, font=fnt, fill=shadow, anchor=anchor, stroke_width=stroke, stroke_fill=shadow)
-    layer = layer.filter(ImageFilter.GaussianBlur(blur))
-    canvas.alpha_composite(layer)
-    ImageDraw.Draw(canvas).text(xy, text, font=fnt, fill=fill, anchor=anchor, stroke_width=stroke,
-                                stroke_fill=(20, 12, 4, 255))
 
 
 def to_rgba_array(img):

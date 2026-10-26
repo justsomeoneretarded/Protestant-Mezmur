@@ -153,6 +153,13 @@ def write_kit(folder, m, stanzas, cues, duration, chorus_lines, credits, lyrics_
     (folder / "description.txt").write_text(desc + "\n", encoding="utf-8")
     (folder / "title.txt").write_text("\n".join(ts) + "\n", encoding="utf-8")
     (folder / "tags.txt").write_text(", ".join(tg) + "\n", encoding="utf-8")
+    name = m.get("title_am") or m.get("title_latin", "")
+    singer = m.get("artist_am") or m.get("artist_latin", "")
+    (folder / "pinned_comment.txt").write_text(
+        f"🙏 «{name}» — {singer}\n"
+        "ከዚህ መዝሙር የትኛው ስንኝ ልብዎን ነካው? በኮሜንት ይጻፉልን 👇\n"
+        "Which line touched you the most? Write it below 👇\n"
+        "ለተጨማሪ የመዝሙር ግጥሞች ሰብስክራይብ ያድርጉ 🔔\n", encoding="utf-8")
     kit = {"titles": ts, "recommended_title": ts[0] if ts else "", "description_file": "description.txt",
            "tags": tg, "category": "Music (10)", "language": "Amharic", "chapters": chapters,
            "thumbnails": ["thumbnail.jpg", "thumbnail-b.jpg", "thumbnail-c.jpg"],
@@ -168,6 +175,7 @@ def write_kit(folder, m, stanzas, cues, duration, chorus_lines, credits, lyrics_
                  "4. Thumbnail — `thumbnail.jpg`. Use *Test & Compare* with `thumbnail-b.jpg` and `thumbnail-c.jpg`.",
                  "5. Tags — paste `tags.txt` (Show more → Tags).",
                  "6. Category: Music · Video language: Amharic · Not made for kids.",
+                 "   After publishing, post and pin `pinned_comment.txt`.",
                  "7. Subtitles → Upload file → With timing → `captions/am.srt` (Amharic).",
                  f"8. End screen: add elements from {clock(outro_start)} (the video leaves that area clean)."
                  if kit["end_screen_from"] else "8. End screen: the song ends without a long outro; use a 5–10 s end screen.",
