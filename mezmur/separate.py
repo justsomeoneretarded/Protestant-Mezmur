@@ -3,12 +3,12 @@ import os
 import subprocess
 from pathlib import Path
 
-DEFAULT_MODEL = "vocals_mel_band_roformer.ckpt"
-FALLBACKS = ["UVR-MDX-NET-Voc_FT.onnx", "htdemucs_ft.yaml"]
+DEFAULT_MODEL = "UVR-MDX-NET-Voc_FT.onnx"
+FALLBACKS = ["UVR_MDXNET_KARA_2.onnx", "htdemucs_ft.yaml"]
 
 
 def _run(wav, out, model, log):
-    cmd = ["audio-separator", str(wav), "-m", model, "--output_dir", str(out), "--single_stem", "Vocals",
+    cmd = [os.environ.get("AUDIO_SEPARATOR_BIN", "audio-separator"), str(wav), "-m", model, "--output_dir", str(out), "--single_stem", "Vocals",
            "--model_file_dir", os.environ.get("MEZMUR_MODEL_CACHE", ".model-cache") + "/separator",
            "--output_format", "WAV"]
     if "roformer" in model.lower():

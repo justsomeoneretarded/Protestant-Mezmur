@@ -16,9 +16,11 @@ dependencies = [
 # Everything the per-song render job needs (torch is installed from the CPU index first).
 render = [
     "torch==2.5.1", "transformers==4.57.3", "huggingface-hub==0.36.0", "tokenizers==0.22.1",
-    "opencv-python-headless==4.10.0.84", "ddgs>=9.5", "audio-separator[cpu]>=0.39",
+    "opencv-python-headless==4.10.0.84", "onnxruntime>=1.18", "ddgs>=9.5",
     "soundfile==0.13.1",
 ]
+# Vocal separation runs from its own virtualenv (see the workflow) so its pins cannot clash.
+separator = ["audio-separator[cpu]>=0.39"]
 test = ["pytest==8.4.2", "responses==0.25.8"]
 
 [project.scripts]

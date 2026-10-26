@@ -44,7 +44,7 @@ for the **real lyrics** and only uses the speech model to *time* them.
    replies → public Telegram lyrics channels (`LYRICS_CHANNELS`) → [LRCLIB](https://lrclib.net)
    → web search across WikiMezmur, mezmuroch.com, legeta316.com, Mezmur Debter and any
    other page that carries the lyrics.
-2. **Isolate the vocals** (Mel-Band RoFormer via `audio-separator`, falling back to MDX-Net and HTDemucs).
+2. **Isolate the vocals** (MDX-Net Voc-FT via `audio-separator`; Mel-Band RoFormer optional, HTDemucs as fallback).
 3. **Listen** with [Ethio-ASR Amharic](https://huggingface.co/badrex/Ethio-ASR-amharic)
    (Wav2Vec2-BERT CTC, CC BY 4.0), producing per-frame character probabilities.
 4. **Verify** each candidate against what is actually sung (spelling variants such as
@@ -99,7 +99,7 @@ re-timing your text automatically.
 * `batch_size` — how many new songs (oldest first). Each song renders on its own
   runner in parallel.
 * `message_ids` — re-make specific posts (e.g. `2,5`) without moving the bookmark.
-* `separator` — vocal isolation model (Mel-Band RoFormer is the default; MDX-Net is ~3× faster).
+* `separator` — vocal isolation model (MDX-Net Voc-FT is the fast default; Mel-Band RoFormer is cleaner but several times slower).
 
 When it finishes, open the run and download **Artifacts → `mezmur-<id>-run…`**.
 The run summary lists each song's lyric source and anything to check.
@@ -110,7 +110,7 @@ the batch succeeded. Failed batches are retried next time; nothing is skipped.
 ## Costs and limits
 
 Everything is free for a public repository: GitHub-hosted runners (4 vCPU / 16 GB),
-open models (Ethio-ASR, Mel-Band RoFormer, YuNet, SFace, U²-Net), keyless web sources and
+open models (Ethio-ASR, MDX-Net, YuNet, SFace, U²-Net), keyless web sources and
 free API keys. A 5-minute song takes roughly 20–40 minutes of runner time, mostly
 vocal separation and rendering. Artifacts are kept 30 days.
 

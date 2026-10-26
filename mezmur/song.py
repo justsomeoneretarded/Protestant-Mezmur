@@ -97,6 +97,31 @@ def choose_lyrics(cands, draft_text, logp, frame_s, vocab, energy):
     return best, reports
 
 
+def lrc_check(cues, candidates, duration):
+    """Compare our line starts with human-made synced lyrics (LRCLIB), when available."""
+    import re
+    for c in candidates:
+        lrc = c.get("synced")
+        if not lrc or abs((c.get("lrclib_duration") or 0) - duration) > 2.5:
+            continue
+        marks = []
+        for line in lrc.splitlines():
+            m = re.match(r"\[(\d+):(\d+(?:\.\d+)?)\]\s*(.+)", line)
+            if m:
+                marks.append((int(m.group(1)) * 60 + float(m.group(2)), fold(m.group(3))))
+        diffs, used = [], set()
+        for cue in cues:
+            key = fold(cue["text"])
+            best = min((abs(t - cue["start"]), i) for i, (t, text) in enumerate(marks)
+                       if i not in used and text and (text in key or key in text)) if marks else None
+            if best and best[0] < 8:
+                used.add(best[1])
+                diffs.append(best[0])
+        if len(diffs) >= 4:
+            return {"source": c["url"], "lines_compared": len(diffs), "median_seconds": round(float(np.median(diffs)), 2)}
+    return None
+
+
 def face_square(img, face, margin=2.4):
     x, y, w, h = face["box"]
     cx, cy = x + w / 2, y + h / 2
@@ -203,12 +228,12 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     duration = common_duration(master)
     timings["master"] = round(time.time() - t, 1)
 
-    # 3. Vocals + acoustic model.
+    # 3. Vocals + acoustic model (load the model first so a broken install fails fast).
+    vocab = asr.vocabulary()
     t = time.time()
     vocals = separate(source_audio, work, model=separator, log=log)
     timings["separation"] = round(time.time() - t, 1)
     t = time.time()
-    vocab = asr.vocabulary()
     logp, frame_s = asr.frame_log_probs(vocals, log=log)
     energy = asr.vocal_energy(vocals, frame_s, len(logp))
     draft = asr.greedy_words(logp, frame_s, vocab)
@@ -260,6 +285,10 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
         raise RuntimeError("No timed lyrics could be produced")
     cues = build_cues(words, chorus_lines=chorus)
     timings["alignment"] = round(time.time() - t, 1)
+    lrc = lrc_check(cues, cands, duration)
+    if lrc and lrc["median_seconds"] > 1.0:
+        review["reasons"].append(f"Line timing differs from LRCLIB's synced lyrics by {lrc['median_seconds']} s (median); "
+                                 "spot-check the karaoke timing.")
 
     # 6. Subtitles & lyrics files.
     (out / "captions").mkdir(exist_ok=True)
@@ -342,7 +371,7 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
         "lyrics_mode": mode, "lyrics_source": lyrics_source, "artist_photo": photo_source,
         "backgrounds": clip_records, "tempo_bpm": round(feats.tempo, 1), "timings_seconds": timings,
         "review": review, "model": asr.MODEL})
-    write_json(out / "quality.json", {"mode": mode, "candidates": cand_reports, "alignment": {
+    write_json(out / "quality.json", {"mode": mode, "candidates": cand_reports, "lrc_check": lrc, "alignment": {
         k: v for k, v in align_report.items() if k != "phrase_details"}, "phrases": align_report.get("phrase_details", []),
         "draft_text": draft_text, "draft_word_count": len(draft), "review": review})
     write_json(out / "backgrounds.json", [c["id"] for c in clip_records])

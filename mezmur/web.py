@@ -136,17 +136,20 @@ def youtube_thumbnail(video_id):
 
 
 def lrclib(track, artist="", duration=None):
-    params = {"track_name": track}
-    if artist:
-        params["artist_name"] = artist
-    r = get("https://lrclib.net/api/search", params=params,
-            headers={"Lrclib-Client": "protestant-mezmur (github.com/justsomeoneretarded/Protestant-Mezmur)"})
-    if r is None or r.status_code != 200:
-        return []
-    try:
-        items = r.json()
-    except ValueError:
-        return []
+    """LRCLIB public lyrics database (free, no key). Tries field search, then free text."""
+    headers = {"Lrclib-Client": "protestant-mezmur (github.com/justsomeoneretarded/Protestant-Mezmur)"}
+    attempts = [{"track_name": track, "artist_name": artist}] if artist else []
+    attempts.append({"q": f"{track} {artist}".strip()})
+    items = []
+    for params in attempts:
+        r = get("https://lrclib.net/api/search", params=params, headers=headers)
+        try:
+            data = r.json() if r is not None and r.status_code == 200 else []
+        except ValueError:
+            data = []
+        if isinstance(data, list) and data:
+            items = data
+            break
     if duration:
         items.sort(key=lambda x: abs((x.get("duration") or 0) - duration))
     return items[:6]

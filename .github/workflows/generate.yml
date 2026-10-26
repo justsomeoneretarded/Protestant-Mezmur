@@ -16,11 +16,11 @@ on:
         description: Vocal isolation model used to time the lyrics
         type: choice
         options:
-          - vocals_mel_band_roformer.ckpt
           - UVR-MDX-NET-Voc_FT.onnx
+          - vocals_mel_band_roformer.ckpt
           - htdemucs_ft.yaml
           - none
-        default: vocals_mel_band_roformer.ckpt
+        default: UVR-MDX-NET-Voc_FT.onnx
       resolution:
         description: Video height
         type: choice
@@ -33,7 +33,7 @@ on:
     inputs:
       batch_size: {type: string, default: '3'}
       message_ids: {type: string, default: ''}
-      separator: {type: string, default: vocals_mel_band_roformer.ckpt}
+      separator: {type: string, default: UVR-MDX-NET-Voc_FT.onnx}
       resolution: {type: string, default: '1080'}
 
 permissions:
@@ -138,12 +138,20 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .model-cache
-          key: mezmur-models-v3-${{ inputs.separator || 'vocals_mel_band_roformer.ckpt' }}
+          key: mezmur-models-v3-${{ inputs.separator || 'UVR-MDX-NET-Voc_FT.onnx' }}
           restore-keys: mezmur-models-v3-
       - name: Install
         run: |
           pip install torch==2.5.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cpu
           pip install -e '.[render]'
+          python -c "from transformers import AutoProcessor, AutoModelForCTC; import cv2, onnxruntime; print('render env OK')"
+      - name: Install vocal separator (isolated)
+        if: (inputs.separator || 'UVR-MDX-NET-Voc_FT.onnx') != 'none'
+        run: |
+          python -m venv "$RUNNER_TEMP/sep"
+          "$RUNNER_TEMP/sep/bin/pip" install -q torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu
+          "$RUNNER_TEMP/sep/bin/pip" install -q "audio-separator[cpu]>=0.39"
+          echo "AUDIO_SEPARATOR_BIN=$RUNNER_TEMP/sep/bin/audio-separator" >> "$GITHUB_ENV"
       - uses: actions/download-artifact@v4
         with:
           name: inputs-${{ github.run_id }}
@@ -154,7 +162,7 @@ jobs:
           out="output/song-${{ matrix.id }}"; mkdir -p "$out"
           set +e
           python -m mezmur.song --input "inputs/song-${{ matrix.id }}" --output "$out" \
-            --work ".runtime/work" --separator "${{ inputs.separator || 'vocals_mel_band_roformer.ckpt' }}" \
+            --work ".runtime/work" --separator "${{ inputs.separator || 'UVR-MDX-NET-Voc_FT.onnx' }}" \
             --height "${{ inputs.resolution || '1080' }}" 2>&1 | tee "$out/run.log"
           code=${PIPESTATUS[0]}
           if [ "$code" != 0 ]; then
