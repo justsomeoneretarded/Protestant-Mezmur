@@ -103,7 +103,7 @@ YouTube channel and the web, checking that the faces agree.
 - `separator`: vocal-isolation model (default is the fast, accurate UVR-MDX-NET).
 
 When it finishes, open the run and download each `mezmur-<message id>-run…` artifact
-(kept 30 days). It holds only what you upload. Anything to check before publishing (for example
+(kept 3 days — download it before then). It holds only what you upload. Anything to check before publishing (for example
 unverified lyrics) is listed per song on the run's summary page. If a song fails, a `log-…`
 artifact with its log is added instead.
 

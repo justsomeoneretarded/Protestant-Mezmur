@@ -201,7 +201,7 @@ jobs:
             output/song-${{ matrix.id }}/pinned_comment.txt
             output/song-${{ matrix.id }}/captions/
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 3
           compression-level: 0
       - name: Upload the log (only if this song failed)
         uses: actions/upload-artifact@v4
@@ -210,7 +210,7 @@ jobs:
           name: log-${{ matrix.id }}-run${{ github.run_id }}
           path: output/song-${{ matrix.id }}/run.log
           if-no-files-found: ignore
-          retention-days: 7
+          retention-days: 3
       - uses: actions/upload-artifact@v4
         with:
           name: bg-${{ matrix.id }}-${{ github.run_id }}
