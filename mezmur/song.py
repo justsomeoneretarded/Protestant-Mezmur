@@ -282,7 +282,9 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
         _, chosen, aligned, align_report, lines = best
         stanzas = chosen["stanzas"]
         flat = [word for line in lines for word in line]
-        aligned, filled = complete_with_lyrics(aligned, lines, energy, frame_s, duration)
+        aligned, filled = complete_with_lyrics(aligned, lines, energy, frame_s, duration, logp=logp,
+                                               char_to_id=vocab["char_to_id"], blank=vocab["blank"],
+                                               delimiter=vocab["delimiter"])
         align_report["completion"] = filled
         words = [{**w, "word": flat[w["word_index"]]} for w in aligned]
         words = smooth_words(words)

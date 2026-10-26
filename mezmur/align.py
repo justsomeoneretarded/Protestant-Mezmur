@@ -480,7 +480,94 @@ def _lay_out(line_ids, lines, first_word, phrases, sec_per_char, phrase_id):
     return out
 
 
-def complete_with_lyrics(words, lines, energy, frame_seconds, duration, max_repeat=3):
+def _force_in_gap(emit_all, energy, fa, fb, seq, lines, first_word, char_to_id, blank, anchors, layout,
+                  frame_seconds, phrase_id, silence_cost=3.0, spread_bonus=0.15, weak=-4.0):
+    """Second recognition pass inside a gap: every word of ``seq`` (line ids) must appear, in order.
+
+    emit_all: prior-normalised log-probabilities for the whole song [T, V].
+    Characters placed on frames without vocal energy pay ``silence_cost``; blank on sung frames pays
+    ``spread_bonus`` (so words follow the singing instead of bunching). Recognised fragments
+    (``anchors``: list of (word position in seq, start, end)) pin their words in time.
+    Returns words, or None if there are not enough frames.
+    """
+    # Token sequence with word bookkeeping.
+    toks, tok_word = [], []
+    word_meta = []  # (seq position, line id, word idx in line)
+    for k, l in enumerate(seq):
+        for j, word in enumerate(lines[l]):
+            ids = [char_to_id[c] for c in word if c in char_to_id]
+            wpos = len(word_meta)
+            word_meta.append((k, l, j))
+            toks.extend(ids)
+            tok_word.extend([wpos] * len(ids))
+    T = fb - fa
+    L = len(toks)
+    if L == 0 or T < L + 2:
+        return None
+    S = 2 * L + 1
+    labels = np.full(S, blank, dtype=np.int64)
+    labels[1::2] = toks
+    emit = emit_all[fa:fb][:, labels].astype(np.float64).copy()
+    voiced = np.asarray(energy[fa:fb], dtype=bool)
+    emit[np.ix_(~voiced, np.arange(1, S, 2))] -= silence_cost
+    emit[np.ix_(voiced, np.arange(0, S, 2))] -= spread_bonus
+    # Anchors: a recognised word's characters may only sit inside its recognised span (+-0.3 s).
+    tok_word = np.array(tok_word)
+    for wpos, a, b in anchors:
+        f0 = max(0, int((a - 0.3) / frame_seconds) - fa)
+        f1 = min(T, int((b + 0.3) / frame_seconds) - fa)
+        states = 1 + 2 * np.where(tok_word == wpos)[0]
+        mask = np.ones(T, dtype=bool)
+        mask[f0:f1] = False
+        emit[np.ix_(mask, states)] = NEG
+    skip_ok = np.zeros(S, dtype=bool)
+    skip_ok[3::2] = np.array(toks[1:]) != np.array(toks[:-1])
+    alpha = np.full(S, NEG)
+    alpha[0], alpha[1] = emit[0, 0], emit[0, 1]
+    choice = np.zeros((T, S), dtype=np.int8)
+    for t in range(1, T):
+        stay = alpha
+        step = np.concatenate(([NEG], alpha[:-1]))
+        skip = np.where(skip_ok, np.concatenate(([NEG, NEG], alpha[:-2])), NEG)
+        best = stay.copy()
+        c = np.zeros(S, dtype=np.int8)
+        m = step > best
+        best[m], c[m] = step[m], 1
+        m = skip > best
+        best[m], c[m] = skip[m], 2
+        choice[t] = c
+        alpha = best + emit[t]
+    s = S - 1 if alpha[S - 1] >= alpha[S - 2] else S - 2
+    if alpha[s] <= NEG / 2:
+        return None
+    path = np.empty(T, dtype=np.int64)
+    for t in range(T - 1, -1, -1):
+        path[t] = s
+        s -= int(choice[t, s])
+    spans = {}
+    for t, st in enumerate(path):
+        if st % 2 == 1:
+            w = int(tok_word[st // 2])
+            a, b = spans.get(w, (t, t))
+            spans[w] = (min(a, t), max(b, t))
+    raw = emit_all[fa:fb]
+    out = []
+    for wpos, (k, l, j) in enumerate(word_meta):
+        if wpos not in spans:
+            continue
+        a, b = spans[wpos]
+        idx = np.where(tok_word == wpos)[0]
+        # Evidence: best posterior of this word's characters inside its span.
+        ev = float(np.mean([raw[a:b + 1, toks[i]].max() for i in idx])) if len(idx) else weak - 1
+        anchored = any(x[0] == wpos for x in anchors)
+        out.append({"word_index": int(first_word[l] + j), "line": int(l), "start": (fa + a) * frame_seconds,
+                    "end": (fa + b + 1) * frame_seconds, "phrase": phrase_id + k, "confidence": float(np.exp(min(0, ev))),
+                    "estimated": not anchored and ev < weak, "recognised": anchored or ev >= weak})
+    return out
+
+
+def complete_with_lyrics(words, lines, energy, frame_seconds, duration, max_repeat=3,
+                         logp=None, char_to_id=None, blank=None, delimiter=None):
     """Fill lines the acoustic model missed and finish partially matched lines.
 
     words: aligned words (word_index, line, start, end, phrase); lines: list of word lists.
@@ -498,6 +585,11 @@ def complete_with_lyrics(words, lines, energy, frame_seconds, duration, max_repe
     rates = [(ws[-1]["end"] - ws[0]["start"]) / max(1, sum(len(w) for w in lines[ws[0]["line"]])) for ws in full]
     spc = float(np.median(rates)) if rates else 0.12
     next_phrase = max(w["phrase"] for w in words) + 1
+    emit_all = None
+    if logp is not None and char_to_id is not None and blank is not None:
+        merged = merge_blank(np.asarray(logp, dtype=np.float64), blank, delimiter)
+        prior = np.exp(merged).mean(0) + 1e-6
+        emit_all = merged - 0.45 * np.log(prior)[None, :]
     out = [dict(w) for w in words]
     info = {"filled_lines": 0, "completed_lines": 0, "estimated_words": 0}
 
@@ -534,13 +626,44 @@ def complete_with_lyrics(words, lines, energy, frame_seconds, duration, max_repe
         if reps == 1 and {w["line"] for w in in_gap} >= set(missing):
             continue  # every missing line was partly recognised: keep real timings, finish them below
         seq = missing * reps
-        # Drop recognised fragments of these lines (or identical repeats) in the gap; the layout replaces them.
+        fragments = [w for w in out if gap_a <= w["start"] < gap_b and " ".join(lines[w["line"]]) in texts]
         out = [w for w in out if not (gap_a <= w["start"] < gap_b and " ".join(lines[w["line"]]) in texts)]
-        added = _lay_out(seq, lines, first_word, phrases, spc, next_phrase)
+        layout = _lay_out(seq, lines, first_word, phrases, spc, next_phrase)
+        added = None
+        if emit_all is not None:
+            # Anchor each recognised fragment word to the nearest copy of that word in the sequence.
+            positions = []  # (wpos, line text, word idx in line, layout start)
+            wpos = 0
+            lay_by_k = {}
+            for w in layout:
+                lay_by_k.setdefault(w["phrase"] - next_phrase, []).append(w)
+            for k, l in enumerate(seq):
+                for j in range(len(lines[l])):
+                    lw = lay_by_k.get(k, [])
+                    positions.append((wpos, " ".join(lines[l]), j, lw[j]["start"] if j < len(lw) else gap_a))
+                    wpos += 1
+            anchors, taken = [], set()
+            for fw in fragments:
+                key = " ".join(lines[fw["line"]])
+                j = fw["word_index"] - first_word[fw["line"]]
+                cand = [p for p in positions if p[1] == key and p[2] == j and p[0] not in taken]
+                if cand:
+                    best = min(cand, key=lambda p: abs(p[3] - fw["start"]))
+                    taken.add(best[0])
+                    anchors.append((best[0], fw["start"], fw["end"]))
+            fa, fb = int((gap_a + 0.05) / frame_seconds), int((gap_b - 0.05) / frame_seconds)
+            try:
+                added = _force_in_gap(emit_all, energy, fa, fb, seq, lines, first_word, char_to_id, blank, anchors,
+                                      layout, frame_seconds, next_phrase)
+            except Exception:  # noqa: BLE001 - fall back to the layout
+                added = None
+        if not added:
+            added = layout
         next_phrase += len(seq)
         out += added
         info["filled_lines"] += len(seq)
-        info["estimated_words"] += len(added)
+        info["estimated_words"] += sum(1 for w in added if w.get("estimated"))
+        info["recognised_in_gaps"] = info.get("recognised_in_gaps", 0) + sum(1 for w in added if w.get("recognised"))
 
     # 2) Finish partially matched lines (outside filled gaps).
     out.sort(key=lambda w: w["start"])
