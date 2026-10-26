@@ -257,6 +257,18 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
             record[k] = overrides[k]
     record = names.finalize(record)
     timings["lyrics_search"] = round(time.time() - t, 1)
+    if os.environ.get("MEZMUR_DEBUG"):
+        dbg = out / "debug"
+        dbg.mkdir(exist_ok=True)
+        np.savez_compressed(dbg / "acoustic.npz", logp=logp.astype(np.float16), frame_s=frame_s, energy=energy)
+        write_json(dbg / "vocab.json", {"id_to_char": {str(k): v for k, v in vocab["id_to_char"].items()},
+                                        "blank": vocab["blank"], "delimiter": vocab["delimiter"]})
+        write_json(dbg / "candidates.json", [{k: v for k, v in c.items() if k != "synced"} | {"synced": c.get("synced")}
+                                             for c in cands])
+        write_json(dbg / "record.json", {"record": record, "draft": draft, "duration": duration})
+        if os.environ.get("MEZMUR_DEBUG") == "acoustic":
+            log(f"[{mid}] debug dump written; stopping before alignment/render")
+            return {"message_id": mid, "mode": "debug"}
 
     # 5. Verify + align.
     t = time.time()

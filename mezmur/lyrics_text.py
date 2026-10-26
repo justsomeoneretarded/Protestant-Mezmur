@@ -111,6 +111,31 @@ def html_to_text(markup):
     return re.sub(r"\n[ \t]+", "\n", text)
 
 
+def script_texts(markup, min_ethiopic=40):
+    """Decode JSON/JS string literals that carry Ge'ez text (Next.js flight data, __NEXT_DATA__, Nuxt...)."""
+    import json
+    out = []
+    for script in re.findall(r"<script[^>]*>(.*?)</script>", markup, re.S | re.I):
+        if len(ETHIOPIC.findall(script)) < min_ethiopic and "\\u12" not in script:
+            continue
+        for literal in re.findall(r'"((?:[^"\\]|\\.){60,})"', script):
+            if len(ETHIOPIC.findall(literal)) < min_ethiopic and literal.count("\\u12") < min_ethiopic:
+                continue
+            text = literal
+            for _ in range(3):  # strings may be JSON-encoded inside other JSON strings
+                try:
+                    decoded = json.loads(f'"{text}"')
+                except ValueError:
+                    break
+                if decoded == text:
+                    break
+                text = decoded
+            if text.count("\\n") > 3 and "\n" not in text:
+                text = text.replace("\\n", "\n")
+            out.append(text)
+    return out
+
+
 def extract_blocks(text, min_lines=4):
     """Find runs of lyric-looking lines inside arbitrary text (pages, posts, descriptions)."""
     blocks, current, blank_run = [], [], 0

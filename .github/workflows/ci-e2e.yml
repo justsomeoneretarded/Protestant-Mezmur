@@ -8,8 +8,9 @@ jobs:
   gen:
     uses: ./.github/workflows/generate.yml
     with:
-      message_ids: '2,3'
+      message_ids: '2,3,4,5'
       batch_size: '1'
+      debug: acoustic
     secrets: inherit
   preview:
     needs: gen
@@ -21,24 +22,37 @@ jobs:
           pattern: mezmur-*
           path: art
       - name: Build previews
+        shell: bash
         run: |
+          set +e
           mkdir -p out
           for d in art/*/song-*; do
+            [ -d "$d" ] || continue
             id=$(basename "$d"); mkdir -p "out/$id"
-            cp "$d"/*.txt "$d"/*.json "$d"/*.md "$d"/*.jpg "$d"/lyrics.ass "out/$id/" 2>/dev/null || true
-            cp -r "$d/captions" "out/$id/" 2>/dev/null || true
+            cp "$d"/*.txt "$d"/*.json "$d"/*.md "$d"/*.jpg "$d"/*.log "$d"/lyrics.ass "out/$id/" 2>/dev/null
+            cp -r "$d/captions" "$d/debug" "out/$id/" 2>/dev/null
             if [ -f "$d/video.mp4" ]; then
               dur=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$d/video.mp4")
-              ls -la "$d/video.mp4" > "out/$id/video_info.txt"; ffprobe -v error -show_streams "$d/video.mp4" | grep -E "codec_name|width|height|bit_rate|duration" >> "out/$id/video_info.txt"
+              ffprobe -v error -show_streams "$d/video.mp4" | grep -E "codec_name|width|height|bit_rate|duration" > "out/$id/video_info.txt"
               for f in 0.06 0.15 0.25 0.35 0.45 0.55 0.7 0.85 0.97; do
                 t=$(python3 -c "print(round($dur*$f,2))")
-                ffmpeg -v error -y -ss "$t" -i "$d/video.mp4" -frames:v 1 -vf scale=960:-2 -q:v 4 "out/$id/frame_$f.jpg"
+                ffmpeg -nostdin -v error -y -ss "$t" -i "$d/video.mp4" -frames:v 1 -vf scale=960:-2 -q:v 4 "out/$id/frame_$f.jpg"
               done
-              ffmpeg -v error -y -ss 30 -t 20 -i "$d/video.mp4" -vf scale=640:-2 -c:v libx264 -crf 30 -preset veryfast -c:a aac -b:a 64k "out/$id/clip.mp4" || true
+              python3 - "$d/lyrics.ass" "$d/video.mp4" "out/$id" <<'PY'
+          import re, subprocess, sys
+          ass, video, out = sys.argv[1:]
+          def ts(s):
+              h, m, x = s.split(":"); return int(h) * 3600 + int(m) * 60 + float(x)
+          starts = [ts(l.split(",")[1]) for l in open(ass, encoding="utf-8") if l.startswith("Dialogue") and ",Lyric," in l]
+          for i, t in enumerate(starts[::max(1, len(starts) // 24)][:24]):
+              subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-ss", f"{t + 0.6:.2f}", "-i", video, "-frames:v", "1",
+                              "-vf", "scale=640:-2", "-q:v", "5", f"{out}/seq_{i:03d}.jpg"])
+          PY
             fi
             rm -f "out/$id/words.json"
           done
           ls -R out | head -80
+          exit 0
       - name: Publish
         run: |
           cd out

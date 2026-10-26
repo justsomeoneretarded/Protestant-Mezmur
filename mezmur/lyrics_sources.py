@@ -4,7 +4,7 @@ from pathlib import Path
 
 from . import web
 from .geez import fold, has_ethiopic
-from .lyrics_text import extract_blocks, html_to_text, parse_lyrics, stanzas_text, title_overlap
+from .lyrics_text import extract_blocks, html_to_text, parse_lyrics, script_texts, stanzas_text, title_overlap
 
 LYRICS_DOMAINS = {
     "wikimezmur.org": 3, "mezmuroch.com": 3, "legeta316.com": 3, "mezmurdebter.vercel.app": 3,
@@ -88,6 +88,8 @@ def _queries(record):
 def _page_candidates(url, html, record):
     text = html_to_text(html)
     blocks = extract_blocks(text, min_lines=4)
+    for embedded in script_texts(html):
+        blocks += extract_blocks(html_to_text(embedded.replace("\n", "<br>")), min_lines=4)
     title_key = record.get("title_am") or record.get("title_latin") or ""
     out = []
     for stanzas in blocks:
@@ -124,6 +126,97 @@ def from_web(record, log=print, max_pages=10):
     return out, titles
 
 
+def _anchors(html):
+    out = []
+    for href, inner in re.findall(r'<a[^>]+href="([^"#]+)"[^>]*>(.*?)</a>', html, re.S | re.I):
+        text = " ".join(html_to_text(inner).split())
+        if text:
+            out.append((href, text))
+    return out
+
+
+def title_match(text, record):
+    """How well a link text names this song (0..1). Handles Ge'ez and romanized spellings."""
+    from .names import similar
+    best = 0.0
+    t_am, t_lat = record.get("title_am", ""), record.get("title_latin", "")
+    if t_am:
+        for run in re.findall(r"[\u1200-\u137F][\u1200-\u137F\s፡]*[\u1200-\u137F]|[\u1200-\u137F]", text):
+            run = " ".join(run.replace("፡", " ").split())
+            best = max(best, 1.0 if fold(run) == fold(t_am) else similar(run, t_am))
+    if t_lat:
+        words = re.findall(r"[A-Za-z']+", text)
+        n = len(t_lat.split())
+        for i in range(0, max(1, len(words) - n + 1)):
+            best = max(best, similar(" ".join(words[i:i + n]), t_lat) * 0.97)
+    return best
+
+
+def _follow(page_url, html, record, source, base, artist_check=False, minimum=0.8):
+    from .names import similar
+    scored = []
+    for href, text in _anchors(html):
+        if "/lyrics/" not in href and source != "mezmurdebter":
+            continue
+        score = title_match(text, record)
+        if artist_check and record.get("artist_latin") and score >= minimum:
+            if not any(similar(record["artist_latin"], " ".join(text.split()[i:i + len(record["artist_latin"].split())])) > 0.7
+                       for i in range(len(text.split()))) and fold(record.get("artist_am", "x")) not in fold(text):
+                score *= 0.7
+        if score >= minimum:
+            scored.append((score, href if href.startswith("http") else base + href, text))
+    scored.sort(key=lambda x: -x[0])
+    out = []
+    for score, url, text in scored[:2]:
+        page = web.get(url)
+        if page is None or page.status_code != 200:
+            continue
+        page.encoding = "utf-8"
+        for stanzas in _page_candidates(url, page.text, record):
+            out.append(_candidate(f"site:{source}", url, stanzas, title=text[:100], extra={"link_score": round(score, 2)}))
+    return out
+
+
+def from_sites(record, log=print):
+    """Look the song up directly on mezmur lyrics sites (no search engine needed)."""
+    out = []
+    artist = record.get("artist_latin", "")
+    try:
+        if artist:
+            url = "https://mezmuroch.com/artists/" + "_".join(w[:1].upper() + w[1:] for w in artist.split())
+            page = web.get(url)
+            if page is not None and page.status_code == 200:
+                page.encoding = "utf-8"
+                out += _follow(url, page.text, record, "mezmuroch.com", "https://mezmuroch.com")
+    except Exception as error:
+        log(f"  mezmuroch lookup failed: {error}", flush=True)
+    try:
+        for q in [record.get("title_am"), record.get("title_latin")]:
+            if not q:
+                continue
+            page = web.get("https://legeta316.com/search", params={"q": q})
+            if page is not None and page.status_code == 200:
+                page.encoding = "utf-8"
+                found = _follow(page.url, page.text, record, "legeta316.com", "https://legeta316.com", artist_check=True)
+                out += found
+                if found:
+                    break
+    except Exception as error:
+        log(f"  legeta316 lookup failed: {error}", flush=True)
+    try:
+        if artist:
+            slug = re.sub(r"[^a-z0-9]+", "-", artist.lower()).strip("-")
+            url = f"https://mezmurdebter.vercel.app/{slug}"
+            page = web.get(url)
+            if page is not None and page.status_code == 200:
+                page.encoding = "utf-8"
+                out += _follow(url, page.text, record, "mezmurdebter", "https://mezmurdebter.vercel.app")
+    except Exception as error:
+        log(f"  mezmurdebter lookup failed: {error}", flush=True)
+    log(f"  lyrics sites: {len(out)} candidate(s)", flush=True)
+    return out
+
+
 def youtube_titles(record):
     q = " ".join(p for p in [record.get("title_am") or record.get("title_latin"), record.get("artist_latin") or record.get("artist_am")] if p)
     videos = web.youtube_search(q) if q else []
@@ -153,6 +246,10 @@ def gather(record, message_id, telegram_data, corrections_dir, duration, log=pri
         cands += from_lrclib(record, duration, log)
     except Exception as error:
         log(f"  lrclib failed: {error}", flush=True)
+    try:
+        cands += from_sites(record, log)
+    except Exception as error:
+        log(f"  lyrics sites failed: {error}", flush=True)
     try:
         web_cands, titles = from_web(record, log)
         cands += web_cands
