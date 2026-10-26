@@ -154,6 +154,17 @@ jobs:
           "$RUNNER_TEMP/sep/bin/pip" install -q torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu
           "$RUNNER_TEMP/sep/bin/pip" install -q "audio-separator[cpu]>=0.39"
           echo "AUDIO_SEPARATOR_BIN=$RUNNER_TEMP/sep/bin/audio-separator" >> "$GITHUB_ENV"
+      - name: Start private search engine (SearXNG, for lyrics and photos)
+        continue-on-error: true
+        run: |
+          docker run -d --name searxng -p 8888:8080 -v "$PWD/.github/searxng:/etc/searxng" \
+            -e SEARXNG_BASE_URL=http://localhost:8888/ searxng/searxng:latest >/dev/null
+          for i in $(seq 1 40); do
+            if curl -sf "http://localhost:8888/search?q=mezmur&format=json" >/dev/null; then
+              echo "SEARXNG_URL=http://localhost:8888" >> "$GITHUB_ENV"; echo "SearXNG ready"; break
+            fi
+            sleep 2
+          done
       - uses: actions/download-artifact@v4
         with:
           name: inputs-${{ github.run_id }}

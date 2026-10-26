@@ -99,7 +99,10 @@ def _commons(query, used):
         if (info.get("width") or 0) < 1280 or not 8 <= float(info.get("duration") or 0) <= 600:
             continue
         derivs = [d for d in info.get("derivatives", []) if d.get("height") in (1080, 720) and "webm" in d.get("type", "")]
-        url = sorted(derivs, key=lambda d: -d.get("height", 0))[0]["src"] if derivs else info.get("url")
+        title = page.get("title", "").lower()
+        if any(x in title for x in ("documentary", "interview", "lecture", "news", "trailer", "presentation", "talk", "speech")):
+            continue
+        url = sorted(derivs, key=lambda d: (d.get("height") != 1080, d.get("height", 0)))[0]["src"] if derivs else info.get("url")
         meta = info.get("extmetadata") or {}
         lic = (meta.get("LicenseShortName") or {}).get("value", "")
         if not any(x in lic for x in ["CC0", "Public domain", "CC BY", "CC-BY"]):
@@ -112,13 +115,43 @@ def _commons(query, used):
     return out
 
 
-def _prepare(url, target, seconds=24):
+def _probe_seconds(path):
+    try:
+        out = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(path)],
+                             capture_output=True, text=True, timeout=60).stdout.strip()
+        return float(out)
+    except (ValueError, subprocess.SubprocessError):
+        return 0.0
+
+
+def _text_free(target, log=print):
+    """Reject clips with burned-in titles, captions or watermarks (checked at 3 points)."""
+    from .textdetect import text_score
+    cap = cv2.VideoCapture(str(target))
+    n = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    worst = 0.0
+    for f in (0.15, 0.5, 0.85):
+        cap.set(cv2.CAP_PROP_POS_FRAMES, int(n * f))
+        ok, frame = cap.read()
+        if ok:
+            worst = max(worst, text_score(frame))
+    cap.release()
+    if worst >= 0.012:
+        log(f"  footage rejected (text on screen, score {worst:.3f}): {target.name}", flush=True)
+        return False
+    return True
+
+
+def _prepare(url, target, seconds=24, log=print):
     raw = target.with_suffix(".src")
-    r = web.get(url, timeout=120, max_bytes=120_000_000)
+    r = web.get(url, timeout=90, max_bytes=80_000_000)
     if r is None or r.status_code != 200 or len(r.content) < 200_000:
         return False
     raw.write_bytes(r.content)
-    code = subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-ss", "1", "-t", str(seconds), "-i", str(raw),
+    total = _probe_seconds(raw)
+    # Take the middle of the clip: title cards and end credits live at the edges.
+    start = max(1.0, min(total * 0.35, total - seconds - 1.0)) if total > seconds + 2 else 0.5
+    code = subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-ss", f"{start:.2f}", "-t", str(seconds), "-i", str(raw),
                            "-vf", "scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080,fps=30,format=yuv420p",
                            "-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "19", str(target)]).returncode
     raw.unlink(missing_ok=True)
@@ -127,21 +160,20 @@ def _prepare(url, target, seconds=24):
     cap = cv2.VideoCapture(str(target))
     ok = cap.isOpened() and cap.get(cv2.CAP_PROP_FRAME_COUNT) > 60
     cap.release()
-    return ok
+    return ok and _text_free(target, log)
 
 
 def footage(lyrics_text, folder, used=(), wanted=6, seed=0, log=print):
-    """Download and normalize stock clips. Returns (sources, records)."""
+    """Find, download and normalize stock clips (in parallel). Returns (sources, records)."""
+    from concurrent.futures import ThreadPoolExecutor
     folder = Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
     used = set(used)
     pexels, pixabay = os.environ.get("PEXELS_API_KEY", "").strip(), os.environ.get("PIXABAY_API_KEY", "").strip()
-    queries = themes_from_lyrics(lyrics_text, limit=wanted, seed=seed)
-    sources, records = [], []
+    queries = themes_from_lyrics(lyrics_text, limit=wanted + 2, seed=seed)
     rnd = random.Random(seed)
+    plan = []  # (query, [options...]) in priority order
     for q in queries:
-        if len(sources) >= wanted:
-            break
         options = []
         try:
             if pexels:
@@ -153,14 +185,32 @@ def footage(lyrics_text, folder, used=(), wanted=6, seed=0, log=print):
         except Exception as error:
             log(f"  footage search {q!r} failed: {error}", flush=True)
         rnd.shuffle(options)
-        for opt in options[:3]:
-            target = folder / f"clip{len(sources)}.mp4"
-            if _prepare(opt["url"], target):
+        if options:
+            plan.append((q, options[:3]))
+    if not pexels and not pixabay:
+        log("  tip: add free PEXELS_API_KEY / PIXABAY_API_KEY secrets for more and better footage", flush=True)
+
+    def attempt(job):
+        index, (q, options) = job
+        for k, opt in enumerate(options):
+            if opt["id"] in used:
+                continue
+            target = folder / f"clip{index}_{k}.mp4"
+            if _prepare(opt["url"], target, log=log):
+                return index, q, opt, target
+        return index, q, None, None
+
+    results = []
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        for index, q, opt, target in pool.map(attempt, list(enumerate(plan))):
+            if opt is not None and opt["id"] not in used:
                 used.add(opt["id"])
-                sources.append(Source("video", str(target), label=q, credit=opt["credit"]))
-                records.append({**opt, "query": q})
+                results.append((index, q, opt, target))
                 log(f"  footage: {q!r} <- {opt['id']}", flush=True)
-                break
+    results.sort(key=lambda x: x[0])
+    results = results[:wanted]
+    sources = [Source("video", str(t), label=q, credit=o["credit"]) for _, q, o, t in results]
+    records = [{**o, "query": q} for _, q, o, _ in results]
     return sources, records
 
 

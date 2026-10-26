@@ -41,7 +41,10 @@ def build_cues(words, line_texts=None, chorus_lines=frozenset(), max_gap=1.2):
         if group:
             same_line = w.get("line") is not None and w.get("line") == group[-1].get("line")
             gap = w["start"] - group[-1]["end"]
-            new_occurrence = same_line and w.get("word_index", 0) <= group[-1].get("word_index", -1)
+            if "phrase" in w:
+                new_occurrence = same_line and w["phrase"] != group[-1].get("phrase")
+            else:
+                new_occurrence = same_line and w.get("word_index", 0) <= group[-1].get("word_index", -1)
             if w.get("line") is None:
                 text = " ".join(x["word"] for x in group + [w])
                 if gap > 0.6 or len(group) >= 7 or len(text) > 40:

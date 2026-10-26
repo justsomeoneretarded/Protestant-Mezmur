@@ -39,13 +39,36 @@ def get(url, timeout=25, max_bytes=3_000_000, **kwargs):
         return None
 
 
+def _searxng(query, max_results=10, category="general"):
+    """The workflow starts a private SearXNG container (Google/Bing/Brave/Mojeek/... in one call)."""
+    import os
+    base = os.environ.get("SEARXNG_URL", "").rstrip("/")
+    if not base:
+        return []
+    try:
+        r = session().get(f"{base}/search", params={"q": query, "format": "json", "categories": category,
+                                                    "language": "all", "safesearch": 0}, timeout=25)
+        data = r.json() if r.status_code == 200 else {}
+    except (requests.RequestException, ValueError) as error:
+        print(f"searxng {query[:50]!r}: {error.__class__.__name__}", flush=True)
+        return []
+    return data.get("results", [])[:max_results * 2]
+
+
 def search(query, max_results=10):
-    """Text web search through the free `ddgs` metasearch library, with backend fallbacks."""
+    """Text web search: private SearXNG first, then the `ddgs` metasearch library."""
+    results, seen = [], set()
+    for item in _searxng(query, max_results):
+        href = item.get("url") or ""
+        if href and href not in seen:
+            seen.add(href)
+            results.append({"title": item.get("title", ""), "url": href, "snippet": item.get("content", "")})
+    if len(results) >= max_results // 2:
+        return results[:max_results]
     try:
         from ddgs import DDGS
     except ImportError:
-        return []
-    results, seen = [], set()
+        return results
     for backend in ["auto", "yahoo", "duckduckgo"]:
         try:
             for item in DDGS(timeout=20).text(query, max_results=max_results, backend=backend):
@@ -62,6 +85,11 @@ def search(query, max_results=10):
 
 
 def image_search(query, max_results=12):
+    found = [{"url": x.get("img_src"), "thumb": x.get("thumbnail_src"), "title": x.get("title", ""),
+              "width": None, "height": None, "source": x.get("url")}
+             for x in _searxng(query, max_results, category="images") if x.get("img_src")]
+    if len(found) >= 4:
+        return found[:max_results]
     try:
         from ddgs import DDGS
         return [{"url": x.get("image"), "thumb": x.get("thumbnail"), "title": x.get("title", ""),

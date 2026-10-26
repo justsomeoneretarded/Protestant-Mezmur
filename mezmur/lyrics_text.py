@@ -14,6 +14,23 @@ EMOJI = re.compile("[\U0001F000-\U0001FAFF☀-➿⬀-⯿️‍]")
 VERSE_NO = re.compile(r"^\s*(\d+|[፩-፼]+)\s*[.)\-:፡]\s*")
 
 
+def balance_brackets(line):
+    """Drop unmatched ( ) [ ] — sources often lose one half of an echo marker like '(በተራዬ'."""
+    out, stack = list(line), []
+    pairs = {")": "(", "]": "["}
+    for i, ch in enumerate(line):
+        if ch in "([":
+            stack.append(i)
+        elif ch in ")]":
+            if stack and line[stack[-1]] == pairs[ch]:
+                stack.pop()
+            else:
+                out[i] = ""
+    for i in stack:
+        out[i] = ""
+    return re.sub(r"\(\s*\)|\[\s*\]", "", "".join(out))
+
+
 def clean_line(line):
     line = html.unescape(line)
     line = EMOJI.sub(" ", line)
@@ -21,6 +38,8 @@ def clean_line(line):
     line = VERSE_NO.sub("", line)
     line = line.replace("፡", " ").replace("…", " ").replace("...", " ")
     line = re.sub(r"[\"“”«»]", "", line)
+    line = balance_brackets(line)
+    line = re.sub(r"\(\s+", "(", re.sub(r"\s+\)", ")", line))
     line = re.sub(r"[ \t]+", " ", line).strip(" -–—*•·|~_=")
     return clean(line)
 
@@ -224,3 +243,29 @@ def has_latin_lyrics(text):
     lines = [l for l in text.splitlines() if l.strip()]
     latin = [l for l in lines if len(LATIN.findall(l)) > 8 and not ETHIOPIC.search(l)]
     return len(latin) >= max(4, len(lines) // 2)
+
+
+def strip_header(stanzas, record):
+    """Remove leading 'Title — Singer' / 'ዘማሪ ...' header lines that lyric pages put above the text."""
+    import re as _re
+    names = [record.get(k, "") for k in ("artist_am", "artist_latin")]
+    title = fold(record.get("title_am", "") or "")
+    keys = [fold(n) for n in names if n]
+    # Ethiopic spellings vary (ይስሐቅ/ይስሃቅ, ሰድቅ/ሰዲቅ): compare the first 2 letters of each name word.
+    stems = [w[:2] for k in keys for w in k.split() if len(w) >= 2]
+    out = [dict(st, lines=list(st["lines"])) for st in stanzas]
+    if not out:
+        return out
+    first = out[0]["lines"]
+    while first:
+        line = first[0]
+        f = fold(line)
+        words = f.split()
+        named = sum(1 for st in stems if any(w.startswith(st) for w in words)) >= 2
+        sep = bool(_re.search(r"-{2,}|—|–|\||//", line))
+        only_title = title and f == title
+        if (named and (sep or len(words) <= 6)) or (sep and title and title in f) or only_title and len(first) > 4:
+            first.pop(0)
+        else:
+            break
+    return [st for st in out if st["lines"]]

@@ -1,121 +1,127 @@
 # Protestant Mezmur
 
-Turn the audio posts of a Telegram channel into finished, YouTube-ready Amharic
-lyric videos — entirely on free GitHub Actions. For every song you download one
-folder with the video, three thumbnails, titles, description, tags, captions and
-an upload checklist, then upload it to YouTube yourself.
+Turns songs from a Telegram channel into **YouTube-ready Amharic lyric videos**, entirely
+inside GitHub Actions, with free tools only. You download the finished folder and upload it
+yourself.
 
-Source channel: [@amharicprotestantmezmurss](https://t.me/amharicprotestantmezmurss)
-(change with the `TELEGRAM_CHANNEL` repository variable).
-
-## What each song gets
+For every song you get:
 
 | File | What it is |
 | --- | --- |
-| `video.mp4` | 1080p30 H.264, AAC 320k, loudness-mastered to YouTube's −14 LUFS |
-| `thumbnail.jpg`, `-b`, `-c` | 1280×720 thumbnails with the singer cut out, Amharic + romanized title — three designs for YouTube *Test & Compare* |
-| `title.txt` | Three title options ≤100 chars, Amharic + romanized (e.g. `ሲወድ ጌታ - አዲስዓለም አሰፋ \| Siwed Geta - Addisalem Assefa \| Amharic Mezmur Lyrics`) |
-| `description.txt` | Description with chapters, Amharic lyrics, romanized lyrics, credits, hashtags |
-| `tags.txt` | Song-specific + genre tags within YouTube's 500-character limit |
-| `captions/am.srt`, `captions/am-Latn.srt` | Timed Amharic and romanized captions |
-| `UPLOAD.md` | Step-by-step upload checklist (incl. where the end screen starts) and anything to double-check |
-| `lyrics.txt`, `lyrics.romanized.txt`, `lyrics.ass` | Lyrics as text and the styled karaoke subtitles burned into the video |
-| `metadata.json`, `quality.json` | Where lyrics/photos/footage came from, alignment statistics, timings |
+| `video.mp4` | 1080p lyric video: karaoke Amharic lyrics timed word-by-word to the real singing, romanized line underneath, next line preview, music-reactive background (beat pulses, live spectrum, particles, scene changes on bar starts), title card, progress bar and a clean end-screen area |
+| `thumbnail.jpg`, `thumbnail-b.jpg`, `thumbnail-c.jpg` | 1280×720 thumbnails with the singer's photo (cut out), the song name in Amharic and Latin letters and the singer's name. Three designs for YouTube's *Test & Compare* |
+| `title.txt` | Title options, first one in the common search style: `Addisalem Assefa siwed geta ሲወድ ጌታ አዲስዓለም አሰፋ lyrics` |
+| `description.txt` | Ready to paste: both scripts, chapters (Intro / Verse / Chorus…), full Amharic lyrics, romanized lyrics, credits, hashtags |
+| `tags.txt` | Song-specific + general tags, under YouTube's 500-character limit |
+| `captions/am.srt`, `captions/am-Latn.srt` | Subtitle files (Amharic, romanized) to upload in YouTube Studio |
+| `pinned_comment.txt` | A comment to post and pin |
+| `UPLOAD.md` | Step-by-step upload checklist, plus anything you should check first |
+| `lyrics.txt`, `lyrics.romanized.txt`, `lyrics.ass` | The lyrics as text and the styled subtitle file |
+| `metadata.json`, `quality.json` | Where the lyrics came from, how well they matched the audio, timings |
 
-### The video
+## How the lyrics are made accurate
 
-* **Intro card** — singer photo, Amharic title, romanized title, singer name.
-* **Karaoke lyrics** — each sung line appears just before it is sung; a gold fill
-  sweeps across each word *as it is sung*, the romanized line fills in sync below,
-  and the next line is previewed. Choruses get a small `አዝማች • CHORUS` tag.
-* **Music-reactive background** — HD footage (or bundled scenes) with slow camera
-  moves, a zoom pulse on every beat, brightness that follows the song's energy,
-  rising light particles, a live spectrum, scene changes on the downbeat.
-* **Countdown dots** before vocals return after an instrumental break, a singer
-  badge and a progress bar, and a clean outro leaving room for YouTube end screens.
+1. **Find the real lyrics.** For each song the pipeline searches, in this order:
+   your own `corrections/<message id>.txt` → nearby posts in the source channel → Amharic lyrics
+   channels on Telegram (and every chat your account has joined) → LRCLIB (free lyrics
+   database) → mezmur lyrics sites (mezmuroch.com, legeta316.com, mezmurdebter, wikimezmur,
+   onlinemezmur …) → a private web search engine started inside the job (SearXNG: Google, Bing,
+   Brave, Mojeek, …).
+2. **Listen to the song.** The vocals are isolated (UVR-MDX-NET) and the Amharic acoustic model
+   Ethio-ASR turns them into per-moment character probabilities.
+3. **Check every candidate against the audio.** Found lyrics are aligned to the whole song. A
+   candidate is used only if it explains most of the singing; lyrics for a different song with
+   the same title fail this check.
+4. **Align word by word.** The aligner follows the song through the lyric lines: choruses can
+   repeat, lines can be skipped or start halfway, instrumentals and ad-libs are allowed, but
+   singing that the lyrics do not explain costs extra, so lines stay on screen for exactly as
+   long as they are sung.
+5. **No verified lyrics?** You still get a video from an automatic transcription, clearly marked
+   in `UPLOAD.md` as needing review.
 
-## How lyrics are made accurate
+### Fixing lyrics (from your phone, no computer needed)
 
-Speech recognition alone gets sung Amharic wrong too often, so the pipeline looks
-for the **real lyrics** and only uses the speech model to *time* them.
+Create or edit `corrections/<message id>.txt` in GitHub's web editor and commit it to `main`:
 
-1. **Collect candidates** from every free source:
-   your `corrections/<id>.txt` → the Telegram post's caption, nearby posts and
-   replies → public Telegram lyrics channels (`LYRICS_CHANNELS`) → [LRCLIB](https://lrclib.net)
-   → web search across WikiMezmur, mezmuroch.com, legeta316.com, Mezmur Debter and any
-   other page that carries the lyrics.
-2. **Isolate the vocals** (MDX-Net Voc-FT via `audio-separator`; Mel-Band RoFormer optional, HTDemucs as fallback).
-3. **Listen** with [Ethio-ASR Amharic](https://huggingface.co/badrex/Ethio-ASR-amharic)
-   (Wav2Vec2-BERT CTC, CC BY 4.0), producing per-frame character probabilities.
-4. **Verify** each candidate against what is actually sung (spelling variants such as
-   ሀ/ሐ/ኀ, ሰ/ሠ, አ/ዐ are treated as equal), and reject lyrics of a different song.
-5. **Align**: a lyrics-constrained CTC search decides, for every vocal phrase, which
-   words of the lyrics explain the audio — choruses repeated any number of times, lines
-   split across breaths, ad-libs skipped — and takes word timings from the acoustic path.
-6. If no lyrics can be verified, the automatic transcription is used and the song is
-   flagged in `UPLOAD.md` for review.
+```text
+---
+title_am: ሲወድ ጌታ
+title_latin: Siwed Geta
+artist_am: አዲስዓለም አሰፋ
+artist_latin: Addisalem Assefa
+---
+ሲወድ ጌታ እስከ መስቀል ነው
+...
 
-**Fixing lyrics** never needs your computer: commit `corrections/<message id>.txt`
-(see [corrections/README.md](corrections/README.md)) and the workflow re-makes that song,
-re-timing your text automatically.
+አዝ፦
+ሀሌሉያ ክብር ለስሙ
+...
+```
 
-## Names, romanization, photos
+The header is optional. Write each stanza once and mark the chorus with `አዝ፦` (or `Chorus:`);
+repeats are found automatically. The commit starts the workflow for that song by itself. Your
+text is treated as correct, the timing is redone, and the video, subtitles, description and
+thumbnails are rebuilt.
 
-* Titles like `የሌለው አቻ//Yelelew acha//ይስሐቅ ሰድቅ//Yishak Sedik`, ID3/MP4 tags, captions
-  and file names are split into title/artist in both scripts. Missing Ge'ez spellings are
-  learned from YouTube and lyrics-site titles; missing Latin spellings are romanized in the
-  usual YouTube style (`ሲወድ ጌታ` → `Siwed Geta`). Fix spellings once in
-  [data/artists.yaml](data/artists.yaml).
-* Singer photos are gathered from `artists/` (your own, always preferred), the song's
-  embedded cover art, Telegram photos near the post, the artist's official YouTube channel
-  and videos, Wikimedia Commons and image search. Faces are detected (YuNet), the identity
-  that appears across most sources is taken as the singer (SFace), and the best shot is cut
-  out with U²-Net human segmentation for the thumbnails.
+### Your own singer photos
+
+Put a good photo in `artists/` named after the singer, for example
+`artists/addisalem-assefa.jpg`. It is then always used for that singer's thumbnails. Without
+one, the pipeline picks the best photo from the song's cover art, the Telegram post, the singer's
+YouTube channel and the web, checking that the faces agree.
 
 ## One-time setup
 
-1. Create a Telegram application at <https://my.telegram.org/apps> (API ID + hash).
-2. On your computer (Python 3.11+): `pip install Telethon==1.42.0` then
-   `python scripts/telegram_session.py`, and log in. Copy the printed session string.
-3. **Settings → Secrets and variables → Actions → Secrets**:
+1. Create a Telegram application at <https://my.telegram.org/apps> (API ID and API hash) with
+   an account that can read the source channel.
+2. On your computer (Python 3.11+): `pip install Telethon==1.42.0`, then
+   `python scripts/telegram_session.py`. Log in when asked and copy the printed session string.
+   It grants access to your Telegram account, so keep it secret.
+3. **Settings → Secrets and variables → Actions → Secrets:**
 
-   | Secret | Value |
-   | --- | --- |
-   | `TELEGRAM_API_ID` | numeric app ID |
-   | `TELEGRAM_API_HASH` | app hash |
-   | `TELEGRAM_SESSION` | the session string (treat like a password) |
-   | `PEXELS_API_KEY` *(optional, recommended)* | free key from <https://www.pexels.com/api/> — real HD stock footage matched to each song |
-   | `PIXABAY_API_KEY` *(optional)* | free key from <https://pixabay.com/api/docs/> |
+   | Secret | Required | Value |
+   | --- | --- | --- |
+   | `TELEGRAM_API_ID` | yes | numeric app ID |
+   | `TELEGRAM_API_HASH` | yes | app hash |
+   | `TELEGRAM_SESSION` | yes | the session string |
+   | `PEXELS_API_KEY` | recommended | free key from <https://www.pexels.com/api/> — real HD nature/sky footage chosen from the lyrics' themes |
+   | `PIXABAY_API_KEY` | optional | free key from <https://pixabay.com/api/docs/> — more footage |
 
-   Without footage keys, videos use Wikimedia Commons footage (free licences, credited
-   in the description) and the bundled scenes.
-4. Optional **Variables**: `TELEGRAM_CHANNEL` (another channel), `LYRICS_CHANNELS`
-   (comma-separated Telegram lyrics channels to search; a good default list is built in).
+   Without footage keys the backgrounds come from Wikimedia Commons plus the bundled scenery,
+   which is slower and repeats more. Both keys are free; with them every video looks different.
+4. Optional **Variables:** `TELEGRAM_CHANNEL` (default `@amharicprotestantmezmurss`) and
+   `LYRICS_CHANNELS` (comma-separated Telegram lyrics channels to search; a good default list is
+   built in). Joining extra lyrics channels with your Telegram account also helps, because the
+   pipeline searches every chat the account is in.
 
-## Running
+## Running it
 
 **Actions → Generate Mezmur Videos → Run workflow**
 
-* `batch_size` — how many new songs (oldest first). Each song renders on its own
-  runner in parallel.
-* `message_ids` — re-make specific posts (e.g. `2,5`) without moving the bookmark.
-* `separator` — vocal isolation model (MDX-Net Voc-FT is the fast default; Mel-Band RoFormer is cleaner but several times slower).
+- `batch_size`: how many new songs (oldest unprocessed first). Each song renders on its own free
+  runner at the same time, so 5 songs take about as long as 1 (≈ 25–35 minutes).
+- `message_ids`: remake specific songs (e.g. `2,3`) without moving your place in the channel.
+- `separator`: vocal-isolation model (default is the fast, accurate UVR-MDX-NET).
 
-When it finishes, open the run and download **Artifacts → `mezmur-<id>-run…`**.
-The run summary lists each song's lyric source and anything to check.
+When it finishes, open the run and download each `mezmur-<message id>-run…` artifact
+(kept 30 days).
 
-Progress is stored on the `mezmur-state` branch and only advances after every song in
-the batch succeeded. Failed batches are retried next time; nothing is skipped.
+### Progress
+
+Your place in the channel is stored on the `mezmur-state` branch and only moves forward after
+every song in the batch succeeded. A failed batch is retried next time, so no song is skipped.
+Replays and corrections never move it. Footage clips already used are remembered so videos
+don't repeat backgrounds.
 
 ## Costs and limits
 
-Everything is free for a public repository: GitHub-hosted runners (4 vCPU / 16 GB),
-open models (Ethio-ASR, MDX-Net, YuNet, SFace, U²-Net), keyless web sources and
-free API keys. A 5-minute song takes roughly 20–40 minutes of runner time, mostly
-vocal separation and rendering. Artifacts are kept 30 days.
+Everything is free: the repository is public, so GitHub Actions minutes are free on 4-CPU
+runners; all models (Ethio-ASR, UVR-MDX-NET, YuNet/SFace faces, U²-Net cutout, PP-OCR text
+detection) are open and run on the runner; Telegram, LRCLIB, Wikimedia, Pexels and Pixabay are free.
+Model files are cached between runs (Actions cache, 10 GB).
 
-Only publish songs you have permission to share. Lyrics and photos found online belong
-to their owners; the description credits the singer and the lyric/footage sources.
+Public repositories' artifacts can be downloaded by any signed-in GitHub user. Make sure you
+have permission to republish the songs; Content ID claims and strikes apply to lyric videos too.
 
 ## Development
 
@@ -123,7 +129,9 @@ to their owners; the description credits the singer and the lyric/footage source
 pip install torch==2.5.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cpu
 pip install -e '.[render,test]'
 pytest -q
-python -m mezmur.song --input inputs/song-2 --output output/song-2   # after a fetch
+python -m mezmur.song --input inputs/song-2 --output output/song-2   # one fetched song
 ```
 
-FFmpeg with libass is required (the workflows download a static build).
+Model credits: [Ethio-ASR Amharic](https://huggingface.co/badrex/Ethio-ASR-amharic) (CC BY 4.0),
+[audio-separator / UVR](https://github.com/nomadkaraoke/python-audio-separator),
+[OpenCV model zoo](https://github.com/opencv/opencv_zoo), [rembg U²-Net](https://github.com/danielgatis/rembg).

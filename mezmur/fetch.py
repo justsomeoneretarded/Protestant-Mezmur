@@ -54,28 +54,58 @@ async def neighbours(tg, entity, message, folder, span=6):
     return texts, photos
 
 
-async def search_channels(tg, record, channels):
-    queries = []
-    if record.get("title_am"):
-        queries.append(record["title_am"])
-    if record.get("title_latin"):
-        queries.append(record["title_latin"])
+def _title_queries(record):
+    qs = []
+    t_am, t_lat = record.get("title_am", ""), record.get("title_latin", "")
+    if t_am:
+        qs.append(t_am)
+        words = t_am.split()
+        if len(words) == 2:
+            qs.append(f"{words[1]} {words[0]}")      # channels often flip two-word titles
+        longest = max(words, key=len)
+        if len(words) > 1 and len(longest) >= 4:
+            qs.append(longest)
+    if t_lat:
+        qs.append(t_lat)
     out = []
+    for q in qs:
+        if q and q not in out:
+            out.append(q)
+    return out[:4]
+
+
+async def search_channels(tg, record, channels):
+    """Search known lyrics channels, then every chat this Telegram account has joined."""
+    queries = _title_queries(record)
+    out, seen = [], set()
+
+    def keep(m, where, link):
+        if m.raw_text and has_ethiopic(m.raw_text, 30) and (where, m.id) not in seen:
+            seen.add((where, m.id))
+            out.append({"where": where, "text": m.raw_text, "link": link})
+
     for name in channels:
         try:
             entity = await tg.get_entity(name)
         except Exception as error:
             print(f"  lyrics channel {name}: {error.__class__.__name__}", flush=True)
             continue
-        for q in queries[:2]:
+        for q in queries:
             try:
-                for m in await tg.get_messages(entity, search=q, limit=4):
-                    if m.raw_text and has_ethiopic(m.raw_text, 30):
-                        out.append({"where": f"channel @{name}", "text": m.raw_text,
-                                    "link": f"https://t.me/{name}/{m.id}"})
+                for m in await tg.get_messages(entity, search=q, limit=5):
+                    keep(m, f"channel @{name}", f"https://t.me/{name}/{m.id}")
             except Exception as error:
                 print(f"  search {name} {q!r}: {error.__class__.__name__}", flush=True)
             await asyncio.sleep(0.4)
+    for q in queries[:2]:
+        try:  # global search: all channels/groups the account is a member of
+            async for m in tg.iter_messages(None, search=q, limit=15):
+                chat = getattr(m.chat, "username", None) or getattr(m.chat, "title", "chat")
+                link = f"https://t.me/{chat}/{m.id}" if getattr(m.chat, "username", None) else ""
+                keep(m, f"joined chat {chat}", link)
+        except Exception as error:
+            print(f"  global search {q!r}: {error.__class__.__name__}", flush=True)
+        await asyncio.sleep(0.6)
     return out
 
 

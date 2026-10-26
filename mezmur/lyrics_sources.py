@@ -255,4 +255,10 @@ def gather(record, message_id, telegram_data, corrections_dir, duration, log=pri
         cands += web_cands
     except Exception as error:
         log(f"  web search failed: {error}", flush=True)
+    from .lyrics_text import strip_header
+    for c in cands:
+        if not c["trusted"]:
+            c["stanzas"] = strip_header(c["stanzas"], record)
+            c["text"] = stanzas_text(c["stanzas"])
+    cands = [c for c in cands if c["stanzas"]]
     return dedupe(cands), titles, overrides, notes

@@ -25,9 +25,10 @@ from .subtitles import build_cues, write_ass, write_srt
 from .visuals import Renderer, Source, render_video
 from .youtube import write_kit
 
-ACCEPT_SHARE = 0.55       # share of vocal time explained by the lyrics
-ACCEPT_DEFICIT = 1.35     # mean per-frame log-prob gap to the unconstrained path
-
+ACCEPT_SHARE = 0.50       # share of vocal frames inside aligned lyric lines
+ACCEPT_GAIN = 0.15        # per-vocal-frame log-likelihood gain over "unscripted singing"
+ACCEPT_LINES = 0.50       # share of the found lines that were actually sung
+MIN_TEXT_SIM = 0.06       # cheap pre-filter against the automatic draft
 
 def log(*a, **k):
     print(*a, **{"flush": True, **k})
@@ -63,33 +64,36 @@ def chorus_lines_of(stanzas, aligned_words):
     return repeated if len(repeated) < 0.8 * len(counts) else set()
 
 
-def choose_lyrics(cands, draft_text, logp, frame_s, vocab, energy):
-    """Verify candidates against the audio; return (best, report list)."""
-    scored = []
+def choose_lyrics(cands, draft_text, logp, frame_s, vocab, energy, max_aligned=6):
+    """Verify candidates against the audio itself; return (best, report list)."""
     for c in cands:
-        sim = similarity(c["text"], draft_text) if draft_text else {"score": 0.0}
-        c["similarity"] = sim
-        scored.append(c)
-    scored.sort(key=lambda c: (not c["trusted"], -c["similarity"]["score"]))
+        c["similarity"] = similarity(c["text"], draft_text) if draft_text else {"score": 0.0}
+    ordered = sorted(cands, key=lambda c: (not c["trusted"], -c["similarity"]["score"]))
     reports, best = [], None
-    for c in scored[:4]:
-        if not c["trusted"] and c["similarity"]["score"] < 0.18:
-            reports.append({"source": c["source"], "url": c["url"], "similarity": c["similarity"], "rejected": "text mismatch"})
+    aligned = 0
+    for c in ordered:
+        if not c["trusted"] and (c["similarity"]["score"] < MIN_TEXT_SIM or aligned >= max_aligned):
+            reports.append({"source": c["source"], "url": c["url"], "similarity": c["similarity"],
+                            "rejected": "text mismatch" if c["similarity"]["score"] < MIN_TEXT_SIM else "not checked"})
             continue
+        aligned += 1
         lines = [l.split() for l in all_lines(c["stanzas"])]
         target = build_target(Lyrics(lines), vocab["char_to_id"])
         t0 = time.time()
         words, rep = align_lyrics(logp, frame_s, target, vocab["blank"], vocab["delimiter"], energy=energy)
+        lines_share = rep["lines_used"] / max(1, rep["lines_total"])
         entry = {"source": c["source"], "url": c["url"], "similarity": c["similarity"],
-                 "matched_share": round(rep["matched_share"], 3), "mean_deficit": rep["mean_deficit"],
-                 "phrases": rep["phrases"], "null_phrases": rep["null"], "seconds": round(time.time() - t0, 1)}
-        ok = c["trusted"] or (rep["matched_share"] >= ACCEPT_SHARE and (rep["mean_deficit"] or 9) <= ACCEPT_DEFICIT)
+                 **{k: (round(v, 3) if isinstance(v, float) else v) for k, v in rep.items() if k != "phrase_details"},
+                 "lines_share": round(lines_share, 3), "seconds": round(time.time() - t0, 1)}
+        ok = c["trusted"] or (rep["matched_share"] >= ACCEPT_SHARE and rep["gain_per_vocal_frame"] >= ACCEPT_GAIN
+                              and lines_share >= ACCEPT_LINES)
         entry["accepted"] = bool(ok)
         reports.append(entry)
-        log(f"  candidate {c['source']}: sim={c['similarity']['score']} share={entry['matched_share']} "
-            f"deficit={entry['mean_deficit']} -> {'OK' if ok else 'no'}")
+        log(f"  candidate {c['source']}: sim={c['similarity']['score']} share={rep['matched_share']:.2f} "
+            f"gain={rep['gain_per_vocal_frame']:.2f} lines={rep['lines_used']}/{rep['lines_total']} "
+            f"complete={rep['complete_share']:.2f} -> {'OK' if ok else 'no'}")
         if ok:
-            score = rep["matched_share"] - 0.2 * (rep["mean_deficit"] or 0) + (5 if c["trusted"] else 0)
+            score = rep["matched_share"] + rep["gain_per_vocal_frame"] + 0.3 * rep["complete_share"] + (10 if c["trusted"] else 0)
             if best is None or score > best[0]:
                 best = (score, c, words, rep, lines)
             if c["trusted"]:
@@ -282,7 +286,7 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
         words = smooth_words(words)
         chorus = chorus_lines_of(stanzas, aligned)
         lyrics_source = f"{chosen['source']} {chosen['url']}".strip()
-        if not chosen["trusted"] and align_report["matched_share"] < 0.75:
+        if not chosen["trusted"] and align_report["matched_share"] < 0.8:
             review["reasons"].append(f"Only {align_report['matched_share']:.0%} of the singing matched the found lyrics; "
                                      "watch for missing lines.")
         mode = "lyrics-aligned"
@@ -343,9 +347,14 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     scenes = backgrounds.local_scenes(work)
     sources = clips + (scenes[:2] if len(clips) >= 3 else scenes)
     if photo_img is not None:
-        p = work / "photo_bg.jpg"
-        cv2.imwrite(str(p), photo_img)
-        sources.append(Source("image", str(p), label="artist", blur=41))
+        from .textdetect import text_score
+        score = text_score(photo_img)
+        if score < 0.012:  # never put a poster/thumbnail with its own lettering behind the lyrics
+            p = work / "photo_bg.jpg"
+            cv2.imwrite(str(p), photo_img)
+            sources.append(Source("image", str(p), label="artist", blur=41))
+        else:
+            log(f"  artist photo has lettering (score {score:.3f}); not used as a background")
     timings["footage"] = round(time.time() - t, 1)
 
     # 9. Thumbnails.

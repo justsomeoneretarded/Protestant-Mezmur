@@ -27,17 +27,14 @@ def _fit(parts, limit=100):
 
 
 def titles(m):
+    """First option follows the common search pattern on YouTube:
+    'Addisalem Assefa siwed geta ሲወድ ጌታ አዲስዓለም አሰፋ lyrics'."""
     t_am, t_lat, a_am, a_lat = m.get("title_am", ""), m.get("title_latin", ""), m.get("artist_am", ""), m.get("artist_latin", "")
-    opts = []
-    if t_am and a_am:
-        opts.append(_fit([f"{t_am} - {a_am}", f"| {t_lat} - {a_lat}" if t_lat and a_lat else "", "| Amharic Mezmur Lyrics"]))
-        opts.append(_fit([a_lat, t_lat.lower() if t_lat else "", t_am, a_am, "lyrics", "new protestant mezmur"]))
-        opts.append(_fit([f"{a_lat} - {t_lat}" if a_lat and t_lat else t_lat, f"({t_am})", a_am, "| Mezmur Lyrics ግጥም"]))
-    else:
-        name = t_am or t_lat
-        artist = a_am or a_lat
-        opts.append(_fit([name, f"- {artist}" if artist else "", f"| {t_lat}" if t_am and t_lat else "", "| Amharic Mezmur Lyrics"]))
-        opts.append(_fit([artist, name, "lyrics", "new protestant mezmur"]))
+    opts = [_fit([a_lat, t_lat.lower() if t_lat else "", t_am, a_am, "lyrics", "| Amharic Mezmur"]),
+            _fit([f"{t_am} - {a_am}" if t_am and a_am else (t_am or t_lat),
+                  f"| {t_lat} - {a_lat}" if t_lat and a_lat else "", "| Mezmur Lyrics ግጥም"]),
+            _fit([f"{a_lat} - {t_lat}" if a_lat and t_lat else (t_lat or t_am), f"({t_am})" if t_am and t_lat else "",
+                  a_am, "| New Amharic Protestant Mezmur Lyrics"])]
     out = []
     for o in opts:
         if o and o not in out:
@@ -45,42 +42,71 @@ def titles(m):
     return out
 
 
-def sections(cues, duration, chorus_lines):
-    """Chapters from sung structure: intro, verses/choruses, instrumentals, outro."""
+def sections(cues, duration, chorus_lines, max_chapters=10):
+    """Chapters from the sung structure. Same verse sung twice keeps its number; back-to-back
+    blocks with the same label are merged; YouTube needs 0:00 first, >= 3 chapters, each >= 10 s."""
     if not cues:
         return []
-    blocks = []  # contiguous runs of cues separated by > 3.5 s
+    chorus_lines = set(chorus_lines or ())
+    cues = [{**c, "chorus": bool(c.get("chorus")) or c.get("line") in chorus_lines} for c in cues]
+    blocks = []
     for cue in cues:
         if blocks and cue["start"] - blocks[-1][-1]["end"] <= 3.5:
             blocks[-1].append(cue)
         else:
             blocks.append([cue])
-    out = [{"start": 0.0, "label": "Intro"}]
-    verse = 0
-    prev_end = 0.0
+    # Split blocks where the chorus starts or stops inside them.
+    parts = []
     for block in blocks:
-        if block[0]["start"] - prev_end > 12 and out[-1]["label"] != "Intro":
-            out.append({"start": prev_end + 0.5, "label": "Instrumental"})
-        chorus = sum(1 for c in block if c.get("line") in chorus_lines) > len(block) / 2
-        if chorus:
+        cur = [block[0]]
+        for cue in block[1:]:
+            if bool(cue.get("chorus")) != bool(cur[-1].get("chorus")) and len(cur) >= 2:
+                parts.append(cur)
+                cur = [cue]
+            else:
+                cur.append(cue)
+        parts.append(cur)
+    verses = {}
+    raw = [{"start": 0.0, "label": "Intro"}]
+    prev_end = 0.0
+    for part in parts:
+        if part[0]["start"] - prev_end > 12 and raw[-1]["label"] != "Intro":
+            raw.append({"start": prev_end + 0.5, "label": "Instrumental • ሙዚቃ"})
+        if sum(1 for c in part if c.get("chorus")) > len(part) / 2:
             label = "Chorus • አዝማች"
         else:
-            verse += 1
-            label = f"Verse {verse} • ስንኝ {verse}"
-        out.append({"start": max(0.0, block[0]["start"] - 0.8), "label": label})
-        prev_end = block[-1]["end"]
+            key = frozenset(c.get("line") for c in part if c.get("line") is not None) or frozenset([id(part)])
+            match = next((n for k, n in verses.items() if len(k & key) >= max(1, len(key) // 2)), None)
+            if match is None:
+                match = len(verses) + 1
+                verses[key] = match
+            label = f"Verse {match} • ስንኝ {match}"
+        if raw[-1]["label"] != label:
+            raw.append({"start": max(prev_end, part[0]["start"] - 0.8), "label": label})
+        prev_end = part[-1]["end"]
     if duration - prev_end > 12:
-        out.append({"start": prev_end + 0.5, "label": "Outro"})
-    # YouTube: first chapter 0:00, each at least 10 s; merge short ones.
+        raw.append({"start": prev_end + 0.5, "label": "Outro"})
     merged = []
-    for s in out:
-        if merged and s["start"] - merged[-1]["start"] < 10:
-            if merged[-1]["label"] == "Intro" and len(merged) == 1:
-                continue
+    for c in raw:
+        if merged and (c["start"] - merged[-1]["start"] < 10 or c["label"] == merged[-1]["label"]):
             continue
-        merged.append(s)
-    if len(merged) > 1 and duration - merged[-1]["start"] < 10:
+        merged.append(c)
+    while len(merged) > 1 and duration - merged[-1]["start"] < 10:
         merged.pop()
+    while len(merged) > max_chapters:  # drop the shortest chapter (never the first)
+        lengths = [(merged[i + 1]["start"] if i + 1 < len(merged) else duration) - merged[i]["start"]
+                   for i in range(len(merged))]
+        i = min(range(1, len(merged)), key=lambda k: lengths[k])
+        merged.pop(i)
+        merged = [c for j, c in enumerate(merged) if j == 0 or c["label"] != merged[j - 1]["label"]]
+    if not merged:
+        return []
+    renumber = {}
+    for c in merged:  # number the verses that survived, in order of first appearance
+        m = re.match(r"Verse (\d+)", c["label"])
+        if m:
+            n = renumber.setdefault(m.group(1), len(renumber) + 1)
+            c["label"] = f"Verse {n} • ስንኝ {n}"
     merged[0]["start"] = 0.0
     return merged if len(merged) >= 3 else []
 

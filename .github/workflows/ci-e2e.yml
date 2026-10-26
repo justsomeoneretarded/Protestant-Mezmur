@@ -10,7 +10,7 @@ jobs:
     with:
       message_ids: '2,3,4,5'
       batch_size: '1'
-      debug: acoustic
+      debug: '1'
     secrets: inherit
   preview:
     needs: gen
