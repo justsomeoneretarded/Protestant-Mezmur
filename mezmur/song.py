@@ -180,8 +180,6 @@ def photo_candidates(work, inp, record, videos):
             log(f"  youtube photos failed: {error}")
         try:
             for i, im in enumerate(web.commons_images(artist, 4)):
-                if not any(x in (im.get("license") or "").lower() for x in ("cc0", "public domain", "pd")):
-                    continue  # thumbnails must not need a credit line
                 r = web.get(im["url"]) if im.get("url") else None
                 if r is not None and r.status_code == 200:
                     path = pdir / f"commons-{i}.jpg"
@@ -331,6 +329,7 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     photo_cands = photo_candidates(work, inp, record, videos)
     ranked = thumbnail.rank_photos(photo_cands, log=log) if photo_cands else []
     person, badge_photo, photo_img, photo_source = None, None, None, None
+    photo_credit = None
     for item in ranked[:4]:
         if not item.get("same_person", True):
             continue
@@ -338,6 +337,7 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
         cut = thumbnail.cutout(img, item["face"])
         if cut is not None:
             person, photo_img, photo_source = cut, img, item["source"]
+            photo_credit = item.get("credit")
             badge_photo = face_square(img, item["face"])
             break
     if person is None and ranked:
@@ -401,7 +401,9 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
         review["reasons"].append(f"Edit correction-template.txt and commit it as corrections/{mid}.txt to re-make "
                                  "this video with the right words (timing is redone automatically).")
     # 11. Upload kit + diagnostics.
-    credits = [c["credit"] for c in clip_records]
+    credits = [c["credit"] for c in clip_records if c.get("credit")]
+    if photo_credit:
+        credits.insert(0, f"Photo: {photo_credit}")
     review["needs_review"] = bool(review["reasons"]) or mode != "lyrics-aligned"
     if record.get("title_latin_auto") or record.get("artist_latin_auto"):
         review["reasons"].append("The romanized title/artist was generated automatically; check spelling in title.txt.")

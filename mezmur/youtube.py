@@ -136,8 +136,8 @@ def hashtag(text):
 
 
 def description(m, stanzas, cues, chapters, credits, lyrics_source):
-    """YouTube description: title in both scripts, lyrics (Ge'ez + Latin letters), song/singer, hashtags.
-    (No chapters, no source/footage/model credits: every background used needs no attribution.)"""
+    """YouTube description: title in both scripts, lyrics (Ge'ez + Latin letters), credits, hashtags.
+    No chapters; credits are the song, the singer, and the photo/footage used.)"""
     t_am, t_lat, a_am, a_lat = m.get("title_am", ""), m.get("title_latin", ""), m.get("artist_am", ""), m.get("artist_latin", "")
     head = " | ".join(p for p in [" - ".join(x for x in [t_am, a_am] if x), " - ".join(x for x in [t_lat, a_lat] if x)] if p)
     lines = [f"{head} (Lyrics • ግጥም)", ""]
@@ -153,7 +153,9 @@ def description(m, stanzas, cues, chapters, credits, lyrics_source):
     rom_block = ["🔤 Lyrics", rom_text, ""]
     tail = ["🙏 Credits",
             f"Song: {t_am or t_lat}{f' / {t_lat}' if t_am and t_lat else ''}",
-            f"Singer: {a_am or a_lat}{f' / {a_lat}' if a_am and a_lat else ''}", ""]
+            f"Singer: {a_am or a_lat}{f' / {a_lat}' if a_am and a_lat else ''}"]
+    tail += [c if c.startswith("Photo:") else f"Background: {c}" for c in credits[:8]]
+    tail.append("")
     tags_line = " ".join(t for t in [hashtag(a_lat or a_am), hashtag(t_lat or t_am), "#AmharicMezmur", "#MezmurLyrics",
                                      "#ProtestantMezmur", "#EthiopianGospel"] if t)
     for with_roman in (True, False):
