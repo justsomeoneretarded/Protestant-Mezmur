@@ -185,14 +185,32 @@ jobs:
       - name: Summary
         if: always()
         run: python -m mezmur.summary "output/song-${{ matrix.id }}" >> "$GITHUB_STEP_SUMMARY" || true
-      - uses: actions/upload-artifact@v4
-        if: always()
+      - name: Upload the YouTube kit (only what you upload)
+        uses: actions/upload-artifact@v4
+        if: success()
         with:
           name: mezmur-${{ matrix.id }}-run${{ github.run_id }}
-          path: output/
-          if-no-files-found: warn
+          path: |
+            output/song-${{ matrix.id }}/video.mp4
+            output/song-${{ matrix.id }}/thumbnail.jpg
+            output/song-${{ matrix.id }}/thumbnail-b.jpg
+            output/song-${{ matrix.id }}/thumbnail-c.jpg
+            output/song-${{ matrix.id }}/title.txt
+            output/song-${{ matrix.id }}/description.txt
+            output/song-${{ matrix.id }}/tags.txt
+            output/song-${{ matrix.id }}/pinned_comment.txt
+            output/song-${{ matrix.id }}/captions/
+          if-no-files-found: error
           retention-days: 30
           compression-level: 0
+      - name: Upload the log (only if this song failed)
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: log-${{ matrix.id }}-run${{ github.run_id }}
+          path: output/song-${{ matrix.id }}/run.log
+          if-no-files-found: ignore
+          retention-days: 7
       - uses: actions/upload-artifact@v4
         with:
           name: bg-${{ matrix.id }}-${{ github.run_id }}
@@ -226,4 +244,5 @@ jobs:
       - name: Where are my files?
         run: |
           echo "### Download each song from this run's **Artifacts** (mezmur-<message id>-run…)" >> "$GITHUB_STEP_SUMMARY"
-          echo "Inside: video.mp4, thumbnail.jpg (+ -b, -c), title.txt, description.txt, tags.txt, captions/, UPLOAD.md" >> "$GITHUB_STEP_SUMMARY"
+          echo "Inside: video.mp4, thumbnail.jpg (+ -b, -c), title.txt, description.txt, tags.txt, pinned_comment.txt, captions/" >> "$GITHUB_STEP_SUMMARY"
+          echo "Anything to check before publishing is listed per song above." >> "$GITHUB_STEP_SUMMARY"

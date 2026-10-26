@@ -395,12 +395,9 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     timings["render"] = round(time.time() - t, 1)
 
     if mode == "transcription":
-        header = "\n".join(f"{k}: {record.get(k, '')}" for k in ["title_am", "title_latin", "artist_am", "artist_latin"])
-        body = "\n".join(c["text"] for c in cues)
-        (out / "correction-template.txt").write_text(
-            f"---\n{header}\n---\n{body}\n", encoding="utf-8")
-        review["reasons"].append(f"Edit correction-template.txt and commit it as corrections/{mid}.txt to re-make "
-                                 "this video with the right words (timing is redone automatically).")
+        review["reasons"].append(f"To fix the words: copy the Amharic lyrics from description.txt into "
+                                 f"corrections/{mid}.txt, correct them and commit — the video is re-made "
+                                 "with the right words and timing.")
     # 11. Upload kit + diagnostics.
     credits = [c["credit"] for c in clip_records if c.get("credit")]
     if photo_credit:

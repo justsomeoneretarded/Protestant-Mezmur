@@ -11,13 +11,10 @@ For every song you get:
 | `video.mp4` | 1080p lyric video: karaoke Amharic lyrics timed word-by-word to the real singing, romanized line underneath, next line preview, one calm background clip for the whole song (waterfall, sky, space, calm water), a smooth music spectrum, title card and a clean end-screen area |
 | `thumbnail.jpg`, `thumbnail-b.jpg`, `thumbnail-c.jpg` | 1280×720 thumbnails with the singer's photo (cut out), the song name in Amharic and Latin letters and the singer's name. Three designs for YouTube's *Test & Compare* |
 | `title.txt` | Title options, first one in the common search style: `Addisalem Assefa siwed geta ሲወድ ጌታ አዲስዓለም አሰፋ lyrics` |
-| `description.txt` | Ready to paste: both scripts, chapters (Intro / Verse / Chorus…), full Amharic lyrics, romanized lyrics, credits, hashtags |
+| `description.txt` | Ready to paste: both scripts, full Amharic lyrics, lyrics in Latin letters, credits, hashtags |
 | `tags.txt` | Song-specific + general tags, under YouTube's 500-character limit |
-| `captions/am.srt`, `captions/am-Latn.srt` | Subtitle files (Amharic, romanized) to upload in YouTube Studio |
+| `captions/am.srt`, `captions/am-Latn.srt` | Caption files to upload in YouTube Studio: Amharic, and Amharic in Latin letters (name that track "Amharic (Latin letters)") |
 | `pinned_comment.txt` | A comment to post and pin |
-| `UPLOAD.md` | Step-by-step upload checklist, plus anything you should check first |
-| `lyrics.txt`, `lyrics.romanized.txt`, `lyrics.ass` | The lyrics as text and the styled subtitle file |
-| `metadata.json`, `quality.json` | Where the lyrics came from, how well they matched the audio, timings |
 
 ## How the lyrics are made accurate
 
@@ -106,7 +103,9 @@ YouTube channel and the web, checking that the faces agree.
 - `separator`: vocal-isolation model (default is the fast, accurate UVR-MDX-NET).
 
 When it finishes, open the run and download each `mezmur-<message id>-run…` artifact
-(kept 30 days).
+(kept 30 days). It holds only what you upload. Anything to check before publishing (for example
+unverified lyrics) is listed per song on the run's summary page. If a song fails, a `log-…`
+artifact with its log is added instead.
 
 ### Progress
 
