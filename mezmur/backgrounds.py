@@ -5,6 +5,7 @@ import subprocess
 from pathlib import Path
 
 import cv2
+import numpy as np
 
 from . import web
 from .geez import fold
@@ -25,6 +26,18 @@ THEMES = [
 ]
 DEFAULT = ["sunrise clouds timelapse", "golden hour nature", "mountains mist", "light rays forest", "ocean sunset",
            "sky clouds timelapse", "flowers field sunlight", "calm lake sunrise"]
+
+
+CALM = ["waterfall", "starry night sky", "milky way timelapse", "calm lake reflection", "clouds timelapse",
+        "ocean waves", "mountain mist", "sunrise clouds", "waterfall forest", "night sky stars"]
+
+
+def calm_themes(limit=4, seed=0):
+    """Neat, slow subjects only (waterfalls, sky, space, calm water); a different order per song."""
+    rnd = random.Random(seed)
+    out = CALM[:]
+    rnd.shuffle(out)
+    return out[:limit]
 
 
 def themes_from_lyrics(text, limit=6, seed=0):
@@ -159,7 +172,7 @@ def _nasa_file(collection_url):
     return mp4[0].replace("http://", "https://") if mp4 else None
 
 
-MIXKIT_TOPICS = [("sunrise", "sunrise"), ("sunset", "sunset"), ("cloud", "clouds"), ("sky", "sky"), ("mountain", "mountain"),
+MIXKIT_TOPICS = [("waterfall", "waterfall"), ("milky", "stars"), ("mist", "fog"), ("lake", "lake"), ("sunrise", "sunrise"), ("sunset", "sunset"), ("cloud", "clouds"), ("sky", "sky"), ("mountain", "mountain"),
                  ("ocean", "ocean"), ("wave", "ocean"), ("river", "river"), ("water", "water"), ("rain", "rain"),
                  ("star", "stars"), ("night", "night"), ("candle", "candle"), ("flame", "fire"), ("flower", "flowers"),
                  ("forest", "forest"), ("tree", "forest"), ("desert", "desert"), ("light", "light"), ("bird", "birds"),
@@ -199,6 +212,65 @@ def _probe_seconds(path):
         return 0.0
 
 
+def _overlay_reason(target):
+    """Detect things laid over footage: watermarks (logos or small corner text) and player bars.
+
+    An overlay stays perfectly still while the picture under it moves, and sits near the edges.
+    Returns a reason string, or None when the clip is clean.
+    """
+    cap = cv2.VideoCapture(str(target))
+    n = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    frames = []
+    for k in range(10):
+        cap.set(cv2.CAP_PROP_POS_FRAMES, int(n * (0.05 + 0.09 * k)))
+        ok, f = cap.read()
+        if ok:
+            frames.append(cv2.resize(f, (480, 270), interpolation=cv2.INTER_AREA))
+    cap.release()
+    if len(frames) < 6:
+        return None
+    H, W = 270, 480
+    gray = np.stack([cv2.cvtColor(f, cv2.COLOR_BGR2GRAY) for f in frames]).astype(np.float32)
+    raw_motion = gray.std(0)
+    motion = cv2.GaussianBlur(raw_motion, (0, 0), 2)
+    edges = np.stack([cv2.Canny(g.astype(np.uint8), 60, 150) > 0 for g in gray]).mean(0)
+    steady = edges >= 0.9
+    # Player bar / timeline: a straight line, still in every frame, across the top or bottom.
+    for r in list(range(0, int(H * 0.08))) + list(range(int(H * 0.88), H)):
+        if steady[max(0, r - 1):r + 2].any(0).mean() > 0.5:
+            return "player bar or frame line"
+    # Logo watermark: a still, edged blob near the edges while the picture around it moves.
+    zone = np.zeros((H, W), bool)
+    zone[:int(H * 0.22), :] = zone[-int(H * 0.22):, :] = True
+    zone[:, :int(W * 0.22)] = zone[:, -int(W * 0.22):] = True
+    blobs = cv2.dilate((steady & zone).astype(np.uint8), np.ones((5, 5), np.uint8))
+    count, labels, stats, _ = cv2.connectedComponentsWithStats(blobs)
+    for i in range(1, count):
+        x, y, w, h, area = stats[i]
+        if area < 40 or w < 8 or h < 5 or w > W * 0.45 or h > H * 0.3:
+            continue
+        inside = labels == i
+        ring = cv2.dilate(inside.astype(np.uint8), np.ones((25, 25), np.uint8)).astype(bool) & ~cv2.dilate(
+            inside.astype(np.uint8), np.ones((7, 7), np.uint8)).astype(bool)
+        strokes = inside & steady
+        ring_motion = motion[ring].mean()
+        if strokes.sum() >= 20 and ring_motion > 6.0 and np.median(raw_motion[strokes]) < 0.6 * ring_motion:
+            return "watermark/logo"
+    # Small watermark text in a corner (the main text check ignores tiny text).
+    from .textdetect import text_boxes
+    hits = 0
+    for f in frames[1::4]:
+        fh, fw = f.shape[:2]
+        for bx, by, bw, bh in text_boxes(f):
+            corner = (bx < fw * 0.3 or bx + bw > fw * 0.7) and (by < fh * 0.2 or by + bh > fh * 0.8)
+            if corner and bh >= fh * 0.012:
+                hits += 1
+                break
+    if hits >= 2:
+        return "watermark text"
+    return None
+
+
 def _text_free(target, log=print):
     """Reject clips with burned-in titles, captions or watermarks (checked at 3 points)."""
     from .textdetect import text_score
@@ -214,10 +286,14 @@ def _text_free(target, log=print):
     if worst >= 0.012:
         log(f"  footage rejected (text on screen, score {worst:.3f}): {target.name}", flush=True)
         return False
+    reason = _overlay_reason(target)
+    if reason:
+        log(f"  footage rejected ({reason}): {target.name}", flush=True)
+        return False
     return True
 
 
-def _prepare(url, target, seconds=24, log=print):
+def _prepare(url, target, seconds=40, log=print):
     raw = target.with_suffix(".src")
     r = web.get(url, timeout=60, max_bytes=80_000_000)
     if r is None or r.status_code != 200 or len(r.content) < 200_000:
@@ -260,7 +336,7 @@ def footage(lyrics_text, folder, used=(), wanted=6, seed=0, log=print, budget=30
             log(f"  footage search {label!r} failed: {error.__class__.__name__}", flush=True)
             return []
 
-    themes = themes_from_lyrics(lyrics_text, limit=wanted + 2, seed=seed)
+    themes = calm_themes(limit=4, seed=seed)
     if pexels or pixabay:
         for q in themes:
             opts = (search(q, _pexels, q, pexels, used) if pexels else []) + \
@@ -300,7 +376,7 @@ def footage(lyrics_text, folder, used=(), wanted=6, seed=0, log=print, budget=30
 
     results = []
     with ThreadPoolExecutor(max_workers=3) as pool:
-        for index, q, opt, target in pool.map(attempt, list(enumerate(plan))):
+        for index, q, opt, target in pool.map(attempt, list(enumerate(plan))[:wanted + 2]):
             if opt is not None and opt["id"] not in used:
                 used.add(opt["id"])
                 results.append((index, q, opt, target))

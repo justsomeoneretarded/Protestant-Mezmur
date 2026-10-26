@@ -75,6 +75,37 @@ class VideoReader:
         return self.last
 
 
+class LoopReader:
+    """Plays a clip forever; its last seconds crossfade into its start, so the loop is invisible."""
+
+    def __init__(self, path, w, h, fps, overlap_s=2.0):
+        cap = cv2.VideoCapture(path)
+        src_fps = cap.get(cv2.CAP_PROP_FPS) or fps
+        count = cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0
+        cap.release()
+        self.args = (path, w, h, fps)
+        self.n = max(6, int(count / src_fps * fps) - 2)
+        self.ov = max(1, min(int(overlap_s * fps), self.n // 3))
+        self.a, self.b, self.j = VideoReader(*self.args), None, 0
+
+    def read(self):
+        fa = self.a.read()
+        fade_from = self.n - self.ov
+        if self.j >= fade_from:
+            if self.b is None:
+                self.b = VideoReader(*self.args)
+            fb = self.b.read()
+            x = (self.j - fade_from + 1) / (self.ov + 1)
+            x = x * x * (3 - 2 * x)
+            frame = cv2.addWeighted(fa, 1 - x, fb, x, 0)
+        else:
+            frame = fa
+        self.j += 1
+        if self.j >= self.n:
+            self.a, self.b, self.j = self.b or VideoReader(*self.args), None, self.ov
+        return frame
+
+
 PALETTES = [  # (deep background, glow 1, glow 2, light) in RGB — warm, worshipful colour schemes
     [(18, 10, 38), (214, 120, 48), (120, 40, 110), (255, 220, 160)],   # dusk gold / plum
     [(8, 20, 42), (40, 110, 190), (230, 170, 80), (255, 236, 190)],    # night blue / sunrise
@@ -179,22 +210,14 @@ class Renderer:
 
     # ---------- planning ----------
     def _schedule(self, sources):
-        sources = [s for s in sources if s] or [Source("procedural", label="light")]
-        bars = self.f.downbeats
-        target = 13.0
-        times = [0.0]
-        t = 0.0
-        while t + target < self.duration - 4:
-            t = snap(t + target, bars, 2.0)
-            times.append(t)
-        times.append(self.duration)
-        order = list(range(len(sources)))
-        self.rng.shuffle(order)
-        scenes = []
-        for i in range(len(times) - 1):
-            src = sources[order[i % len(order)]]
-            scenes.append(Scene(times[i], times[i + 1], src, seed=int(self.rng.integers(1e9))))
-        return scenes
+        """One calm background for the whole song: footage first, else a scenic still, else generated."""
+        sources = [x for x in sources if x]
+        stills = [x for x in sources if x.kind == "image" and x.label != "artist"]
+        pick = (next((x for x in sources if x.kind == "video"), None)
+                or (stills[int(self.rng.integers(len(stills)))] if stills else None)
+                or next((x for x in sources if x.kind == "image"), None)
+                or Source("procedural", label="light"))
+        return [Scene(0.0, self.duration, pick, seed=int(self.rng.integers(1e9)))]
 
     def _make_vignette(self):
         yy, xx = np.mgrid[0:self.H, 0:self.W].astype(np.float32)
@@ -286,17 +309,12 @@ class Renderer:
 
     # ---------- per-frame ----------
     def _scene_frame(self, scene, t):
-        local = t - scene.start
-        length = max(1e-3, scene.end - scene.start)
+        p = min(1.0, max(0.0, (t - scene.start) / max(1e-3, scene.end - scene.start)))
         rng = np.random.default_rng(scene.seed)
-        zoom_from, zoom_to = (1.0, 1.10) if rng.random() < 0.5 else (1.10, 1.0)
-        pan = rng.uniform(-0.04, 0.04, 2)
-        p = local / length
-        p = p * p * (3 - 2 * p)
-        zoom = zoom_from + (zoom_to - zoom_from) * p
+        drift = rng.uniform(-0.015, 0.015, 2)
         if scene.source.kind == "video":
             if scene.reader is None:
-                scene.reader = VideoReader(scene.source.path, self.W, self.H, self.fps)
+                scene.reader = LoopReader(scene.source.path, self.W, self.H, self.fps)
             img = scene.reader.read()
         elif scene.source.kind == "image":
             if scene.still is None:
@@ -311,10 +329,10 @@ class Renderer:
                 scene.still = img
             img = scene.still
         else:
-            img = procedural(self.W, self.H, t, scene.seed, float(self.f.rms[self.f.at(t)]))
-        pulse = 0.018 * float(self.f.beat_env[self.f.at(t)]) * (0.5 + float(self.f.rms[self.f.at(t)]))
-        z = zoom + pulse
-        cx, cy = self.W / 2 + pan[0] * self.W * (p - 0.5), self.H / 2 + pan[1] * self.H * (p - 0.5)
+            img = procedural(self.W, self.H, t, scene.seed, 0.5)
+        # A barely noticeable push-in across the whole song (about 5 %), no beat pulses.
+        z = 1.0 + 0.05 * p
+        cx, cy = self.W / 2 + drift[0] * self.W * (p - 0.5), self.H / 2 + drift[1] * self.H * (p - 0.5)
         M = np.float32([[z, 0, (1 - z) * cx], [0, z, (1 - z) * cy]])
         return cv2.warpAffine(img, M, (self.W, self.H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
 
@@ -331,16 +349,13 @@ class Renderer:
         return frame
 
     def _grade(self, frame, t):
-        e = float(self.f.rms[self.f.at(t)])
-        b = float(self.f.beat_env[self.f.at(t)])
-        gain = 0.78 + 0.22 * e + 0.05 * b
-        x = np.arange(256, dtype=np.float32)
-        lut_b = np.clip(x * gain * 0.94, 0, 255)
-        lut_g = np.clip(x * gain * 1.0, 0, 255)
-        lut_r = np.clip(x * gain * 1.06 + 4, 0, 255)
-        lut = np.stack([lut_b, lut_g, lut_r], 1).astype(np.uint8)[:, None, :]
-        frame = cv2.LUT(frame, lut)
-        return cv2.multiply(frame, self._vignette, scale=1 / 255.0)
+        if not hasattr(self, "_lut"):
+            x = np.arange(256, dtype=np.float32)
+            gain = 0.86
+            lut = np.stack([np.clip(x * gain * 0.95, 0, 255), np.clip(x * gain, 0, 255),
+                            np.clip(x * gain * 1.04 + 3, 0, 255)], 1)
+            self._lut = lut.astype(np.uint8)[:, None, :]
+        return cv2.multiply(cv2.LUT(frame, self._lut), self._vignette, scale=1 / 255.0)
 
     def _particles(self, frame, t, dt):
         e = float(self.f.rms[self.f.at(t)])
@@ -363,27 +378,35 @@ class Renderer:
         return cv2.add(frame, layer)
 
     def _spectrum(self, frame, t):
-        i = self.f.at(t)
-        target = self.f.bands[i]
-        self.bars = np.where(target > self.bars, self.bars + 0.6 * (target - self.bars), self.bars * 0.88)
+        """Large mirrored spectrum at the bottom; bars rise smoothly and settle slowly."""
+        target = self.f.bands[self.f.at(t)].astype(np.float32)
+        kernel = np.array([1, 2, 3, 2, 1], np.float32) / 9
+        target = np.convolve(np.pad(target, 2, mode="edge"), kernel, "valid")
+        self.bars = np.where(target > self.bars, self.bars + 0.28 * (target - self.bars),
+                             np.maximum(target, self.bars * 0.93))
         n = len(self.bars)
-        width = int(self.W * 0.62)
+        width = int(self.W * 0.80)
         x0 = (self.W - width) // 2
-        base = self.H - 70
-        maxh = int(self.H * 0.085)
-        strip_y0 = base - maxh - 4
-        strip = frame[strip_y0:base + maxh // 3 + 4].copy()
+        base = self.H - int(self.H * 0.06)
+        maxh = int(self.H * 0.15)
+        top = base - maxh - 8
+        bottom = min(self.H, base + maxh // 4 + 6)
+        strip = frame[top:bottom].copy()
         bw = width / (2 * n)
         values = np.concatenate([self.bars[::-1], self.bars])
+        r = max(1, int(bw * 0.32))
         for k, v in enumerate(values):
-            h = int(4 + v * maxh)
-            xa = int(x0 + k * bw + bw * 0.2)
-            xb = int(x0 + (k + 1) * bw - bw * 0.2)
-            warm = 0.5 + 0.5 * v
-            color = (int(140 * warm), int(214 * warm + 30), 255)
-            cv2.rectangle(strip, (xa, base - h - strip_y0), (xb, base - strip_y0), color, -1)
-            cv2.rectangle(strip, (xa, base - strip_y0 + 3), (xb, base - strip_y0 + 3 + h // 3), tuple(int(c * 0.35) for c in color), -1)
-        frame[strip_y0:base + maxh // 3 + 4] = cv2.addWeighted(frame[strip_y0:base + maxh // 3 + 4], 0.42, strip, 0.58, 0)
+            h = int(r * 2 + v * maxh)
+            xa = int(x0 + k * bw + bw * 0.18)
+            xb = max(xa + 1, int(x0 + (k + 1) * bw - bw * 0.18))
+            warm = 0.55 + 0.45 * v
+            color = (int(120 * warm + 20), int(205 * warm + 30), 255)
+            ya = base - h - top + r
+            cv2.rectangle(strip, (xa, ya), (xb, base - top), color, -1, cv2.LINE_AA)
+            cv2.circle(strip, ((xa + xb) // 2, ya), (xb - xa) // 2 + 1, color, -1, cv2.LINE_AA)
+            cv2.rectangle(strip, (xa, base - top + 4), (xb, base - top + 4 + h // 4),
+                          tuple(int(c * 0.3) for c in color), -1)
+        frame[top:bottom] = cv2.addWeighted(frame[top:bottom], 0.40, strip, 0.60, 0)
         return frame
 
     def _progress(self, frame, t):
@@ -430,7 +453,6 @@ class Renderer:
     def frame(self, t, dt):
         frame = self.background(t)
         frame = self._grade(frame, t)
-        frame = self._particles(frame, t, dt)
         frame = self._spectrum(frame, t)
         o = self.overlays
         if t < self.intro_end:
@@ -441,8 +463,7 @@ class Renderer:
             blend(frame, o.badge[0], o.badge[1], o.badge[2], o.badge[3], opacity=max(0.0, a))
         if t >= self.outro_start:
             blend(frame, *o.outro, 0, 0, opacity=min(1.0, (t - self.outro_start) / 1.2))
-        frame = self._countdown(frame, t)
-        return self._progress(frame, t)
+        return self._countdown(frame, t)
 
 
 def render_video(renderer: Renderer, audio, ass_path, out_path, crf=18, preset="medium", log=print):

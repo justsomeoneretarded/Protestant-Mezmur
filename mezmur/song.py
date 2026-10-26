@@ -353,14 +353,13 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     # 8. Backgrounds.
     t = time.time()
     lyric_text = text + " " + draft_text
-    clips, clip_records = backgrounds.footage(lyric_text, work / "footage", used=used, wanted=6, seed=mid, log=log)
+    clips, clip_records = backgrounds.footage(lyric_text, work / "footage", used=used, wanted=1, seed=mid, log=log)
     scenes = backgrounds.local_scenes(work)
     generated = [Source("procedural", label="generated light", credit="") for _ in range(2)]
-    if len(clips) >= 3:
-        sources = clips + scenes[:2]
-    else:  # little or no footage: bundled scenery plus generated light scenes, always available
-        sources = clips + scenes + generated
-        log(f"  only {len(clips)} footage clip(s); using bundled scenery and generated backgrounds too")
+    # One calm background for the whole song: a clean clip, else a bundled scenic still, else generated light.
+    sources = clips + scenes + generated
+    if not clips:
+        log("  no clean footage found; using a bundled scenic still")
     if photo_img is not None:
         from .textdetect import text_score
         score = text_score(photo_img)
