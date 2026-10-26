@@ -45,7 +45,7 @@ def main():
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     chat = os.environ.get("TELEGRAM_NOTIFY_CHAT", "").strip()
     if not token or not chat:
-        print("Telegram notification skipped (TELEGRAM_BOT_TOKEN secret or chat not set).")
+        report("Telegram message not sent: the TELEGRAM_BOT_TOKEN secret is empty or missing.")
         return
     run_url = f"{os.environ.get('GITHUB_SERVER_URL', 'https://github.com')}/{os.environ.get('GITHUB_REPOSITORY', '')}" \
               f"/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}"
@@ -53,11 +53,33 @@ def main():
     try:
         r = requests.post(f"https://api.telegram.org/bot{token}/sendMessage", timeout=30, json={
             "chat_id": chat, "text": text, "parse_mode": "HTML", "disable_web_page_preview": True})
-        ok = r.status_code == 200 and r.json().get("ok")
-        print("Telegram notification sent." if ok else f"Telegram notification failed: {r.status_code} {r.text[:200]}")
-    except requests.RequestException as error:
-        print(f"Telegram notification failed: {error.__class__.__name__}")
+        data = r.json() if r.headers.get("content-type", "").startswith("application/json") else {}
+    except (requests.RequestException, ValueError) as error:
+        report(f"Telegram message not sent: could not reach Telegram ({error.__class__.__name__}).")
+        return
+    if r.status_code == 200 and data.get("ok"):
+        print(f"Telegram notification sent to {chat}.")
+        return
+    reason = data.get("description") or r.text[:200]
+    hint = ""
+    if "chat not found" in reason.lower():
+        hint = (f" — {chat} was not found. If it is a private channel, use its numeric ID (e.g. -100…) in a "
+                "TELEGRAM_NOTIFY_CHAT repository variable; if it is a person, they must /start the bot and you "
+                "must use their numeric ID.")
+    elif r.status_code == 401:
+        hint = " — the bot token is wrong or was revoked; update the TELEGRAM_BOT_TOKEN secret."
+    elif r.status_code == 403:
+        hint = " — the bot is not allowed to post there; make it an admin with 'Post messages' permission."
+    report(f"Telegram message not sent to {chat}: {reason}{hint}")
 
+
+def report(text):
+    """Visible on the run page (annotation + summary), not only in the step log."""
+    print(f"::warning title=Telegram notification::{text}")
+    summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary:
+        with open(summary, "a", encoding="utf-8") as handle:
+            handle.write(f"\n⚠️ {text}\n")
 
 if __name__ == "__main__":
     main()
