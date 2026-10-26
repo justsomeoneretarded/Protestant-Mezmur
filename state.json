@@ -6,5 +6,8 @@
       "run_id": "39957885714",
       "artifact_name": "mezmur-39957885714-1"
     }
-  }
+  },
+  "used_backgrounds": [
+    "commons:62600132"
+  ]
 }
