@@ -138,8 +138,20 @@ def rank_photos(candidates, log=print):
 _seg = None
 
 
+def _guided_filter(guide, src, radius, eps):
+    """He et al. guided filter (box-filter form): snaps a coarse mask to the photo's real edges."""
+    k = (2 * radius + 1, 2 * radius + 1)
+    mean_i = cv2.boxFilter(guide, -1, k)
+    mean_p = cv2.boxFilter(src, -1, k)
+    corr_ip = cv2.boxFilter(guide * src, -1, k)
+    var_i = cv2.boxFilter(guide * guide, -1, k) - mean_i * mean_i
+    a = (corr_ip - mean_i * mean_p) / (var_i + eps)
+    b = mean_p - a * mean_i
+    return cv2.boxFilter(a, -1, k) * guide + cv2.boxFilter(b, -1, k)
+
+
 def person_mask(img):
-    """Soft person mask (0..1) using U^2-Net human segmentation via onnxruntime."""
+    """Soft person mask (0..1): U^2-Net human segmentation, refined to full-resolution edges."""
     global _seg
     try:
         import onnxruntime as ort
@@ -156,18 +168,33 @@ def person_mask(img):
     x = cv2.resize(cv2.cvtColor(img, cv2.COLOR_BGR2RGB), (320, 320), interpolation=cv2.INTER_AREA).astype(np.float32) / 255
     x = (x - [0.485, 0.456, 0.406]) / [0.229, 0.224, 0.225]
     x = x.transpose(2, 0, 1)[None].astype(np.float32)
-    pred = _seg.run(None, {_seg.get_inputs()[0].name: x})[0][0, 0]
-    pred = (pred - pred.min()) / (pred.max() - pred.min() + 1e-9)
-    mask = cv2.resize(pred, (w, h), interpolation=cv2.INTER_CUBIC)
-    mask = np.clip((mask - 0.25) / 0.5, 0, 1)
-    # Keep the largest connected component.
-    binary = (mask > 0.5).astype(np.uint8)
+    pred = _seg.run(None, {_seg.get_inputs()[0].name: x})[0][0, 0].astype(np.float32)
+    # The network already outputs 0..1; stretching weak responses is what let backgrounds leak in.
+    coarse = cv2.resize(np.clip(pred, 0, 1), (w, h), interpolation=cv2.INTER_CUBIC)
+    binary = (coarse > 0.5).astype(np.uint8)
     n, labels, stats, _ = cv2.connectedComponentsWithStats(binary)
     if n > 2:
         keep = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
         region = cv2.dilate((labels == keep).astype(np.uint8), np.ones((25, 25), np.uint8))
-        mask = mask * region
-    return cv2.GaussianBlur(mask, (0, 0), 1.2)
+        coarse = coarse * region
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).astype(np.float32) / 255
+    r = max(4, int(min(h, w) * 0.012))
+    fine = _guided_filter(gray, coarse.astype(np.float32), r, 1e-3)
+    mask = np.clip((fine - 0.2) / 0.6, 0, 1)
+    mask = mask * mask * (3 - 2 * mask)  # smoothstep: crisp but anti-aliased edge
+    return mask.astype(np.float32)
+
+
+def _decontaminate(rgb, alpha):
+    """Replace the old background's colour bleeding into soft edges with the person's own colours."""
+    a = alpha[..., None].astype(np.float32)
+    inner = (a > 0.95).astype(np.float32)
+    k = (0, 0)
+    num = cv2.GaussianBlur(rgb.astype(np.float32) * inner, k, 6)
+    den = cv2.GaussianBlur(inner, k, 6)[..., None] if inner.ndim == 3 else cv2.GaussianBlur(inner[..., 0], k, 6)[..., None]
+    est = num / np.maximum(den, 1e-3)
+    w = np.clip((0.95 - a) / 0.95, 0, 1) * (den > 0.02)
+    return np.clip(rgb * (1 - w) + est * w, 0, 255).astype(np.uint8)
 
 
 def cutout(img, face=None):
@@ -183,11 +210,27 @@ def cutout(img, face=None):
         cx, cy = min(img.shape[1] - 1, x + fw // 2), min(img.shape[0] - 1, y + fh // 2)
         if mask[cy, cx] < 0.5:
             return None
-    ys, xs = np.where(mask > 0.3)
+    h, w = mask.shape
+    # Where the photo itself cut the person off (frame edges), fade out instead of a hard line.
+    ramp = max(8, int(min(h, w) * 0.10))
+    edge = np.ones_like(mask)
+    for side, strip in (("left", mask[:, :3]), ("right", mask[:, -3:]), ("bottom", mask[-3:, :])):
+        if (strip > 0.5).mean() > 0.02:
+            lin = np.linspace(0, 1, ramp, dtype=np.float32)
+            if side == "left":
+                edge[:, :ramp] *= lin[None, :]
+            elif side == "right":
+                edge[:, -ramp:] *= lin[::-1][None, :]
+            else:
+                edge[-ramp:, :] *= lin[::-1][:, None]
+    touches_bottom = (mask[-3:, :] > 0.5).mean() > 0.02
+    mask = mask * edge
+    ys, xs = np.where(mask > 0.05)
     y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
-    rgba = np.dstack([cv2.cvtColor(img, cv2.COLOR_BGR2RGB), (mask * 255).astype(np.uint8)])[y0:y1, x0:x1]
+    rgb = _decontaminate(cv2.cvtColor(img, cv2.COLOR_BGR2RGB), mask)
+    rgba = np.dstack([rgb, (mask * 255).astype(np.uint8)])[y0:y1, x0:x1]
     out = Image.fromarray(rgba, "RGBA")
-    out.info["touches_bottom"] = y1 >= img.shape[0] - 3
+    out.info["touches_bottom"] = touches_bottom
     if face is not None:
         out.info["face"] = (face["box"][0] - x0, face["box"][1] - y0, face["box"][2], face["box"][3])
     return out
@@ -245,32 +288,77 @@ def _rays(canvas, origin, color, n=9, seed=0):
     canvas.alpha_composite(layer.filter(ImageFilter.GaussianBlur(14)))
 
 
+def _harmonize(person_rgb, alpha, scene_rgb, amount=0.35):
+    """Pull the person's brightness/colour cast part-way toward the scene behind them (LAB stats)."""
+    a = alpha > 0.5
+    if a.sum() < 100:
+        return person_rgb
+    p = cv2.cvtColor(person_rgb, cv2.COLOR_RGB2LAB).astype(np.float32)
+    b = cv2.cvtColor(scene_rgb, cv2.COLOR_RGB2LAB).astype(np.float32).reshape(-1, 3)
+    pm, ps = p[a].mean(0), p[a].std(0) + 1e-3
+    bm, bs = b.mean(0), b.std(0) + 1e-3
+    # Lightness: only a gentle shift (faces must stay readable); colour: match the scene's cast.
+    target_m = pm + np.array([0.25, 1.0, 1.0]) * amount * (bm - pm)
+    target_s = ps * (1 + np.array([0.0, 0.5, 0.5]) * amount * (bs / ps - 1))
+    q = (p - pm) / ps * target_s + target_m
+    return cv2.cvtColor(np.clip(q, 0, 255).astype(np.uint8), cv2.COLOR_LAB2RGB)
+
+
 def _person(canvas, person, side, accent):
     target_h = int(H * 0.98)
     face = person.info.get("face")
     s = target_h / person.height
-    if face:  # keep the face a strong size even for tight crops
-        s = min(s * 1.0, (H * 0.36) / max(1, face[3])) if face[3] * s > H * 0.36 else s
+    if face and face[3] * s > H * 0.36:  # keep the face a strong but not huge size
+        s = (H * 0.36) / max(1, face[3])
     pw, ph = int(person.width * s), int(person.height * s)
     p = person.resize((pw, ph), Image.LANCZOS)
     cx = int(W * (0.74 if side == "right" else 0.26))
-    if face:
-        fx = int((face[0] + face[2] / 2) * s)
-        x = cx - fx
-    else:
-        x = cx - pw // 2
+    x = cx - (int((face[0] + face[2] / 2) * s) if face else pw // 2)
     x = max(-pw // 3, min(W - 2 * pw // 3, x))
     y = H - ph if person.info.get("touches_bottom", True) or ph >= H * 0.9 else int(H * 0.5 - ph / 2 + H * 0.05)
-    alpha = p.getchannel("A")
-    glow = Image.new("RGBA", p.size, accent + (0,))
-    glow.putalpha(alpha.filter(ImageFilter.MaxFilter(9)).filter(ImageFilter.GaussianBlur(18)).point(lambda v: int(v * 0.75)))
-    canvas.alpha_composite(glow, (x, y))
-    shadow = Image.new("RGBA", p.size, (0, 0, 0, 0))
-    shadow.putalpha(alpha.filter(ImageFilter.GaussianBlur(10)).point(lambda v: int(v * 0.55)))
-    canvas.alpha_composite(shadow, (x + 10, y + 8))
-    rim = ImageEnhance.Brightness(p).enhance(1.05)
-    canvas.alpha_composite(rim, (x, y))
-    box = alpha.point(lambda v: 255 if v > 90 else 0).getbbox() or (0, 0, pw, ph)
+
+    # Scene directly behind the person (for colour matching and light wrap).
+    scene = np.array(canvas.convert("RGB"))
+    sx0, sy0, sx1, sy1 = max(0, x), max(0, y), min(W, x + pw), min(H, y + ph)
+    region = scene[sy0:sy1, sx0:sx1]
+    arr = np.array(p)
+    alpha = arr[..., 3].astype(np.float32) / 255
+    rgb = arr[..., :3]
+    if region.size:
+        rgb = _harmonize(rgb, alpha, region)
+
+    # 1) Soft backlight behind head and shoulders (not a traced outline).
+    fx = x + (int((face[0] + face[2] / 2) * s) if face else pw // 2)
+    fy = y + (int((face[1] + face[3] / 2) * s) if face else ph // 3)
+    back = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(back)
+    rad = int(max(pw, ph) * 0.42)
+    d.ellipse((fx - rad, fy - rad * 0.8, fx + rad, fy + rad * 1.2), fill=accent + (70,))
+    canvas.alpha_composite(back.filter(ImageFilter.GaussianBlur(rad * 0.45)))
+
+    # 2) Light wrap: the scene's light spills a little over the person's edges.
+    full = np.zeros((H, W, 3), np.float32)
+    blurred = cv2.GaussianBlur(scene.astype(np.float32), (0, 0), 18)
+    a_full = np.zeros((H, W), np.float32)
+    rgb_full = np.zeros((H, W, 3), np.float32)
+    px0, py0 = sx0 - x, sy0 - y
+    a_full[sy0:sy1, sx0:sx1] = alpha[py0:py0 + (sy1 - sy0), px0:px0 + (sx1 - sx0)]
+    rgb_full[sy0:sy1, sx0:sx1] = rgb[py0:py0 + (sy1 - sy0), px0:px0 + (sx1 - sx0)]
+    inner = cv2.GaussianBlur(a_full, (0, 0), 7)
+    wrap = np.clip(a_full - inner * 0.85, 0, 1) * 0.9 + (1 - inner) * a_full * 0.5
+    wrap = np.clip(wrap, 0, 0.55)[..., None]
+    rgb_full = rgb_full * (1 - wrap) + blurred * wrap
+    # 3) Bottom of the body dissolves into the dark lower edge of the frame.
+    fade = np.ones(H, np.float32)
+    fade[int(H * 0.80):] = np.linspace(1, 0.35, H - int(H * 0.80))
+    rgb_full *= np.minimum(1, 0.55 + 0.45 * fade)[:, None, None]
+    # 4) Contact shadow so the person sits in the scene rather than floats.
+    shadow = cv2.GaussianBlur(a_full, (0, 0), 14)
+    canvas_arr = np.array(canvas.convert("RGB")).astype(np.float32)
+    canvas_arr *= (1 - 0.35 * np.roll(np.roll(shadow, 10, 1), 8, 0))[..., None]
+    out = canvas_arr * (1 - a_full[..., None]) + rgb_full * a_full[..., None]
+    canvas.paste(Image.fromarray(np.clip(out, 0, 255).astype(np.uint8)).convert("RGBA"))
+    box = Image.fromarray((alpha * 255).astype(np.uint8)).point(lambda v: 255 if v > 90 else 0).getbbox() or (0, 0, pw, ph)
     return x + box[0], x + box[2]
 
 
