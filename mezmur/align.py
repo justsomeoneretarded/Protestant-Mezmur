@@ -597,7 +597,10 @@ def complete_with_lyrics(words, lines, energy, frame_seconds, duration, max_repe
         prior = np.exp(merged).mean(0) + 1e-6
         emit_all = merged - 0.45 * np.log(prior)[None, :]
     out = [dict(w) for w in words]
-    info = {"filled_lines": 0, "completed_lines": 0, "estimated_words": 0}
+    info = {"filled_lines": 0, "completed_lines": 0, "estimated_words": 0, "gaps": []}
+
+    def note(**kw):
+        info["gaps"].append({k: (round(v, 2) if isinstance(v, float) else v) for k, v in kw.items()})
 
     # 1) Gaps between confidently placed (complete) lines.
     bounds = [(None, 0.0)] + [(ws[0]["line"], ws[-1]["end"]) for ws in full]
@@ -608,6 +611,7 @@ def complete_with_lyrics(words, lines, energy, frame_seconds, duration, max_repe
         next_line, gap_b = lines_after[k], starts[k]
         if gap_b - gap_a < 3.0:
             continue
+        note(start=gap_a, end=gap_b, after_line=prev_line, before_line=next_line, action="examined")
         first = 0 if prev_line is None else prev_line + 1
         if next_line is not None and next_line <= first:
             # The next clearly heard line is not new (a chorus coming back, or a line written once with
@@ -640,9 +644,12 @@ def complete_with_lyrics(words, lines, energy, frame_seconds, duration, max_repe
         active = sum(b - a for a, b in phrases)
         need = sum(len(w) for l in unit for w in lines[l]) * spc
         if active < 1.0 or need <= 0:
+            note(start=gap_a, end=gap_b, lines=unit, singing=active, action="skipped: no singing")
             continue
         ratio = active / need
         if ratio < 0.45 or ratio > max_repeat + 0.6:
+            note(start=gap_a, end=gap_b, lines=unit, singing=active, needed=need, ratio=ratio,
+                 action="skipped: singing does not fit these lines")
             continue  # far too little or far too much singing for these lines
         reps = 1 if ratio < 1.7 else int(min(max_repeat, round(ratio)))
         texts = {" ".join(lines[l]) for l in missing}
@@ -690,7 +697,10 @@ def complete_with_lyrics(words, lines, energy, frame_seconds, duration, max_repe
         heard = sum(1 for w in added if w.get("recognised")) / max(1, len(added))
         if emit_all is not None and heard < min_heard and not certain:
             out += fragments + stray  # uncertain structure and nothing heard: leave the gap as it was
+            note(start=gap_a, end=gap_b, lines=seq, heard=heard, action="skipped: nothing heard, order uncertain")
             continue
+        note(start=gap_a, end=gap_b, lines=seq, singing=active, needed=need, ratio=ratio, heard=heard,
+             action="filled")
         next_phrase += len(seq)
         out += added
         info["filled_lines"] += len(seq)

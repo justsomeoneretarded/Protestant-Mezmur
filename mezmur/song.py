@@ -310,6 +310,17 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
                                                delimiter=vocab["delimiter"], repeats=line_repeats(stanzas),
                                                stanza_of=line_stanzas(stanzas))
         align_report["completion"] = filled
+        if os.environ.get("MEZMUR_DEBUG"):
+            dbg = out / "debug"
+            dbg.mkdir(exist_ok=True)
+            write_json(dbg / "alignment.json", {
+                "lyrics_source": chosen["source"], "url": chosen["url"], "lines": [" ".join(l) for l in lines],
+                "repeats": line_repeats(stanzas),
+                "first_pass": [{k: v for k, v in d.items()} for d in align_report.get("phrase_details", [])],
+                "gap_decisions": filled.get("gaps", []),
+                "final": [{"line": w["line"], "word": flat[w["word_index"]], "start": round(w["start"], 2),
+                           "end": round(w["end"], 2), "heard": bool(w.get("recognised", not w.get("estimated")))}
+                          for w in sorted(aligned, key=lambda w: w["start"])]})
         words = [{**w, "word": flat[w["word_index"]]} for w in aligned]
         words = smooth_words(words)
         est = filled["estimated_words"] / max(1, len(words))

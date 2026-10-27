@@ -26,6 +26,10 @@ on:
         type: choice
         options: ['1080', '720']
         default: '1080'
+      diagnostics:
+        description: Save lyric-alignment details for troubleshooting (use with message_ids)
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths: ['corrections/**']
@@ -122,7 +126,7 @@ jobs:
       PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
       PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
       OMP_NUM_THREADS: '4'
-      MEZMUR_DEBUG: ${{ inputs.debug }}
+      MEZMUR_DEBUG: ${{ inputs.diagnostics && '1' || inputs.debug }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -182,6 +186,19 @@ jobs:
             echo "::error title=Song ${{ matrix.id }} failed::$(tail -n 12 "$out/run.log" | tr '\n' ' ' | cut -c1-900)"
           fi
           exit $code
+      - name: Publish diagnostics (only when requested)
+        if: always() && env.MEZMUR_DEBUG != ''
+        continue-on-error: true
+        run: |
+          d="output/song-${{ matrix.id }}"
+          [ -d "$d/debug" ] || exit 0
+          mkdir -p "$RUNNER_TEMP/diag/song-${{ matrix.id }}"
+          cp -r "$d/debug" "$d/run.log" "$d/quality.json" "$d/lyrics.ass" "$RUNNER_TEMP/diag/song-${{ matrix.id }}/" 2>/dev/null || true
+          cd "$RUNNER_TEMP/diag"
+          git init -q -b diagnostics-${{ matrix.id }}
+          git config user.name diagnostics; git config user.email diagnostics@users.noreply.github.com
+          git add -A; git commit -qm "diagnostics for song ${{ matrix.id }} (run ${{ github.run_id }})"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" diagnostics-${{ matrix.id }}
       - name: Summary
         if: always()
         run: python -m mezmur.summary "output/song-${{ matrix.id }}" >> "$GITHUB_STEP_SUMMARY" || true
