@@ -12,9 +12,18 @@ Join us @mezmuroch1 👉
 
 def test_parse_markers_repeats_and_junk():
     stanzas = parse_lyrics(TEXT)
-    assert stanzas[0] == {"lines": ["ሲወድ ጌታ እስከ መስቀል ነው", "ፍቅሩ አይለካም ከቶ"], "chorus": False}
+    assert stanzas[0] == {"lines": ["ሲወድ ጌታ እስከ መስቀል ነው", "ፍቅሩ አይለካም ከቶ"], "repeats": [2, 1], "chorus": False}
     assert stanzas[1]["chorus"] is True
     assert stanzas[1]["lines"] == ["ሃሌሉያ ክብር ለስሙ", "ዘመኔን ሁሉ አመሰግናለሁ"]
+    assert stanzas[1]["repeats"] == [2, 1]  # written twice in a row = sung twice
+
+
+def test_slash_repeat_marker():
+    from mezmur.lyrics_text import line_repeats, stanzas_text
+    stanzas = parse_lyrics("ዛሬም ይሰራል/3\nዛሬም እየሱስ ይሰራል\n")
+    assert stanzas[0]["lines"] == ["ዛሬም ይሰራል", "ዛሬም እየሱስ ይሰራል"]
+    assert line_repeats(stanzas) == [3, 1]
+    assert stanzas_text(stanzas).startswith("ዛሬም ይሰራል ×3\n")
 
 
 def test_extract_from_html_page():

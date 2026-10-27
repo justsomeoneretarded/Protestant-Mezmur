@@ -19,7 +19,7 @@ from .common import duration as common_duration, write_json
 from .features import analyze
 from .geez import fold, romanize
 from .lyrics_sources import gather
-from .lyrics_text import all_lines, similarity, stanzas_text
+from .lyrics_text import all_lines, line_repeats, line_stanzas, similarity, stanzas_text
 from .separate import separate
 from .subtitles import build_cues, write_ass, write_srt
 from .visuals import Renderer, Source, render_video
@@ -102,7 +102,8 @@ def choose_lyrics(cands, draft_text, logp, frame_s, vocab, energy, max_aligned=6
         lines = [l.split() for l in all_lines(c["stanzas"])]
         target = build_target(Lyrics(lines), vocab["char_to_id"])
         t0 = time.time()
-        words, rep = align_lyrics(logp, frame_s, target, vocab["blank"], vocab["delimiter"], energy=energy)
+        words, rep = align_lyrics(logp, frame_s, target, vocab["blank"], vocab["delimiter"], energy=energy,
+                                  repeats=line_repeats(c["stanzas"]))
         lines_share = rep["lines_used"] / max(1, rep["lines_total"])
         entry = {"source": c["source"], "url": c["url"], "similarity": c["similarity"],
                  **{k: (round(v, 3) if isinstance(v, float) else v) for k, v in rep.items() if k != "phrase_details"},
@@ -306,7 +307,8 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
         flat = [word for line in lines for word in line]
         aligned, filled = complete_with_lyrics(aligned, lines, energy, frame_s, duration, logp=logp,
                                                char_to_id=vocab["char_to_id"], blank=vocab["blank"],
-                                               delimiter=vocab["delimiter"])
+                                               delimiter=vocab["delimiter"], repeats=line_repeats(stanzas),
+                                               stanza_of=line_stanzas(stanzas))
         align_report["completion"] = filled
         words = [{**w, "word": flat[w["word_index"]]} for w in aligned]
         words = smooth_words(words)

@@ -6,7 +6,25 @@ from html.parser import HTMLParser
 from .geez import ETHIOPIC, LATIN, clean, ethiopic_share, fold
 
 CHORUS = re.compile(r"^\s*[\(\[]?\s*(አዝ(ማች)?|አዝማቹ|ዝማሬ|chorus|ref(rain)?|ኮረስ)\s*[\)\]:.\-–—፦፥፡]*\s*", re.I)
-REPEAT = re.compile(r"[\(\[]?\s*(?:[x×*]\s*[\d፩-፼]+|[\d፩-፼]+\s*[x×*]|[\d፩-፼]+\s*ጊዜ|ሁለት ጊዜ|//+|\\\\+)\s*[\)\]]?\s*$", re.I)
+REPEAT = re.compile(r"[\(\[]?\s*(?:[x×*]\s*[\d፩-፼]+|[\d፩-፼]+\s*[x×*]|[\d፩-፼]+\s*ጊዜ|ሁለት ጊዜ|ሶስት ጊዜ|ሦስት ጊዜ|"
+                    r"/+\s*[\d፩-፼]+|//+|\\\\+)\s*[\)\]]?\s*$", re.I)
+GEEZ_DIGITS = {"፩": 1, "፪": 2, "፫": 3, "፬": 4, "፭": 5, "፮": 6, "፯": 7, "፰": 8, "፱": 9}
+
+
+def repeat_count(marker):
+    """How many times a line is sung, from its trailing marker ('/3', 'x2', '3 ጊዜ', '//', ...)."""
+    if not marker:
+        return 1
+    m = re.search(r"\d+", marker)
+    if m:
+        return max(1, min(8, int(m.group(0))))
+    for ch in marker:
+        if ch in GEEZ_DIGITS:
+            return GEEZ_DIGITS[ch]
+    if "ሶስት" in marker or "ሦስት" in marker:
+        return 3
+    return 2  # '//', '\\', 'ሁለት ጊዜ'
+
 NOISE = re.compile(r"(https?://\S+|www\.\S+|@\w+|#\S+|t\.me/\S+)", re.I)
 JUNK_LINE = re.compile(r"(join|subscribe|ሰብስክራይብ|ቻናል|channel|telegram|youtube|lyrics by|ግጥም\s*[:፡]|ዜማ\s*[:፡]|"
                        r"ዘማሪ\s*[:፡]|ቅንብር|copyright|©|share|ሼር|like|ላይክ|follow|ፎሎው|ተቀላቀሉ|ይቀላቀሉ)", re.I)
@@ -50,38 +68,58 @@ def is_lyric_line(line):
 
 
 def parse_lyrics(text, keep_markers=False):
-    """Return stanzas: list of {"lines": [...], "chorus": bool}. Repeat markers are removed."""
-    stanzas, current, chorus = [], [], False
+    """Return stanzas: list of {"lines": [...], "repeats": [...], "chorus": bool}.
+
+    Repeat markers ('/3', 'x2', '3 ጊዜ', '//') are removed from the text and kept as counts."""
+    stanzas, current, counts, chorus = [], [], [], False
+
+    def close():
+        nonlocal current, counts
+        if current:
+            stanzas.append({"lines": current, "repeats": counts, "chorus": chorus})
+        current, counts = [], []
+
     for raw in str(text).replace("\r", "").split("\n"):
         line = raw.strip()
         if not line:
-            if current:
-                stanzas.append({"lines": current, "chorus": chorus})
-                current, chorus = [], False
+            close()
+            chorus = False
             continue
         if CHORUS.match(line):
             rest = CHORUS.sub("", line).strip()
-            if current:
-                stanzas.append({"lines": current, "chorus": chorus})
-                current = []
+            close()
             chorus = True
             line = rest
             if not line:
                 continue
+        m = REPEAT.search(line)
+        count = repeat_count(m.group(0)) if m else 1
         line = REPEAT.sub("", line).strip()
         line = clean_line(line)
         if not is_lyric_line(line):
             continue
         if current and fold(current[-1]) == fold(line):
+            counts[-1] += 1  # the same line written twice in a row means it is sung twice
             continue
         current.append(line)
-    if current:
-        stanzas.append({"lines": current, "chorus": chorus})
+        counts.append(count)
+    close()
     return [s for s in stanzas if s["lines"]]
 
 
 def stanzas_text(stanzas):
-    return "\n\n".join("\n".join(s["lines"]) for s in stanzas) + "\n"
+    def show(s, i):
+        n = (s.get("repeats") or [1] * len(s["lines"]))[i]
+        return s["lines"][i] + (f" ×{n}" if n > 1 else "")
+    return "\n\n".join("\n".join(show(s, i) for i in range(len(s["lines"]))) for s in stanzas) + "\n"
+
+
+def line_repeats(stanzas):
+    return [n for s in stanzas for n in (s.get("repeats") or [1] * len(s["lines"]))]
+
+
+def line_stanzas(stanzas):
+    return [k for k, s in enumerate(stanzas) for _ in s["lines"]]
 
 
 def all_lines(stanzas):
@@ -253,7 +291,8 @@ def strip_header(stanzas, record):
     keys = [fold(n) for n in names if n]
     # Ethiopic spellings vary (ይስሐቅ/ይስሃቅ, ሰድቅ/ሰዲቅ): compare the first 2 letters of each name word.
     stems = [w[:2] for k in keys for w in k.split() if len(w) >= 2]
-    out = [dict(st, lines=list(st["lines"])) for st in stanzas]
+    out = [dict(st, lines=list(st["lines"]), repeats=list(st.get("repeats") or [1] * len(st["lines"])))
+           for st in stanzas]
     if not out:
         return out
     first = out[0]["lines"]
@@ -266,6 +305,7 @@ def strip_header(stanzas, record):
         only_title = title and f == title
         if (named and (sep or len(words) <= 6)) or (sep and title and title in f) or only_title and len(first) > 4:
             first.pop(0)
+            out[0]["repeats"].pop(0)
         else:
             break
     return [st for st in out if st["lines"]]
