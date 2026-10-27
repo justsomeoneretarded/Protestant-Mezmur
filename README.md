@@ -8,7 +8,7 @@ For every song you get:
 
 | File | What it is |
 | --- | --- |
-| `video.mp4` | 1080p lyric video: karaoke Amharic lyrics timed word-by-word to the real singing, romanized line underneath, next line preview, one calm background clip for the whole song (waterfall, sky, space, calm water), a smooth music spectrum, title card and a clean end-screen area |
+| `video.mp4` | 1080p lyric video: karaoke Amharic lyrics timed word-by-word to the real singing, romanized line underneath, next line preview, one calm nature photograph for the whole song (waterfall, mountains, lake, forest — nothing man-made, no text), a smooth music spectrum, title card and a clean end-screen area |
 | `thumbnail.jpg`, `thumbnail-b.jpg`, `thumbnail-c.jpg` | 1280×720 thumbnails with the singer's photo (cut out), the song name in Amharic and Latin letters and the singer's name. Three designs for YouTube's *Test & Compare* |
 | `title.txt` | Title options, first one in the common search style: `Addisalem Assefa siwed geta ሲወድ ጌታ አዲስዓለም አሰፋ lyrics` |
 | `description.txt` | Ready to paste: both scripts, full Amharic lyrics, lyrics in Latin letters, credits, hashtags |

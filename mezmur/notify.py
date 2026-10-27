@@ -17,6 +17,13 @@ def message(folder, run_url, ok, retention_days, message_id):
     title_file = folder / "title.txt"
     title = title_file.read_text(encoding="utf-8").splitlines()[0].strip() if title_file.is_file() else ""
     title = title or f"Telegram message {message_id}"
+    skipped = folder / "skipped.json"
+    if ok and skipped.is_file():
+        info = json.loads(skipped.read_text(encoding="utf-8"))
+        return (f"⏭ <b>Not made — lyrics not certain</b>\n\nSong: {html.escape(title)}\n\n"
+                f"{html.escape(info.get('reason', ''))}\n\n"
+                f"To make it: put the correct lyrics in <code>corrections/{html.escape(str(message_id))}.txt</code> "
+                f"and commit it to main.\n\nRun: <a href=\"{run_url}\">GitHub run link</a>")
     if not ok:
         return (f"❌ <b>Video failed</b>\n\nSong: {html.escape(title)}\n\n"
                 f"Details: <a href=\"{run_url}\">GitHub run link</a>")

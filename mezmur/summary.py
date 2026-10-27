@@ -10,6 +10,13 @@ def main():
     quality = json.loads((folder / "quality.json").read_text()) if (folder / "quality.json").is_file() else {}
     title = (folder / "title.txt").read_text().splitlines()[0] if (folder / "title.txt").is_file() else folder.name
     print(f"### {title}")
+    skipped = folder / "skipped.json"
+    if skipped.is_file():
+        info = json.loads(skipped.read_text(encoding="utf-8"))
+        print(f"- ⏭ **Not made:** {info.get('reason')}")
+        print(f"- To make it: {info.get('fix')}")
+        print()
+        return
     if not meta:
         print("❌ This song failed — see the job log above.")
         return

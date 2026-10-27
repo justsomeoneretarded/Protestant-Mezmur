@@ -25,10 +25,32 @@ from .subtitles import build_cues, write_ass, write_srt
 from .visuals import Renderer, Source, render_video
 from .youtube import write_kit
 
-ACCEPT_SHARE = 0.50       # share of vocal frames inside aligned lyric lines
-ACCEPT_GAIN = 0.15        # per-vocal-frame log-likelihood gain over "unscripted singing"
-ACCEPT_LINES = 0.50       # share of the found lines that were actually sung
+# Strict: a song is only made when found lyrics clearly explain the singing. Measured on real songs, the
+# right lyrics explain 81-87 % of the singing (gain 0.21-0.25, 74-97 % of lines sung); wrong lyrics <= 36 %.
+ACCEPT_SHARE = 0.70       # share of vocal frames inside aligned lyric lines
+ACCEPT_GAIN = 0.18        # per-vocal-frame log-likelihood gain over "unscripted singing"
+ACCEPT_LINES = 0.70       # share of the found lines that were actually sung
+MAX_ESTIMATED = 0.35      # share of word timings that may be estimated rather than heard
 MIN_TEXT_SIM = 0.06       # cheap pre-filter against the automatic draft
+
+def notice(mid, text, level="notice"):
+    """A line on the Actions run page (readable later, unlike the step log)."""
+    print(f"::{level} title=Song {mid}::{text}", flush=True)
+
+
+def skip(out, mid, record, cand_reports, timings, reason):
+    """Lyrics are not certain: make nothing for this song, say why, keep diagnostics."""
+    from .youtube import titles
+    meta = {k: record.get(k, "") for k in ["title_am", "title_latin", "artist_am", "artist_latin"]}
+    ts = titles(meta)
+    (out / "title.txt").write_text((ts[0] if ts else f"Telegram message {mid}") + "\n", encoding="utf-8")
+    write_json(out / "skipped.json", {"message_id": mid, "reason": reason,
+                                      "fix": f"Put the correct lyrics in corrections/{mid}.txt and commit it to main.",
+                                      "candidates": cand_reports, "timings_seconds": timings})
+    notice(mid, f"Skipped — {reason} Add corrections/{mid}.txt to make it.", level="warning")
+    log(f"[{mid}] skipped: {reason}")
+    return {"message_id": mid, "mode": "skipped", "reason": reason}
+
 
 def log(*a, **k):
     print(*a, **{"flush": True, **k})
@@ -299,12 +321,16 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
                                      "watch for missing lines.")
         mode = "lyrics-aligned"
     else:
-        stanzas, chorus, align_report = [], set(), {}
-        words = [{**w, "line": None} for w in draft]
-        lyrics_source = "automatic transcription (no verified lyrics found)"
-        review["reasons"].append("No published lyrics could be verified for this song — the words are an automatic "
-                                 "transcription. Fix them in corrections/" + str(mid) + ".txt and re-run.")
-        mode = "transcription"
+        best_seen = max((r.get("matched_share", 0) for r in cand_reports), default=0)
+        return skip(out, mid, record, cand_reports, timings,
+                    f"No lyrics could be verified for this song (best match explained {best_seen:.0%} of the singing; "
+                    f"{ACCEPT_SHARE:.0%} needed).")
+    if not chosen["trusted"] and est > MAX_ESTIMATED:
+        return skip(out, mid, record, cand_reports, timings,
+                    f"The lyrics were found, but {est:.0%} of the word timings could only be estimated "
+                    f"(limit {MAX_ESTIMATED:.0%}), so the karaoke would not be reliable.")
+    sure = "your corrected lyrics" if chosen["trusted"] else f"{align_report['matched_share']:.0%} of the singing matched"
+    notice(mid, f"Lyrics verified ({sure}) — source: {lyrics_source}")
     if not words:
         raise RuntimeError("No timed lyrics could be produced")
     cues = build_cues(words, chorus_lines=chorus)
@@ -352,36 +378,18 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
 
     # 8. Backgrounds.
     t = time.time()
-    lyric_text = text + " " + draft_text
-    clips, clip_records = backgrounds.footage(lyric_text, work / "footage", used=used, wanted=1, seed=mid, log=log)
-    scenes = backgrounds.local_scenes(work)
-    generated = [Source("procedural", label="generated light", credit="") for _ in range(2)]
-    # One calm background for the whole song: a clean clip, else a bundled scenic still, else generated light.
-    sources = clips + scenes + generated
-    if not clips:
-        log("  no clean footage found; using a bundled scenic still")
-    if photo_img is not None:
-        from .textdetect import text_score
-        score = text_score(photo_img)
-        if score < 0.012:  # never put a poster/thumbnail with its own lettering behind the lyrics
-            p = work / "photo_bg.jpg"
-            cv2.imwrite(str(p), photo_img)
-            sources.append(Source("image", str(p), label="artist", blur=41))
-        else:
-            log(f"  artist photo has lettering (score {score:.3f}); not used as a background")
+    # One calm, clean nature photograph for the whole song (and its thumbnails).
+    still, still_record = backgrounds.nature_still(work / "background", used=used, seed=mid, log=log)
+    clip_records = [still_record] if still_record else []
+    if still is None:
+        still = backgrounds.fallback_scene(work, seed=mid)
+        log("  no clean nature photo found online; using a bundled nature picture")
+    sources = [still] if still else [Source("procedural", label="generated light")]
     timings["footage"] = round(time.time() - t, 1)
 
     # 9. Thumbnails.
     meta = {k: record.get(k, "") for k in ["title_am", "title_latin", "artist_am", "artist_latin"]}
-    bg_img = None
-    if clips:
-        cap = cv2.VideoCapture(clips[0].path)
-        cap.set(cv2.CAP_PROP_POS_FRAMES, int(cap.get(cv2.CAP_PROP_FRAME_COUNT) * 0.4))
-        ok, bg_img = cap.read()
-        cap.release()
-        bg_img = bg_img if ok else None
-    if bg_img is None:
-        bg_img = cv2.imread(scenes[mid % len(scenes)].path) if scenes else None
+    bg_img = cv2.imread(still.path) if still is not None and still.path else None
     for variant, name in [("a", "thumbnail.jpg"), ("b", "thumbnail-b.jpg"), ("c", "thumbnail-c.jpg")]:
         img = thumbnail.compose(meta, background=bg_img, person=person, photo=photo_img, variant=variant, seed=mid)
         thumbnail.save(img, out / name)

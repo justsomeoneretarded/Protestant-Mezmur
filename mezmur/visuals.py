@@ -214,7 +214,7 @@ class Renderer:
         sources = [x for x in sources if x]
         stills = [x for x in sources if x.kind == "image" and x.label != "artist"]
         pick = (next((x for x in sources if x.kind == "video"), None)
-                or (stills[int(self.rng.integers(len(stills)))] if stills else None)
+                or (stills[0] if stills else None)
                 or next((x for x in sources if x.kind == "image"), None)
                 or Source("procedural", label="light"))
         return [Scene(0.0, self.duration, pick, seed=int(self.rng.integers(1e9)))]

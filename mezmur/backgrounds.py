@@ -401,3 +401,132 @@ def local_scenes(folder):
         cv2.imwrite(str(path), atlas[y:y + h // 2, x:x + w // 2])
         out.append(Source("image", str(path), label="bundled scene"))
     return out
+
+
+# ------------------------------------------------------------------------------------------------
+# One calm nature photograph per song (Wikimedia Commons "Quality images": sharp, well composed).
+# Nothing man-made, no people, no space imagery, no graphics, no text.
+# ------------------------------------------------------------------------------------------------
+NATURE_QUERIES = ["waterfall", "waterfall forest", "mountain lake reflection", "misty mountains", "misty forest",
+                  "lake sunrise", "mountains sunrise clouds", "forest stream", "calm sea sunset", "valley clouds"]
+BANNED = ("road", "street", "highway", "car ", "cars", "vehicle", "bus ", "truck", "city", "town", "village", "building",
+          "house", "church", "temple", "mosque", "castle", "bridge", "tower", "dam ", "people", "person", "man ", "woman",
+          "child", "girl", "boy", "portrait", "tourist", "hiker", "flag", "sign", "map", "diagram", "arrow", "text",
+          "logo", "poster", "nasa", "space", "planet", "earth from", "satellite", "astronaut", "galaxy", "nebula",
+          "aircraft", "airplane", "train", "railway", "boat", "ship", "fence", "monument", "statue", "sculpture",
+          "interior", "rendering", "illustration", "drawing", "painting", "artwork", "cgi", "animal", "bird", "insect",
+          "dog", "cat ", "cow", "horse", "wind turbine", "power line", "pylon", "hut", "cabin", "bench", "lighthouse",
+          "pier", "harbour", "harbor", "port ", "marina", "camp", "tent", "ruins", "wall")
+
+
+def _banned(text):
+    t = f" {text.lower()} "
+    return next((b for b in BANNED if b in t), None)
+
+
+def _nature_candidates(query, used):
+    r = web.get("https://commons.wikimedia.org/w/api.php", headers=BOT_HEADERS, timeout=20, params={
+        "action": "query", "format": "json", "generator": "search", "gsrnamespace": 6, "gsrlimit": 30,
+        "gsrsearch": f'incategory:"Quality_images" {query} filetype:bitmap',
+        "prop": "imageinfo", "iiprop": "url|size|mime|extmetadata", "iiurlwidth": 2560})
+    if r is None or r.status_code != 200:
+        return []
+    out = []
+    for page in ((r.json().get("query") or {}).get("pages") or {}).values():
+        info = (page.get("imageinfo") or [{}])[0]
+        pid = f"commons-img:{page.get('pageid')}"
+        w, h = info.get("width") or 0, info.get("height") or 0
+        if pid in used or w < 1920 or not 1.3 <= w / max(1, h) <= 2.2:
+            continue
+        meta = info.get("extmetadata") or {}
+        lic = (meta.get("LicenseShortName") or {}).get("value", "")
+        if not any(x in lic for x in ["CC0", "Public domain", "CC BY", "CC-BY"]):
+            continue
+        import re as _re
+        words = " ".join([page.get("title", ""), (meta.get("Categories") or {}).get("value", "").replace("|", " "),
+                          _re.sub(r"<[^>]+>", " ", (meta.get("ImageDescription") or {}).get("value", ""))[:600]])
+        if _banned(words):
+            continue
+        artist = _re.sub(r"<[^>]+>", "", (meta.get("Artist") or {}).get("value", "")).strip()[:80]
+        out.append({"id": pid, "url": info.get("thumburl") or info.get("url"),
+                    "credit": f"{page.get('title', '').replace('File:', '')} — {artist or 'Wikimedia Commons'} ({lic})",
+                    "page": info.get("descriptionurl"), "query": query})
+    return out
+
+
+def picture_problem(img):
+    """Reasons a picture is not a calm, clean nature background (None when it is fine)."""
+    from .textdetect import text_score
+    if img is None:
+        return "unreadable"
+    small = cv2.resize(img, (960, int(960 * img.shape[0] / img.shape[1])), interpolation=cv2.INTER_AREA)
+    H, W = small.shape[:2]
+    hsv = cv2.cvtColor(small, cv2.COLOR_BGR2HSV)
+    v = float(hsv[..., 2].mean())
+    if not 55 <= v <= 215:
+        return f"too dark or too bright ({v:.0f})"
+    if text_score(img) >= 0.004:
+        return "text in the picture"
+    gray = cv2.cvtColor(small, cv2.COLOR_BGR2GRAY)
+    edges = cv2.Canny(cv2.GaussianBlur(gray, (3, 3), 0), 70, 180)
+    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=60, minLineLength=int(W * 0.15), maxLineGap=6)
+    slanted = 0
+    for x1, y1, x2, y2 in (lines.reshape(-1, 4) if lines is not None else []):
+        angle = abs(np.degrees(np.arctan2(y2 - y1, x2 - x1))) % 180
+        if 6 < angle < 174:  # the horizon may be a long straight line; anything else straight is man-made
+            slanted += 1
+    if slanted >= 3:
+        return f"straight man-made lines ({slanted})"
+    local_std = cv2.blur(gray.astype(np.float32) ** 2, (5, 5)) - cv2.blur(gray.astype(np.float32), (5, 5)) ** 2
+    flat = local_std < 4
+    hue = hsv[..., 0]
+    graphic = flat & (hsv[..., 1] > 210) & ~((hue >= 90) & (hue <= 130))  # flat, vivid, not sky blue (flags, signs)
+    if graphic.mean() > 0.04:
+        return "graphic / flat colour areas"
+    return None
+
+
+def nature_still(folder, used=(), seed=0, log=print, budget=150):
+    """Return (Source, record) for one checked nature photograph, or (None, None)."""
+    import time as _time
+    deadline = _time.time() + budget
+    folder = Path(folder)
+    folder.mkdir(parents=True, exist_ok=True)
+    used = set(used)
+    rnd = random.Random(seed)
+    queries = NATURE_QUERIES[:]
+    rnd.shuffle(queries)
+    tried = 0
+    for q in queries:
+        if _time.time() > deadline:
+            break
+        try:
+            cands = _nature_candidates(q, used)
+        except Exception as error:  # noqa: BLE001
+            log(f"  nature photo search {q!r} failed: {error.__class__.__name__}", flush=True)
+            continue
+        rnd.shuffle(cands)
+        for c in cands[:4]:
+            if _time.time() > deadline or tried >= 12:
+                break
+            tried += 1
+            r = web.get(c["url"], headers=BOT_HEADERS, timeout=40, max_bytes=25_000_000)
+            if r is None or r.status_code != 200:
+                continue
+            img = cv2.imdecode(np.frombuffer(r.content, np.uint8), cv2.IMREAD_COLOR)
+            problem = picture_problem(img)
+            if problem:
+                log(f"  background rejected ({problem}): {c['credit'][:70]}", flush=True)
+                continue
+            path = folder / "nature.jpg"
+            cv2.imwrite(str(path), img, [cv2.IMWRITE_JPEG_QUALITY, 94])
+            log(f"  background: {c['credit'][:90]}", flush=True)
+            return Source("image", str(path), label="nature", credit=c["credit"]), c
+    return None, None
+
+
+def fallback_scene(folder, seed=0):
+    """Bundled pictures that are pure nature (highland mountains, desert dunes)."""
+    scenes = local_scenes(folder)
+    nature = [scenes[i] for i in (0, 3) if i < len(scenes)]
+    return nature[seed % len(nature)] if nature else None

@@ -187,7 +187,7 @@ jobs:
         run: python -m mezmur.summary "output/song-${{ matrix.id }}" >> "$GITHUB_STEP_SUMMARY" || true
       - name: Upload the YouTube kit (only what you upload)
         uses: actions/upload-artifact@v4
-        if: success()
+        if: success() && hashFiles(format('output/song-{0}/video.mp4', matrix.id)) != ''
         with:
           name: mezmur-${{ matrix.id }}-run${{ github.run_id }}
           path: |
