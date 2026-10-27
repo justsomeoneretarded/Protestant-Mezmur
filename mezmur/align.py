@@ -600,6 +600,8 @@ def complete_with_lyrics(words, lines, energy, frame_seconds, duration, max_repe
     rates = [(ws[-1]["end"] - ws[0]["start"]) / max(1, sum(len(w) for w in lines[ws[0]["line"]])) for ws in full]
     spc = float(np.median(rates)) if rates else 0.12
     next_phrase = max(w["phrase"] for w in words) + 1
+    pauses = [b[0]["start"] - a[-1]["end"] for a, b in zip(full, full[1:]) if 0 <= b[0]["start"] - a[-1]["end"] < 2.5]
+    pause = float(np.median(pauses)) if pauses else 0.6
     emit_all = None
     if logp is not None and char_to_id is not None and blank is not None:
         merged = merge_blank(np.asarray(logp, dtype=np.float64), blank, delimiter)
@@ -686,6 +688,15 @@ def complete_with_lyrics(words, lines, energy, frame_seconds, duration, max_repe
         fragments = [w for w in out if gap_a <= w["start"] < gap_b and " ".join(lines[w["line"]]) in texts]
         stray = [w for w in out if gap_a <= w["start"] < gap_b and " ".join(lines[w["line"]]) not in texts]
         out = [w for w in out if not (gap_a <= w["start"] < gap_b)]
+        # Before the first clearly heard line (song intro), the missing lines are sung right before it at the
+        # song's own pace — an instrumental intro comes first. Search only that window.
+        win_a = gap_a
+        if prev_line is None and next_line is not None:
+            sung = sum(len(w) for l in seq for w in lines[l]) * spc + pause * len(seq)
+            win_a = max(gap_a, gap_b - 2.0 * sung - 0.5)
+            if fragments:
+                win_a = min(win_a, min(w["start"] for w in fragments) - 0.3)
+            phrases = _vocal_phrases(energy, frame_seconds, win_a + 0.15, gap_b - 0.15) or phrases
         layout = _lay_out(seq, lines, first_word, phrases, spc, next_phrase)
         added = None
         if emit_all is not None:
@@ -709,7 +720,7 @@ def complete_with_lyrics(words, lines, energy, frame_seconds, duration, max_repe
                     best = min(cand, key=lambda p: abs(p[3] - fw["start"]))
                     taken.add(best[0])
                     anchors.append((best[0], fw["start"], fw["end"]))
-            fa, fb = int((gap_a + 0.05) / frame_seconds), int((gap_b - 0.05) / frame_seconds)
+            fa, fb = int((win_a + 0.05) / frame_seconds), int((gap_b - 0.05) / frame_seconds)
             try:
                 added = _force_in_gap(emit_all, energy, fa, fb, seq, lines, first_word, char_to_id, blank, anchors,
                                       layout, frame_seconds, next_phrase)
