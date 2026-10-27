@@ -33,26 +33,33 @@ NAME_FILLER = {"official", "music", "mezmur", "mezmurs", "gospel", "worship", "s
                "song", "songs", "new", "hd", "the", "and", "&", "-", "|", "ዘማሪ", "ዘማሪት", "መዝሙር", "መዝሙሮች"}
 
 
+def _word_match(a, b):
+    """Same name word, allowing spelling variants and short forms (Dagi ~ Dagmawi, Yishak ~ Yisihak)."""
+    if SequenceMatcher(None, a, b).ratio() >= 0.8:
+        return True
+    short, long_ = sorted((a, b), key=len)
+    return len(short) >= 3 and long_.startswith(short[:3]) and len(short) <= 5
+
+
 def same_person_name(candidate, *names):
-    """True only when ``candidate`` names exactly this artist: every word of one of ``names`` is present
-    (fuzzy per word, any script) and the candidate has no other name words. 'Tilahun Gessesse' is not
-    'Dagi Tilahun'; 'Dagi Tilahun Official' is."""
+    """True when ``candidate`` mentions this artist: every word of one of ``names`` appears in it (any
+    script, spelling variants and short forms allowed). Extra words are fine ('Dagmawi Tilahun Official',
+    'Dagi Tilahun - Topic', 'Dagi Tilahun | New Mezmur'); a different person sharing one name is not
+    ('Tilahun Gessesse' is not 'Dagi Tilahun')."""
     cand_words = [w for w in re.split(r"[\s/|,()\-–—:]+", str(candidate)) if w]
     cand_keys = [latin_key(w) for w in cand_words if w.lower() not in NAME_FILLER and latin_key(w)]
     for name in names:
         words = [latin_key(w) for w in str(name or "").split() if latin_key(w) and w.lower() not in NAME_FILLER]
         if not words:
             continue
-        used = set()
-        ok = True
+        used, ok = set(), True
         for w in words:
-            hit = next((i for i, c in enumerate(cand_keys)
-                        if i not in used and SequenceMatcher(None, w, c).ratio() >= 0.8), None)
+            hit = next((i for i, c in enumerate(cand_keys) if i not in used and _word_match(w, c)), None)
             if hit is None:
                 ok = False
                 break
             used.add(hit)
-        if ok and len(cand_keys) - len(used) <= 0:
+        if ok:
             return True
     return False
 

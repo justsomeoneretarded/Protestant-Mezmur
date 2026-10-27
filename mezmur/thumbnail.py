@@ -116,8 +116,15 @@ def rank_photos(candidates, log=print):
         anchor = max(trusted, key=lambda i: (i["support"], i["weight"]))
     else:
         strict = [i for i in items if i.get("strict_name") and i["emb"] is not None]
-        if strict:  # only a channel whose name is exactly this singer may stand in
+        named = [i for i in items if i.get("named") and i["emb"] is not None]
+        if strict:  # the singer's own YouTube channel (its name contains the singer's full name)
             anchor = max(strict, key=lambda i: i["weight"])
+        elif len(named) >= 3:  # web pages that name the singer in full, and at least 3 agree on the face
+            for i in named:
+                i["support"] = sum(1 for j in named if j is not i and float(i["emb"] @ j["emb"]) > SAME)
+            best = max(named, key=lambda i: i["support"])
+            if best["support"] >= 2:
+                anchor = best
     for i in items:
         i["same_person"] = bool(anchor is not None and i["emb"] is not None
                                 and (i is anchor or float(i["emb"] @ anchor["emb"]) > SAME))

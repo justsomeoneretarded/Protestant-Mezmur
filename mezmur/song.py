@@ -231,7 +231,8 @@ def photo_candidates(work, inp, record, videos):
                 path = pdir / f"web-{i}.jpg"
                 path.write_bytes(r.content)
                 cands.append({"path": path, "source": f"web image {web.domain(im.get('source') or im['url'])}",
-                              "weight": 1, "trusted": False})
+                              "weight": 1, "trusted": False,
+                              "named": names.same_person_name(im.get("title", ""), *names_all)})
     except Exception as error:
         log(f"  web photos failed: {error}")
     return cands
@@ -411,8 +412,7 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
         img = cv2.imread(str(confirmed[0]["path"]))
         photo_img, badge_photo, photo_source = img, face_square(img, confirmed[0]["face"]), confirmed[0]["source"]
     if badge_photo is None:
-        review["reasons"].append("No photo of the singer was found; thumbnails use a text design. Add one under "
-                                 "artists/<name>.jpg to always use your own picture.")
+        review["reasons"].append("No photo could be confirmed as this singer; thumbnails use the text design.")
     timings["photos"] = round(time.time() - t, 1)
 
     # 8. Backgrounds.
