@@ -383,10 +383,8 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
 
     # 6. Subtitles & lyrics files.
     (out / "captions").mkdir(exist_ok=True)
-    write_ass(cues, work / "lyrics.ass")
     write_srt(cues, out / "captions" / "am.srt")
     write_srt(cues, out / "captions" / "am-Latn.srt", romanized=True)
-    shutil.copy2(work / "lyrics.ass", out / "lyrics.ass")
     text = stanzas_text(stanzas) if stanzas else "\n".join(c["text"] for c in cues) + "\n"
     (out / "lyrics.txt").write_text(text, encoding="utf-8")
     (out / "lyrics.romanized.txt").write_text("\n".join(romanize(l) if l.strip() else "" for l in text.splitlines()) + "\n",
@@ -432,6 +430,15 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
             "  no unused picture left; using a generated light background")
     clip_records = [still_record] if still_record else []
     sources = [still] if still else [Source("procedural", label="generated light")]
+    # Lyric style for this song: varies by song; dark letters on bright daytime pictures.
+    from .backgrounds import brightness
+    from .subtitles import choose_theme
+    still_img = cv2.imread(still.path) if still is not None and still.path else None
+    bright = brightness(still_img) >= 140
+    theme = choose_theme(seed=mid // 10 + mid, bright_background=bright)
+    write_ass(cues, work / "lyrics.ass", theme=theme)
+    shutil.copy2(work / "lyrics.ass", out / "lyrics.ass")
+    log(f"  look: {'bright daytime' if bright else 'darker'} picture, lyric style '{theme['name']}'")
     timings["footage"] = round(time.time() - t, 1)
 
     # 9. Thumbnails.
@@ -445,7 +452,9 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     t = time.time()
     width = height * 16 // 9
     feats = analyze(master, fps=fps)
-    renderer = Renderer(width, height, fps, duration, feats, sources, cues, meta, artist_photo=badge_photo, seed=mid)
+    accent = tuple(int(theme["sung"][i:i + 2], 16) for i in (1, 3, 5))
+    renderer = Renderer(width, height, fps, duration, feats, sources, cues, meta, artist_photo=badge_photo, seed=mid,
+                        bright=bright, accent=accent)
     render_video(renderer, master, work / "lyrics.ass", out / "video.mp4", preset=preset, log=log)
     timings["render"] = round(time.time() - t, 1)
 

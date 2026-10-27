@@ -189,8 +189,10 @@ class Overlays:
 
 class Renderer:
     def __init__(self, width, height, fps, duration, features: Features, sources, cues, meta,
-                 artist_photo=None, seed=0, end_screen=20.0):
+                 artist_photo=None, seed=0, end_screen=20.0, bright=False, accent=(255, 214, 140)):
         self.W, self.H, self.fps, self.duration = width, height, fps, duration
+        self.bright = bright          # daytime picture: keep it light, soften the vignette
+        self.accent = accent          # spectrum colour (RGB), matches the lyric highlight
         self.f = features
         self.cues = cues
         self.meta = meta
@@ -222,7 +224,7 @@ class Renderer:
     def _make_vignette(self):
         yy, xx = np.mgrid[0:self.H, 0:self.W].astype(np.float32)
         nx, ny = (xx / self.W - 0.5) * 2, (yy / self.H - 0.5) * 2
-        vig = 1.0 - 0.42 * np.clip(nx ** 2 * 0.55 + ny ** 2 * 0.8, 0, 1.3)
+        vig = 1.0 - (0.22 if self.bright else 0.42) * np.clip(nx ** 2 * 0.55 + ny ** 2 * 0.8, 0, 1.3)
         band = 1.0 - 0.38 * np.exp(-((yy / self.H - 0.56) / 0.17) ** 4)  # darken lyric zone
         m = np.clip(vig * band, 0, 1)
         return (m[..., None] * 255).astype(np.uint8).repeat(3, axis=2)
@@ -351,7 +353,7 @@ class Renderer:
     def _grade(self, frame, t):
         if not hasattr(self, "_lut"):
             x = np.arange(256, dtype=np.float32)
-            gain = 0.86
+            gain = 1.0 if self.bright else 0.86
             lut = np.stack([np.clip(x * gain * 0.95, 0, 255), np.clip(x * gain, 0, 255),
                             np.clip(x * gain * 1.04 + 3, 0, 255)], 1)
             self._lut = lut.astype(np.uint8)[:, None, :]
@@ -399,8 +401,9 @@ class Renderer:
             h = int(r * 2 + v * maxh)
             xa = int(x0 + k * bw + bw * 0.18)
             xb = max(xa + 1, int(x0 + (k + 1) * bw - bw * 0.18))
-            warm = 0.55 + 0.45 * v
-            color = (int(120 * warm + 20), int(205 * warm + 30), 255)
+            warm = 0.6 + 0.4 * v
+            r, g, b = self.accent
+            color = (int(b * warm), int(g * warm), int(r * warm))
             ya = base - h - top + r
             cv2.rectangle(strip, (xa, ya), (xb, base - top), color, -1, cv2.LINE_AA)
             cv2.circle(strip, ((xa + xb) // 2, ya), (xb - xa) // 2 + 1, color, -1, cv2.LINE_AA)

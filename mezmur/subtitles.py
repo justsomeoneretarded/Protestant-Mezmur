@@ -82,6 +82,63 @@ def _karaoke(words, event_start, roman=False):
     return "".join(parts).rstrip()
 
 
+def _ass(rgb, alpha=0):
+    r, g, b = (int(rgb[i:i + 2], 16) for i in (1, 3, 5))
+    return f"&H{alpha:02X}{b:02X}{g:02X}{r:02X}"
+
+
+# (name, font family, font file, bold, unsung colour, sung colour, outline colour, outline px, shadow px)
+LIGHT_TEXT = [  # for darker backgrounds
+    ("gold", "Noto Sans Ethiopic", "NotoSansEthiopic-Bold.ttf", True, "#FFFFFF", "#FFD27A", "#140C04", 4.5, 3),
+    ("sky", "Noto Sans Ethiopic Black", "NotoSansEthiopic-Black.ttf", False, "#FFFFFF", "#8FD3FF", "#06142B", 4.5, 3),
+    ("rose", "Noto Serif Ethiopic", "NotoSerifEthiopic-Bold.ttf", True, "#FFF6E8", "#FFB0C4", "#2A0A1C", 4.5, 3),
+    ("mint", "Noto Sans Ethiopic SemiBold", "NotoSansEthiopic-SemiBold.ttf", False, "#FFFFFF", "#93F0CF", "#032620", 5.0, 3),
+    ("amber", "Noto Serif Ethiopic", "NotoSerifEthiopic-Bold.ttf", True, "#FFFFFF", "#FFAE52", "#000000", 4.5, 3),
+    ("lilac", "Noto Sans Ethiopic Black", "NotoSansEthiopic-Black.ttf", False, "#FFF9F0", "#D7B8FF", "#1A0B2E", 4.5, 3),
+]
+DARK_TEXT = [  # for bright, daytime backgrounds: dark letters with a light outline
+    ("navy", "Noto Sans Ethiopic Black", "NotoSansEthiopic-Black.ttf", False, "#1B2A4A", "#C0263B", "#FFFFFF", 5.0, 0),
+    ("forest", "Noto Serif Ethiopic", "NotoSerifEthiopic-Bold.ttf", True, "#163A29", "#C2510C", "#FFFBEF", 5.0, 0),
+    ("plum", "Noto Sans Ethiopic", "NotoSansEthiopic-Bold.ttf", True, "#3A1C4A", "#0E7C86", "#FFFFFF", 5.0, 0),
+    ("ink", "Noto Sans Ethiopic SemiBold", "NotoSansEthiopic-SemiBold.ttf", False, "#111111", "#1F6FEB", "#FFFFFF", 5.5, 0),
+    ("bold-white", "Noto Sans Ethiopic Black", "NotoSansEthiopic-Black.ttf", False, "#FFFFFF", "#FFE066", "#1A1A1A", 6.0, 4),
+]
+
+
+def choose_theme(seed=0, bright_background=False):
+    """A lyric style for this song: font and colours vary from song to song; dark letters on bright
+    daytime pictures, light letters on darker ones."""
+    family = DARK_TEXT if bright_background else LIGHT_TEXT
+    name, font, file, bold, unsung, sung, outline, ow, shadow = family[int(seed) % len(family)]
+    return {"name": name, "font": font, "file": file, "bold": bold, "unsung": unsung, "sung": sung,
+            "outline": outline, "outline_w": ow, "shadow": shadow, "bright": bright_background}
+
+
+def header(theme):
+    t = theme
+    b = -1 if t["bold"] else 0
+    back = "&H64000000" if t["shadow"] else "&HFF000000"
+    roman_unsung = t["unsung"]
+    return f"""[Script Info]
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+WrapStyle: 2
+ScaledBorderAndShadow: yes
+YCbCr Matrix: TV.709
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Lyric,{t["font"]},92,{_ass(t["sung"])},{_ass(t["unsung"])},{_ass(t["outline"])},{back},{b},0,0,0,100,100,1,0,1,{t["outline_w"]},{t["shadow"]},5,60,60,0,1
+Style: Roman,Noto Sans,44,{_ass(t["sung"])},{_ass(roman_unsung)},{_ass(t["outline"])},{back},0,-1,0,0,100,100,1,0,1,{max(2.4, t["outline_w"] * 0.6):.1f},{min(2, t["shadow"])},5,60,60,0,1
+Style: Next,{t["font"]},46,{_ass(t["unsung"], 0x40)},{_ass(t["unsung"], 0x40)},{_ass(t["outline"], 0x50)},{back},0,0,0,0,100,100,1,0,1,{max(2.0, t["outline_w"] * 0.5):.1f},{min(1, t["shadow"])},5,60,60,0,1
+Style: Section,Noto Sans,30,{_ass(t["sung"])},{_ass(t["sung"])},{_ass(t["outline"])},{back},-1,0,0,0,100,100,6,0,1,2,{min(1, t["shadow"])},5,60,60,0,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+"""
+
+
 HEADER = """[Script Info]
 ScriptType: v4.00+
 PlayResX: 1920
@@ -102,7 +159,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
 
 
-def write_ass(cues, path, romanized=True, preview=True):
+def write_ass(cues, path, romanized=True, preview=True, theme=None):
+    theme = theme or choose_theme(0)
+    font_file = theme["file"]
     events = []
     for i, cue in enumerate(cues):
         nxt = cues[i + 1] if i + 1 < len(cues) else None
@@ -111,7 +170,7 @@ def write_ass(cues, path, romanized=True, preview=True):
         end = cue["end"] + 0.5
         if nxt:
             end = min(end, max(cue["end"] + 0.05, nxt["start"] - LEAD - 0.02))
-        size = fit_size(cue["text"])
+        size = fit_size(cue["text"], font_file=font_file)
         fade = "\\fad(180,220)"
         move = f"\\move(960,{578},960,560,0,260)"
         events.append(f"Dialogue: 2,{timestamp(start, True)},{timestamp(end, True)},Lyric,,0,0,0,,"
@@ -121,14 +180,14 @@ def write_ass(cues, path, romanized=True, preview=True):
             events.append(f"Dialogue: 2,{timestamp(start, True)},{timestamp(end, True)},Roman,,0,0,0,,"
                           f"{{\\move(960,{672},960,656,0,260){fade}\\fs{rsize}}}{_karaoke(cue['words'], start, roman=True)}")
         if preview and nxt and nxt["start"] - cue["end"] < 6.0:
-            nsize = min(46, fit_size(nxt["text"], maximum=46, minimum=30))
+            nsize = min(46, fit_size(nxt["text"], font_file=font_file, maximum=46, minimum=30))
             events.append(f"Dialogue: 1,{timestamp(start, True)},{timestamp(end, True)},Next,,0,0,0,,"
                           f"{{\\pos(960,756){fade}\\fs{nsize}}}{safe_ass(nxt['text'])}")
         first_of_chorus = cue.get("chorus") and not (i and cues[i - 1].get("chorus") and cue["start"] - cues[i - 1]["end"] < 3)
         if first_of_chorus:
             events.append(f"Dialogue: 3,{timestamp(start, True)},{timestamp(min(end, start + 3.5), True)},Section,,0,0,0,,"
                           f"{{\\pos(960,452)\\fad(250,400)}}አዝማች  •  CHORUS")
-    Path(path).write_text(HEADER + "\n".join(events) + "\n", encoding="utf-8")
+    Path(path).write_text(header(theme) + "\n".join(events) + "\n", encoding="utf-8")
 
 
 def write_srt(cues, path, romanized=False):

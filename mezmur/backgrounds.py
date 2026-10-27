@@ -411,6 +411,26 @@ NATURE_QUERIES = ["waterfall", "mountain lake reflection", "misty mountains", "m
                   "mountains sunrise clouds", "forest stream", "river valley", "ocean waves", "sea sunset",
                   "sunset sky clouds", "clouds sky", "milky way", "starry night sky", "city skyline night",
                   "city skyline sunset", "mountain road landscape", "canyon", "desert dunes", "snow mountains"]
+DAY_QUERIES = ["waterfall sunny", "blue sky clouds", "green hills", "mountain lake summer", "beach sunny",
+               "meadow flowers", "forest sunlight", "snow mountains blue sky", "river valley summer", "rolling hills",
+               "lake reflection daytime", "alpine meadow", "turquoise sea", "palm beach", "sunflower field",
+               "green valley mountains", "cliffs sea sunny", "spring landscape"]
+
+
+def day_look(seed):
+    """About 7 songs in 10 get a bright daytime picture; the rest a calmer evening one."""
+    return int(seed) % 10 < 7
+
+
+def brightness(img):
+    """Mean brightness (0-255) of the band where the lyrics are drawn."""
+    if img is None:
+        return 128.0
+    h = img.shape[0]
+    band = cv2.cvtColor(img[int(h * 0.42):int(h * 0.80)], cv2.COLOR_BGR2HSV)[..., 2]
+    return float(band.mean())
+
+
 # What must not be *on* the picture: overlays, graphics, people. Scenery itself may be anything.
 BANNED = ("flag", " sign ", "signs", "signpost", "map ", " maps", "diagram", "arrow", "text", "logo", "poster",
           "caption", "label", "advert", "billboard", "graffiti", "screenshot", "chart", "graph", "infographic",
@@ -453,7 +473,7 @@ def _nature_candidates(query, used):
     return out
 
 
-def picture_problem(img):
+def picture_problem(img, day=False):
     """Reasons a picture is not a clean background (None when it is fine): nothing may be drawn or written on it."""
     from .textdetect import text_score
     if img is None:
@@ -462,8 +482,8 @@ def picture_problem(img):
     H, W = small.shape[:2]
     hsv = cv2.cvtColor(small, cv2.COLOR_BGR2HSV)
     v = float(hsv[..., 2].mean())
-    if not 55 <= v <= 215:
-        return f"too dark or too bright ({v:.0f})"
+    if not (120 if day else 55) <= v <= 215:
+        return f"{'not bright enough for a daytime look' if day else 'too dark or too bright'} ({v:.0f})"
     if text_score(img) >= 0.004:
         return "text in the picture"
     gray = cv2.cvtColor(small, cv2.COLOR_BGR2GRAY)
@@ -476,7 +496,7 @@ def picture_problem(img):
     return None
 
 
-def nature_still(folder, used=(), seed=0, log=print, budget=150, slot=0, slots=1):
+def nature_still(folder, used=(), seed=0, log=print, budget=150, slot=0, slots=1, day=None):
     """Return (Source, record) for one checked photograph never used before, or (None, None).
 
     Songs of one batch render at the same time, so each takes only candidates whose id falls in its
@@ -487,7 +507,8 @@ def nature_still(folder, used=(), seed=0, log=print, budget=150, slot=0, slots=1
     folder.mkdir(parents=True, exist_ok=True)
     used = set(used)
     rnd = random.Random(seed)
-    queries = NATURE_QUERIES[:]
+    day = day_look(seed) if day is None else day
+    queries = (DAY_QUERIES if day else NATURE_QUERIES)[:]
     rnd.shuffle(queries)
     tried = 0
     for q in queries:
@@ -508,7 +529,7 @@ def nature_still(folder, used=(), seed=0, log=print, budget=150, slot=0, slots=1
             if r is None or r.status_code != 200:
                 continue
             img = cv2.imdecode(np.frombuffer(r.content, np.uint8), cv2.IMREAD_COLOR)
-            problem = picture_problem(img)
+            problem = picture_problem(img, day=day)
             if problem:
                 log(f"  background rejected ({problem}): {c['credit'][:70]}", flush=True)
                 continue
