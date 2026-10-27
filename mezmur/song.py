@@ -334,10 +334,23 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
                                      "watch for missing lines.")
         mode = "lyrics-aligned"
     else:
-        best_seen = max((r.get("matched_share", 0) for r in cand_reports), default=0)
-        return skip(out, mid, record, cand_reports, timings,
-                    f"No lyrics could be verified for this song (best match explained {best_seen:.0%} of the singing; "
-                    f"{ACCEPT_SHARE:.0%} needed).")
+        checked = [r for r in cand_reports if "matched_share" in r]
+        if not checked:
+            reason = "No lyrics for this song were found in any source."
+        else:
+            r = max(checked, key=lambda r: r["matched_share"] + r.get("gain_per_vocal_frame", 0))
+            fails = []
+            if r["matched_share"] < ACCEPT_SHARE:
+                fails.append(f"they explain only {r['matched_share']:.0%} of the singing ({ACCEPT_SHARE:.0%} needed)")
+            if r.get("lines_share", 1) < ACCEPT_LINES:
+                fails.append(f"only {r.get('lines_used')} of their {r.get('lines_total')} lines are sung in this song "
+                             f"({ACCEPT_LINES:.0%} needed — the page may hold a different version or extra lines)")
+            if r.get("gain_per_vocal_frame", 1) < ACCEPT_GAIN:
+                fails.append(f"the words match the sound only weakly (score {r['gain_per_vocal_frame']:.2f}, "
+                             f"{ACCEPT_GAIN} needed)")
+            reason = (f"The best lyrics found ({r['source']} {r.get('url', '')}) did not pass: "
+                      + "; ".join(fails or ["checks failed"]) + ".")
+        return skip(out, mid, record, cand_reports, timings, reason)
     if not chosen["trusted"] and est > MAX_ESTIMATED:
         return skip(out, mid, record, cand_reports, timings,
                     f"The lyrics were found, but {est:.0%} of the word timings could only be estimated "
