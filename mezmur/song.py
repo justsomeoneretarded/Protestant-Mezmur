@@ -379,11 +379,19 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     # 8. Backgrounds.
     t = time.time()
     # One calm, clean nature photograph for the whole song (and its thumbnails).
-    still, still_record = backgrounds.nature_still(work / "background", used=used, seed=mid, log=log)
-    clip_records = [still_record] if still_record else []
+    slot, slots = 0, 1
+    plan_file = inp.parent / "plan.json"
+    if plan_file.is_file():  # songs of one batch must not pick the same picture
+        ids = [int(x) for x in json.loads(plan_file.read_text()).get("ids", [])]
+        if mid in ids:
+            slot, slots = ids.index(mid), len(ids)
+    still, still_record = backgrounds.nature_still(work / "background", used=used, seed=mid, log=log,
+                                                   slot=slot, slots=slots)
     if still is None:
-        still = backgrounds.fallback_scene(work, seed=mid)
-        log("  no clean nature photo found online; using a bundled nature picture")
+        still, still_record = backgrounds.fallback_scene(work, used=used, seed=mid)
+        log("  no clean photo found online; using a bundled picture" if still else
+            "  no unused picture left; using a generated light background")
+    clip_records = [still_record] if still_record else []
     sources = [still] if still else [Source("procedural", label="generated light")]
     timings["footage"] = round(time.time() - t, 1)
 

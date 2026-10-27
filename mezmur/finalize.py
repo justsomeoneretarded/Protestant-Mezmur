@@ -5,7 +5,7 @@ from pathlib import Path
 
 from .state import Store
 
-MAX_USED = 4000
+MAX_USED = 100000  # never reuse a background (a few MB of state at most)
 
 
 def main():

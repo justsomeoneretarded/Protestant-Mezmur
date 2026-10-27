@@ -407,16 +407,15 @@ def local_scenes(folder):
 # One calm nature photograph per song (Wikimedia Commons "Quality images": sharp, well composed).
 # Nothing man-made, no people, no space imagery, no graphics, no text.
 # ------------------------------------------------------------------------------------------------
-NATURE_QUERIES = ["waterfall", "waterfall forest", "mountain lake reflection", "misty mountains", "misty forest",
-                  "lake sunrise", "mountains sunrise clouds", "forest stream", "calm sea sunset", "valley clouds"]
-BANNED = ("road", "street", "highway", "car ", "cars", "vehicle", "bus ", "truck", "city", "town", "village", "building",
-          "house", "church", "temple", "mosque", "castle", "bridge", "tower", "dam ", "people", "person", "man ", "woman",
-          "child", "girl", "boy", "portrait", "tourist", "hiker", "flag", "sign", "map", "diagram", "arrow", "text",
-          "logo", "poster", "nasa", "space", "planet", "earth from", "satellite", "astronaut", "galaxy", "nebula",
-          "aircraft", "airplane", "train", "railway", "boat", "ship", "fence", "monument", "statue", "sculpture",
-          "interior", "rendering", "illustration", "drawing", "painting", "artwork", "cgi", "animal", "bird", "insect",
-          "dog", "cat ", "cow", "horse", "wind turbine", "power line", "pylon", "hut", "cabin", "bench", "lighthouse",
-          "pier", "harbour", "harbor", "port ", "marina", "camp", "tent", "ruins", "wall")
+NATURE_QUERIES = ["waterfall", "mountain lake reflection", "misty mountains", "misty forest", "lake sunrise",
+                  "mountains sunrise clouds", "forest stream", "river valley", "ocean waves", "sea sunset",
+                  "sunset sky clouds", "clouds sky", "milky way", "starry night sky", "city skyline night",
+                  "city skyline sunset", "mountain road landscape", "canyon", "desert dunes", "snow mountains"]
+# What must not be *on* the picture: overlays, graphics, people. Scenery itself may be anything.
+BANNED = ("flag", " sign ", "signs", "signpost", "map ", " maps", "diagram", "arrow", "text", "logo", "poster",
+          "caption", "label", "advert", "billboard", "graffiti", "screenshot", "chart", "graph", "infographic",
+          "people", "person", "portrait", "selfie", "tourist", "crowd", "man ", "woman", "child", "girl", "boy",
+          "rendering", "illustration", "drawing", "painting", "artwork", "cgi", "collage", "montage", "composite")
 
 
 def _banned(text):
@@ -455,7 +454,7 @@ def _nature_candidates(query, used):
 
 
 def picture_problem(img):
-    """Reasons a picture is not a calm, clean nature background (None when it is fine)."""
+    """Reasons a picture is not a clean background (None when it is fine): nothing may be drawn or written on it."""
     from .textdetect import text_score
     if img is None:
         return "unreadable"
@@ -468,15 +467,6 @@ def picture_problem(img):
     if text_score(img) >= 0.004:
         return "text in the picture"
     gray = cv2.cvtColor(small, cv2.COLOR_BGR2GRAY)
-    edges = cv2.Canny(cv2.GaussianBlur(gray, (3, 3), 0), 70, 180)
-    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=60, minLineLength=int(W * 0.15), maxLineGap=6)
-    slanted = 0
-    for x1, y1, x2, y2 in (lines.reshape(-1, 4) if lines is not None else []):
-        angle = abs(np.degrees(np.arctan2(y2 - y1, x2 - x1))) % 180
-        if 6 < angle < 174:  # the horizon may be a long straight line; anything else straight is man-made
-            slanted += 1
-    if slanted >= 3:
-        return f"straight man-made lines ({slanted})"
     local_std = cv2.blur(gray.astype(np.float32) ** 2, (5, 5)) - cv2.blur(gray.astype(np.float32), (5, 5)) ** 2
     flat = local_std < 4
     hue = hsv[..., 0]
@@ -486,8 +476,11 @@ def picture_problem(img):
     return None
 
 
-def nature_still(folder, used=(), seed=0, log=print, budget=150):
-    """Return (Source, record) for one checked nature photograph, or (None, None)."""
+def nature_still(folder, used=(), seed=0, log=print, budget=150, slot=0, slots=1):
+    """Return (Source, record) for one checked photograph never used before, or (None, None).
+
+    Songs of one batch render at the same time, so each takes only candidates whose id falls in its
+    own slot (id mod slots); together with the remembered ``used`` ids no two videos share a picture."""
     import time as _time
     deadline = _time.time() + budget
     folder = Path(folder)
@@ -505,6 +498,7 @@ def nature_still(folder, used=(), seed=0, log=print, budget=150):
         except Exception as error:  # noqa: BLE001
             log(f"  nature photo search {q!r} failed: {error.__class__.__name__}", flush=True)
             continue
+        cands = [c for c in cands if int(c["id"].split(":")[1]) % max(1, slots) == slot]
         rnd.shuffle(cands)
         for c in cands[:4]:
             if _time.time() > deadline or tried >= 12:
@@ -525,8 +519,11 @@ def nature_still(folder, used=(), seed=0, log=print, budget=150):
     return None, None
 
 
-def fallback_scene(folder, seed=0):
-    """Bundled pictures that are pure nature (highland mountains, desert dunes)."""
+def fallback_scene(folder, used=(), seed=0):
+    """The four bundled pictures (mountains, skyline, road, desert), each used for one video only."""
     scenes = local_scenes(folder)
-    nature = [scenes[i] for i in (0, 3) if i < len(scenes)]
-    return nature[seed % len(nature)] if nature else None
+    for i in sorted(range(len(scenes)), key=lambda i: (i + seed) % max(1, len(scenes))):
+        sid = f"bundled:{i}"
+        if i < len(scenes) and sid not in used:
+            return scenes[i], {"id": sid, "credit": "", "query": "bundled"}
+    return None, None
