@@ -486,7 +486,7 @@ def _lay_out(line_ids, lines, first_word, phrases, sec_per_char, phrase_id):
 
 
 def _force_in_gap(emit_all, energy, fa, fb, seq, lines, first_word, char_to_id, blank, anchors, layout,
-                  frame_seconds, phrase_id, silence_cost=3.0, spread_bonus=0.15, weak=-4.0):
+                  frame_seconds, phrase_id, silence_cost=3.0, spread_bonus=0.0, weak=-2.3):
     """Second recognition pass inside a gap: every word of ``seq`` (line ids) must appear, in order.
 
     emit_all: prior-normalised log-probabilities for the whole song [T, V].
@@ -561,6 +561,15 @@ def _force_in_gap(emit_all, energy, fa, fb, seq, lines, first_word, char_to_id, 
         if wpos not in spans:
             continue
         a, b = spans[wpos]
+        idx_w = np.where(tok_word == wpos)[0]
+        # A word cannot last much longer than it takes to sing it: when the path smeared it over music,
+        # keep the window (inside its span) where its own letters are heard best.
+        longest = max(3, int(round(len(idx_w) * 0.45 / frame_seconds)))
+        if b - a + 1 > longest and len(idx_w):
+            score = raw[a:b + 1][:, [toks[i] for i in idx_w]].max(1)
+            win = np.convolve(score, np.ones(longest), "valid")
+            a = a + int(np.argmax(win))
+            b = a + longest - 1
         idx = np.where(tok_word == wpos)[0]
         # Evidence: best posterior of this word's characters inside its span.
         ev = float(np.mean([raw[a:b + 1, toks[i]].max() for i in idx])) if len(idx) else weak - 1
@@ -613,21 +622,24 @@ def complete_with_lyrics(words, lines, energy, frame_seconds, duration, max_repe
             continue
         note(start=gap_a, end=gap_b, after_line=prev_line, before_line=next_line, action="examined")
         first = 0 if prev_line is None else prev_line + 1
-        if next_line is not None and next_line <= first:
-            # The next clearly heard line is not new (a chorus coming back, or a line written once with
-            # '/3' that was only heard on its last repetition): the gap holds the start of its stanza.
+        rep = repeats or [1] * n_lines
+        certain = True
+        if next_line is not None and next_line < first:
+            # The lyrics jump back (a chorus returning): only the lines of that stanza *before* the next
+            # heard line can be missing. Nothing before the stanza start is guessed.
+            certain = False
             if stanza_of is None:
                 continue
             st = stanza_of[next_line]
             s0 = min(i for i in range(n_lines) if stanza_of[i] == st)
-            s1 = max(i for i in range(n_lines) if stanza_of[i] == st)
-            missing = list(range(s0, next_line)) or list(range(s0, s1 + 1))
+            missing = list(range(s0, next_line))
+        elif next_line is not None and next_line == first:
+            missing = []  # the next heard line is the next lyric line: nothing is missing (instrumental)
         else:
             last = (next_line - 1) if next_line is not None else n_lines - 1
             missing = list(range(first, last + 1))
-        rep = repeats or [1] * n_lines
-        certain = not (next_line is not None and next_line <= first)
-        # Repetitions of the line just before the gap that were not heard yet ('ዛሬም ይሰራል /3' heard once).
+        # Repetitions still owed: of the line just before the gap ('ዛሬም ይሰራል /3' heard once), or of a marked
+        # line whose first repetitions were sung before it was clearly heard.
         carry = []
         if prev_line is not None and rep[prev_line] > 1:
             run = 0
@@ -636,9 +648,18 @@ def complete_with_lyrics(words, lines, energy, frame_seconds, duration, max_repe
                     break
                 run += 1
             carry = [prev_line] * max(0, rep[prev_line] - run)
-        if not missing and not carry:
+        lead = []
+        if next_line is not None and rep[next_line] > 1 and not missing:
+            run = 0
+            for ws in full[k:]:
+                if ws[0]["line"] != next_line:
+                    break
+                run += 1
+            lead = [next_line] * max(0, rep[next_line] - run)
+        if not missing and not carry and not lead:
+            note(start=gap_a, end=gap_b, action="nothing missing (instrumental)")
             continue
-        unit = carry + [l for l in missing for _ in range(max(1, rep[l]))]
+        unit = carry + [l for l in missing for _ in range(max(1, rep[l]))] + lead
         missing = sorted(set(unit))
         phrases = _vocal_phrases(energy, frame_seconds, gap_a + 0.15, gap_b - 0.15)
         active = sum(b - a for a, b in phrases)
@@ -647,11 +668,13 @@ def complete_with_lyrics(words, lines, energy, frame_seconds, duration, max_repe
             note(start=gap_a, end=gap_b, lines=unit, singing=active, action="skipped: no singing")
             continue
         ratio = active / need
-        if ratio < 0.45 or ratio > max_repeat + 0.6:
+        if ratio < 0.45:
             note(start=gap_a, end=gap_b, lines=unit, singing=active, needed=need, ratio=ratio,
-                 action="skipped: singing does not fit these lines")
-            continue  # far too little or far too much singing for these lines
-        reps = 1 if ratio < 1.7 else int(min(max_repeat, round(ratio)))
+                 action="skipped: too little singing for these lines")
+            continue
+        # The lyrics say how often each line is sung; extra time in a gap is music, not more lyrics.
+        # Only the song's last stretch may repeat its final lines (choruses sung again at the end).
+        reps = int(min(max_repeat, round(ratio))) if (next_line is None and ratio >= 1.7) else 1
         texts = {" ".join(lines[l]) for l in missing}
         in_gap = [w for w in out if gap_a <= w["start"] < gap_b and " ".join(lines[w["line"]]) in texts]
         if (reps == 1 and len(unit) == len(missing) and {w["line"] for w in in_gap} >= set(missing)
