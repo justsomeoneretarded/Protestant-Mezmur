@@ -103,21 +103,26 @@ def rank_photos(candidates, log=print):
                       "sharp": sharpness(img)})
     if not items:
         return []
-    # Identity consensus.
-    with_emb = [i for i in items if i["emb"] is not None]
-    if len(with_emb) >= 2:
-        for i in with_emb:
-            i["support"] = sum(j["weight"] for j in with_emb if j is not i and float(i["emb"] @ j["emb"]) > 0.40)
-        best_support = max(i["support"] for i in with_emb)
-        anchor = max(with_emb, key=lambda i: (i["support"], i["weight"]))
-        for i in items:
-            i["same_person"] = i["emb"] is not None and (i is anchor or float(i["emb"] @ anchor["emb"]) > 0.40)
-        if best_support == 0:
-            for i in items:
-                i["same_person"] = i["weight"] >= 2
+    # Who is the singer? Decided only by trusted photos (this song's cover, post, official uploads, your
+    # artists/ folder). Name searches can be flooded with a more famous namesake, so they never decide;
+    # they are used only when their face matches the trusted face.
+    SAME = 0.45
+    trusted = [i for i in items if i.get("trusted") and i["emb"] is not None]
+    anchor = None
+    if trusted:
+        for i in trusted:
+            i["support"] = i["weight"] + sum(j["weight"] for j in trusted
+                                             if j is not i and float(i["emb"] @ j["emb"]) > SAME)
+        anchor = max(trusted, key=lambda i: (i["support"], i["weight"]))
     else:
-        for i in items:
-            i["same_person"] = i["weight"] >= 2 or len(items) == 1
+        strict = [i for i in items if i.get("strict_name") and i["emb"] is not None]
+        if strict:  # only a channel whose name is exactly this singer may stand in
+            anchor = max(strict, key=lambda i: i["weight"])
+    for i in items:
+        i["same_person"] = bool(anchor is not None and i["emb"] is not None
+                                and (i is anchor or float(i["emb"] @ anchor["emb"]) > SAME))
+    if anchor is None:
+        log("  no photo can be tied to this singer with confidence; thumbnails use the text design", flush=True)
     for i in items:
         h, w = i["img_shape"]
         x, y, fw, fh = i["face"]["box"]

@@ -28,8 +28,39 @@ def similar(a, b):
     return max(full, 0.9 * skel)
 
 
+NAME_FILLER = {"official", "music", "mezmur", "mezmurs", "gospel", "worship", "singer", "tv", "channel", "media",
+               "production", "productions", "records", "entertainment", "ministry", "ministries", "lyrics", "topic",
+               "song", "songs", "new", "hd", "the", "and", "&", "-", "|", "ዘማሪ", "ዘማሪት", "መዝሙር", "መዝሙሮች"}
+
+
+def same_person_name(candidate, *names):
+    """True only when ``candidate`` names exactly this artist: every word of one of ``names`` is present
+    (fuzzy per word, any script) and the candidate has no other name words. 'Tilahun Gessesse' is not
+    'Dagi Tilahun'; 'Dagi Tilahun Official' is."""
+    cand_words = [w for w in re.split(r"[\s/|,()\-–—:]+", str(candidate)) if w]
+    cand_keys = [latin_key(w) for w in cand_words if w.lower() not in NAME_FILLER and latin_key(w)]
+    for name in names:
+        words = [latin_key(w) for w in str(name or "").split() if latin_key(w) and w.lower() not in NAME_FILLER]
+        if not words:
+            continue
+        used = set()
+        ok = True
+        for w in words:
+            hit = next((i for i, c in enumerate(cand_keys)
+                        if i not in used and SequenceMatcher(None, w, c).ratio() >= 0.8), None)
+            if hit is None:
+                ok = False
+                break
+            used.add(hit)
+        if ok and len(cand_keys) - len(used) <= 0:
+            return True
+    return False
+
+
 def strip_junk(text):
     text = re.sub(r"https?://\S+|t\.me/\S+|@\w+|#\w+", " ", str(text))
+    text = re.sub(r"(?i)\b(join|subscribe|follow)\b.*$", " ", text)  # 'Join us ...' tails in captions
+    text = re.sub(r"(ቻናላችንን|ቴሌግራም|ይቀላቀሉ|ተቀላቀሉ|ሰብስክራይብ).*$", " ", text)
     text = re.sub(r"[\U0001F000-\U0001FAFF☀-➿️]", " ", text)
     text = LEADING_NUMBER.sub("", text)
     text = re.sub(r"\.(mp3|m4a|ogg|opus|wav|flac|aac)$", "", text, flags=re.I)

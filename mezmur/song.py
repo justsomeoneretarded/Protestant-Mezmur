@@ -5,6 +5,7 @@ output folder: video.mp4, thumbnails, captions, lyrics, YouTube upload kit, diag
 """
 import argparse
 import json
+import re
 import os
 import shutil
 import time
@@ -160,66 +161,79 @@ def face_square(img, face, margin=2.4):
 
 
 def photo_candidates(work, inp, record, videos):
+    """Photos of the singer. 'trusted' ones belong to this song (your artists/ folder, the song's cover art,
+    its Telegram post, official uploads of this exact song) and decide who the singer is; name searches
+    (YouTube channel, Wikimedia, web) only add photos of that same face."""
     cands = []
     pdir = work / "photos"
     pdir.mkdir(exist_ok=True)
+    names_all = [n for n in [record.get("artist_latin"), record.get("artist_am")] if n]
     root = Path(__file__).resolve().parent.parent / "artists"
-    for name in [record.get("artist_latin"), record.get("artist_am")]:
-        if name and root.is_dir():
+    for name in names_all:
+        if root.is_dir():
             for p in root.glob(f"{names.slug(name)}*"):
                 if p.suffix.lower() in {".jpg", ".jpeg", ".png", ".webp"}:
-                    cands.append({"path": p, "source": f"artists/{p.name}", "weight": 6})
+                    cands.append({"path": p, "source": f"artists/{p.name}", "weight": 6, "trusted": True})
     for p in sorted((inp / "photos").glob("*")) if (inp / "photos").is_dir() else []:
-        cands.append({"path": p, "source": f"telegram:{p.name}", "weight": 2})
+        cands.append({"path": p, "source": f"telegram:{p.name}", "weight": 2, "trusted": True})
     cover = audio.cover_art(_audio_file(inp), pdir / "cover.jpg")
     if cover:
-        cands.append({"path": cover, "source": "embedded cover art", "weight": 2})
+        cands.append({"path": cover, "source": "embedded cover art", "weight": 3, "trusted": True})
     artist = record.get("artist_latin") or record.get("artist_am")
-    if artist:
-        try:
-            chans = web.youtube_search(artist, channels=True)
-            chans = [c for c in chans if names.similar(c["title"].replace("Official", ""), artist) >= 0.6
-                     or names.similar(c["title"], record.get("artist_am", "") or artist) >= 0.6]
-            chans.sort(key=lambda c: (" - Topic" in c["title"], not c["verified"], -_subs(c["subscribers"])))
-            for i, c in enumerate(chans[:2]):
-                r = web.get(c["avatar"])
-                if r is not None and r.status_code == 200 and len(r.content) > 5000:
-                    path = pdir / f"yt-channel-{i}.jpg"
-                    path.write_bytes(r.content)
-                    cands.append({"path": path, "source": f"youtube channel {c['title']}", "weight": 3 if i == 0 else 2})
-            official = {c["channel_id"] for c in chans[:2]}
-            picked = 0
-            for v in videos:
-                if picked >= 3:
-                    break
-                if v.get("channel_id") in official or names.similar(v.get("channel", ""), artist) >= 0.7:
-                    data = web.youtube_thumbnail(v["video_id"])
-                    if data:
-                        path = pdir / f"yt-video-{v['video_id']}.jpg"
-                        path.write_bytes(data)
-                        cands.append({"path": path, "source": f"youtube video {v['video_id']}", "weight": 2})
-                        picked += 1
-        except Exception as error:
-            log(f"  youtube photos failed: {error}")
-        try:
-            for i, im in enumerate(web.commons_images(artist, 4)):
-                r = web.get(im["url"]) if im.get("url") else None
-                if r is not None and r.status_code == 200:
-                    path = pdir / f"commons-{i}.jpg"
-                    path.write_bytes(r.content)
-                    cands.append({"path": path, "source": f"wikimedia {im['title']} ({im['license']})", "weight": 2,
-                                  "credit": f"{im['title']} — {im['artist']} ({im['license']})"})
-        except Exception as error:
-            log(f"  commons photos failed: {error}")
-        try:
-            for i, im in enumerate(web.image_search(f"{artist} {'singer' if record.get('artist_latin') else 'ዘማሪ'}", 8)[:6]):
-                r = web.get(im["url"], timeout=15) if im.get("url") else None
-                if r is not None and r.status_code == 200 and len(r.content) > 15000:
-                    path = pdir / f"web-{i}.jpg"
-                    path.write_bytes(r.content)
-                    cands.append({"path": path, "source": f"web image {web.domain(im.get('source') or im['url'])}", "weight": 1})
-        except Exception as error:
-            log(f"  web photos failed: {error}")
+    if not artist:
+        return cands
+    from .lyrics_sources import title_match
+    try:
+        # Official uploads of this very song: title names the song AND the channel or title names the singer.
+        picked = 0
+        for v in videos:
+            if picked >= 3:
+                break
+            if title_match(v.get("title", ""), record) >= 0.8 and (
+                    names.same_person_name(v.get("channel", ""), *names_all)
+                    or any(names.same_person_name(part, *names_all)
+                           for part in re.split(r"[|/\-–—()]+", v.get("title", "")))):
+                data = web.youtube_thumbnail(v["video_id"])
+                if data:
+                    path = pdir / f"yt-video-{v['video_id']}.jpg"
+                    path.write_bytes(data)
+                    cands.append({"path": path, "source": f"youtube video {v['video_id']}", "weight": 2, "trusted": True})
+                    picked += 1
+        chans = [c for c in web.youtube_search(artist, channels=True)
+                 if names.same_person_name(c["title"], *names_all)]
+        chans.sort(key=lambda c: (" - Topic" in c["title"], not c["verified"], -_subs(c["subscribers"])))
+        for i, c in enumerate(chans[:2]):
+            r = web.get(c["avatar"])
+            if r is not None and r.status_code == 200 and len(r.content) > 5000:
+                path = pdir / f"yt-channel-{i}.jpg"
+                path.write_bytes(r.content)
+                cands.append({"path": path, "source": f"youtube channel {c['title']}", "weight": 2,
+                              "trusted": False, "strict_name": True})
+    except Exception as error:
+        log(f"  youtube photos failed: {error}")
+    try:
+        for i, im in enumerate(web.commons_images(artist, 4)):
+            if not names.same_person_name(im.get("title", "").replace("File:", "").rsplit(".", 1)[0], *names_all):
+                continue
+            r = web.get(im["url"]) if im.get("url") else None
+            if r is not None and r.status_code == 200:
+                path = pdir / f"commons-{i}.jpg"
+                path.write_bytes(r.content)
+                cands.append({"path": path, "source": f"wikimedia {im['title']} ({im['license']})", "weight": 1,
+                              "trusted": False, "credit": f"{im['title']} — {im['artist']} ({im['license']})"})
+    except Exception as error:
+        log(f"  commons photos failed: {error}")
+    try:
+        query = f'"{artist}" {"mezmur" if record.get("artist_latin") else "መዝሙር"}'
+        for i, im in enumerate(web.image_search(query, 10)[:8]):
+            r = web.get(im["url"], timeout=15) if im.get("url") else None
+            if r is not None and r.status_code == 200 and len(r.content) > 15000:
+                path = pdir / f"web-{i}.jpg"
+                path.write_bytes(r.content)
+                cands.append({"path": path, "source": f"web image {web.domain(im.get('source') or im['url'])}",
+                              "weight": 1, "trusted": False})
+    except Exception as error:
+        log(f"  web photos failed: {error}")
     return cands
 
 
@@ -384,9 +398,8 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     ranked = thumbnail.rank_photos(photo_cands, log=log) if photo_cands else []
     person, badge_photo, photo_img, photo_source = None, None, None, None
     photo_credit = None
-    for item in ranked[:4]:
-        if not item.get("same_person", True):
-            continue
+    confirmed = [i for i in ranked if i.get("same_person")]
+    for item in confirmed[:4]:
         img = cv2.imread(str(item["path"]))
         cut = thumbnail.cutout(img, item["face"])
         if cut is not None:
@@ -394,9 +407,9 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
             photo_credit = item.get("credit")
             badge_photo = face_square(img, item["face"])
             break
-    if person is None and ranked:
-        img = cv2.imread(str(ranked[0]["path"]))
-        photo_img, badge_photo, photo_source = img, face_square(img, ranked[0]["face"]), ranked[0]["source"]
+    if person is None and confirmed:
+        img = cv2.imread(str(confirmed[0]["path"]))
+        photo_img, badge_photo, photo_source = img, face_square(img, confirmed[0]["face"]), confirmed[0]["source"]
     if badge_photo is None:
         review["reasons"].append("No photo of the singer was found; thumbnails use a text design. Add one under "
                                  "artists/<name>.jpg to always use your own picture.")

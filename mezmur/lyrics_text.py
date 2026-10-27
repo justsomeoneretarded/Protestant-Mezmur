@@ -26,8 +26,12 @@ def repeat_count(marker):
     return 2  # '//', '\\', 'ሁለት ጊዜ'
 
 NOISE = re.compile(r"(https?://\S+|www\.\S+|@\w+|#\S+|t\.me/\S+)", re.I)
-JUNK_LINE = re.compile(r"(join|subscribe|ሰብስክራይብ|ቻናል|channel|telegram|youtube|lyrics by|ግጥም\s*[:፡]|ዜማ\s*[:፡]|"
-                       r"ዘማሪ\s*[:፡]|ቅንብር|copyright|©|share|ሼር|like|ላይክ|follow|ፎሎው|ተቀላቀሉ|ይቀላቀሉ)", re.I)
+JUNK_LINE = re.compile(
+    r"(join|subscribe|channel|telegram|youtube|facebook|tiktok|instagram|whats ?app|twitter|follow|share|like|"
+    r"comment|inbox|contact|link|lyrics by|credit|copyright|©|all rights|for more|visit|click|download|"
+    r"ጆይን|ሰብስክራይብ|ሰብስክራይፕ|ቻናል|ቴሌግራም|ቴሌግራማችን|ዩቲዩብ|ዩትዩብ|ፌስቡክ|ቲክቶክ|ኢንስታግራም|ሊንክ|ሼር|ላይክ|ኮሜንት|"
+    r"ፎሎው|ተቀላቀሉ|ይቀላቀሉ|ተቀላቀሉን|ይቀላቀሉን|ይጎብኙ|ለተጨማሪ|ለበለጠ|ይከታተሉ|ተከታተሉ|ያጋሩ|አጋሩ|"
+    r"ግጥም\s*[:፡]|ዜማ\s*[:፡]|ዘማሪ\s*[:፡]|ዘማሪት\s*[:፡]|ቅንብር|ሙዚቃ\s*[:፡]|ስቱዲዮ)", re.I)
 EMOJI = re.compile("[\U0001F000-\U0001FAFF☀-➿⬀-⯿️‍]")
 VERSE_NO = re.compile(r"^\s*(\d+|[፩-፼]+)\s*[.)\-:፡]\s*")
 
