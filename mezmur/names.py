@@ -157,8 +157,24 @@ def resolve(info, artists=None):
     return finalize(record)
 
 
+def tidy_name(value):
+    """Drop separators and stray words left at either end of a name ('Agegnehu Yideg | በ', '- Title')."""
+    value = str(value or "")
+    for _ in range(3):
+        before = value
+        value = re.sub(r"\s*[|/\\\-–—:,•·]+\s*\S{0,2}\s*$", "", value)          # '... | በ', '... -'
+        value = re.sub(r"^\s*\S{0,2}\s*[|/\\\-–—:,•·]+\s*", "", value)          # 'በ | ...'
+        value = re.sub(r"\s+(በ|by|By|ft\.?|feat\.?)\s*$", "", value)              # trailing 'by'
+        if value == before:
+            break
+    return " ".join(value.split())
+
+
 def finalize(record):
-    """Fill missing romanized forms from the Ge'ez spelling; title-case Latin."""
+    """Fill missing romanized forms from the Ge'ez spelling; title-case Latin; tidy every name."""
+    for key in ["title_am", "title_latin", "artist_am", "artist_latin"]:
+        if record.get(key):
+            record[key] = tidy_name(record[key])
     if record.get("title_am") and not record.get("title_latin"):
         record["title_latin"] = romanize(record["title_am"], title_case=True)
         record["title_latin_auto"] = True

@@ -114,13 +114,24 @@ COMMON = {"ነው", "ነኝ", "ነህ", "ነሽ", "ነን", "እና", "ላይ", 
           "እስከ", "ከዚህ", "ይህ", "ያ", "ወደ", "ስለ", "እንደ", "አለ", "የለም", "ዛሬ", "ዛሬም", "አሁን", "ደግሞ", "በጣም"}
 
 
+SPELLING = {  # how the acoustic model often spells words that lyrics write differently
+    "እግዚያብሔር": "እግዚአብሔር", "እግዚብሔር": "እግዚአብሔር", "እግዚያብሄር": "እግዚአብሔር", "እግዚአብሄር": "እግዚአብሔር",
+    "እየሱስ": "ኢየሱስ", "ሀሌሉያ": "ሃሌሉያ", "ሐሌሉያ": "ሃሌሉያ", "መንፈስቅዱስ": "መንፈስ ቅዱስ", "አዝኖል": "አዝኗል",
+    "ወቶአል": "ወጥቷል", "ሆኖአል": "ሆኗል", "ሆኖል": "ሆኗል", "ቆሞአል": "ቆሟል", "ፀጋ": "ጸጋ",
+}
+
+
+def _spell(word):
+    return SPELLING.get(word, word)
+
+
 def phrases_from_draft(draft, limit=3):
     """Distinctive sung phrases from the automatic transcription: clearly heard word pairs, repeated (the
     chorus) and not made only of common words. Lyrics posts nearly always contain the chorus, even when the
     song's title is wrong or spelled differently."""
     from collections import Counter
     good = [w for w in draft if w.get("probability", 1) >= 0.55 and has_ethiopic(w["word"], 2)]
-    words = [w["word"] for w in good]
+    words = [_spell(w["word"]) for w in good]
     pairs = Counter(f"{a} {b}" for a, b in zip(words, words[1:]) if a != b)
 
     def distinctive(p):
