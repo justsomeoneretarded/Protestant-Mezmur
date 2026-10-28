@@ -68,20 +68,74 @@ def from_lrclib(record, duration, log=print):
     return out
 
 
+def latin_variants(text, amharic=""):
+    """Common Latin spellings of a name: as given, doubled letters single/double, and our own
+    romanization of the Amharic ('Agegnehu' / 'Agegnew', 'Addis' / 'Adis', ...)."""
+    import re as _re
+    from .geez import romanize
+    out = []
+
+    def add(v):
+        v = " ".join(str(v or "").split())
+        if v and v.lower() not in {o.lower() for o in out}:
+            out.append(v)
+
+    add(text)
+    add(_re.sub(r"([a-z])\1", r"\1", text or "", flags=_re.I))           # Addis -> Adis
+    if amharic:
+        add(romanize(amharic, title_case=True))
+        add(_re.sub(r"(?i)nye|gnie", "gne", romanize(amharic, title_case=True)))
+    return out[:4]
+
+
 def _queries(record):
-    t_am, t_lat = record.get("title_am", ""), record.get("title_latin", "")
-    a_am, a_lat = record.get("artist_am", ""), record.get("artist_latin", "")
+    t_am, a_am = record.get("title_am", ""), record.get("artist_am", "")
+    t_lats = latin_variants(record.get("title_latin", ""), t_am)
+    a_lats = latin_variants(record.get("artist_latin", ""), a_am)
+    a_lat = a_lats[0] if a_lats else ""
     qs = []
     if t_am:
-        qs += [f"{t_am} {a_am} ግጥም".strip(), f"{t_am} {a_am or a_lat} lyrics".strip(), f"\"{t_am}\" መዝሙር ግጥም"]
-    if t_lat:
-        qs += [f"{t_lat} {a_lat} lyrics".strip()]
-    qs += [f"{t_am or t_lat} wikimezmur", f"{t_am or t_lat} {a_lat} mezmuroch"]
+        qs += [f"{t_am} {a_am} ግጥም", f"{t_am} {a_am or a_lat} lyrics", f"\"{t_am}\" መዝሙር ግጥም"]
+    for t in t_lats[:3]:
+        qs.append(f"{t} {a_lat} lyrics")
+    for a in a_lats[1:2]:
+        if t_lats:
+            qs.append(f"{t_lats[0]} {a} lyrics")
+    qs += [f"{t_am or (t_lats[0] if t_lats else '')} wikimezmur", f"{t_am or (t_lats[0] if t_lats else '')} {a_lat} mezmuroch"]
     out = []
     for q in qs:
         q = " ".join(q.split())
         if q and q not in out:
             out.append(q)
+    return out[:9]
+
+
+COMMON = {"ነው", "ነኝ", "ነህ", "ነሽ", "ነን", "እና", "ላይ", "ውስጥ", "የኔ", "እኔ", "አንተ", "አንቺ", "ሁሉ", "ሆይ", "ግን",
+          "እስከ", "ከዚህ", "ይህ", "ያ", "ወደ", "ስለ", "እንደ", "አለ", "የለም", "ዛሬ", "ዛሬም", "አሁን", "ደግሞ", "በጣም"}
+
+
+def phrases_from_draft(draft, limit=3):
+    """Distinctive sung phrases from the automatic transcription: clearly heard word pairs, repeated (the
+    chorus) and not made only of common words. Lyrics posts nearly always contain the chorus, even when the
+    song's title is wrong or spelled differently."""
+    from collections import Counter
+    good = [w for w in draft if w.get("probability", 1) >= 0.55 and has_ethiopic(w["word"], 2)]
+    words = [w["word"] for w in good]
+    pairs = Counter(f"{a} {b}" for a, b in zip(words, words[1:]) if a != b)
+
+    def distinctive(p):
+        ws = p.split()
+        return any(len(w) >= 3 and w not in COMMON for w in ws) and not all(w in COMMON for w in ws)
+
+    ranked = sorted((p for p in pairs if distinctive(p)),
+                    key=lambda p: (-pairs[p], -sum(len(w) for w in p.split())))
+    out = [p for p in ranked if pairs[p] >= 2][:limit]
+    if len(out) < limit:
+        for p in ranked:
+            if p not in out:
+                out.append(p)
+            if len(out) >= limit:
+                break
     return out
 
 
@@ -217,29 +271,119 @@ def from_sites(record, log=print):
     return out
 
 
-def from_youtube(record, videos=(), log=print, max_videos=8):
-    """Lyrics pasted into the descriptions of other channels' uploads of the same song."""
-    found = list(videos or [])
-    seen = {v.get("video_id") for v in found}
-    for q in [f"{record.get('title_am', '')} {record.get('artist_am', '')} ግጥም",
-              f"{record.get('title_latin') or record.get('title_am', '')} {record.get('artist_latin', '')} lyrics"]:
+LYRIC_WORDS = ("lyric", "ግጥም", "lyrics", "with lyrics", "karaoke")
+
+
+def from_youtube(record, videos=(), log=print, max_videos=15, phrases=(), report=None):
+    """Lyric videos of the song: their descriptions and their caption tracks (lyric uploads usually caption
+    every line). Videos whose title says 'lyrics'/'ግጥም' are read first."""
+    found, seen = [], set()
+
+    def take(vs, origin):
+        for v in vs:
+            if v.get("video_id") and v["video_id"] not in seen:
+                seen.add(v["video_id"])
+                found.append({**v, "origin": origin})
+
+    take(videos or [], "title")
+    t_am, a_am = record.get("title_am", ""), record.get("artist_am", "")
+    t_lats = latin_variants(record.get("title_latin", ""), t_am)
+    a_lat = (latin_variants(record.get("artist_latin", ""), a_am) or [""])[0]
+    queries = [f"{t_am} {a_am} ግጥም", f"{t_am} {a_am} lyrics"] + [f"{a_lat} {t} lyrics" for t in t_lats[:2]]
+    for q in queries:
         q = " ".join(q.split())
-        if len(q) < 4:
-            continue
-        for v in web.youtube_search(q):
-            if v.get("video_id") not in seen:
-                seen.add(v.get("video_id"))
-                found.append(v)
-    scored = sorted(found, key=lambda v: -title_match(v.get("title", ""), record))
+        if len(q) >= 4:
+            take(web.youtube_search(q), "title")
+    for p in phrases:
+        take(web.youtube_search(f"{p} ግጥም"), "phrase")
+
+    def is_lyric(v):
+        t = v.get("title", "").lower()
+        return any(w in t for w in LYRIC_WORDS)
+
+    usable = [v for v in found if title_match(v.get("title", ""), record) >= 0.6
+              or (v["origin"] == "phrase" and is_lyric(v))]
+    usable.sort(key=lambda v: (not is_lyric(v), -title_match(v.get("title", ""), record)))
+    out, n_desc, n_cap = [], 0, 0
+    for v in usable[:max_videos]:
+        url = f"https://www.youtube.com/watch?v={v['video_id']}"
+        page = web.youtube_watch(v["video_id"])
+        for stanzas in extract_blocks(page["description"], min_lines=4):
+            out.append(_candidate("youtube description", url, stanzas, title=v.get("title", "")[:100]))
+            n_desc += 1
+        tracks = sorted(page["captions"], key=lambda t: (t["auto"], t["lang"] not in ("am", "am-ET")))
+        for t in tracks[:2]:
+            if t["auto"]:
+                continue  # YouTube's automatic captions of sung Amharic are not lyrics
+            text = web.youtube_caption_text(t["url"])
+            if has_ethiopic(text, 40):
+                stanzas = parse_lyrics(text)
+                if stanzas:
+                    out.append(_candidate("youtube captions", url, stanzas, title=v.get("title", "")[:100]))
+                    n_cap += 1
+                    break
+    if report is not None:
+        report["youtube videos checked"] = min(len(usable), max_videos)
+        report["youtube descriptions"] = n_desc
+        report["youtube captions"] = n_cap
+    log(f"  youtube: {min(len(usable), max_videos)} video(s) checked, {n_desc} description(s), {n_cap} caption track(s)",
+        flush=True)
+    return out
+
+
+def from_phrases(record, phrases, channels, log=print, report=None):
+    """Search by sung phrases (not the title): public Telegram lyrics channels and the web."""
+    out, seen = [], set()
+    n_tg = n_web = 0
+    for p in phrases:
+        for ch in channels:
+            for item in web.telegram_public_search(ch, p, limit=4):
+                if item["link"] in seen:
+                    continue
+                seen.add(item["link"])
+                for stanzas in extract_blocks(item["text"], min_lines=3):
+                    out.append(_candidate(f"telegram:@{ch} (phrase)", item["link"], stanzas))
+                    n_tg += 1
+        for r in web.search(f"\"{p}\" ግጥም", max_results=8)[:5]:
+            if r["url"] in seen or web.domain(r["url"]) in SKIP_DOMAINS:
+                continue
+            seen.add(r["url"])
+            page = web.get(r["url"])
+            if page is None or page.status_code != 200:
+                continue
+            page.encoding = page.encoding if page.encoding and page.encoding.lower() != "iso-8859-1" else "utf-8"
+            for stanzas in _page_candidates(r["url"], page.text, record):
+                out.append(_candidate(f"web:{web.domain(r['url'])} (phrase)", r["url"], stanzas, title=r["title"]))
+                n_web += 1
+    if report is not None:
+        report["phrases searched"] = list(phrases)
+        report["telegram by phrase"] = n_tg
+        report["web by phrase"] = n_web
+    log(f"  phrase search {phrases}: telegram {n_tg}, web {n_web} candidate(s)", flush=True)
+    return out
+
+
+def from_library(record, draft_text, folder, report=None):
+    """Lyrics verified for earlier songs (saved automatically) — re-posts and remakes find them instantly."""
+    from .lyrics_text import similarity
+    from .names import same_person_name
+    folder = Path(folder) if folder else None
     out = []
-    for v in scored[:max_videos]:
-        if title_match(v.get("title", ""), record) < 0.6:
-            continue
-        text = web.youtube_description(v["video_id"])
-        for stanzas in extract_blocks(text, min_lines=4):
-            out.append(_candidate("youtube description", f"https://www.youtube.com/watch?v={v['video_id']}", stanzas,
-                                  title=v.get("title", "")[:100]))
-    log(f"  youtube descriptions: {len(out)} candidate(s)", flush=True)
+    if folder and folder.is_dir():
+        for path in folder.rglob("*.txt"):
+            stanzas, meta = read_correction(path.parent, path.stem)
+            if not stanzas:
+                continue
+            text = stanzas_text(stanzas)
+            named = (title_match(" ".join([meta.get("title_am", ""), meta.get("title_latin", "")]), record) >= 0.8
+                     and (not record.get("artist_latin") and not record.get("artist_am")
+                          or same_person_name(" ".join([meta.get("artist_am", ""), meta.get("artist_latin", "")]),
+                                              record.get("artist_latin", ""), record.get("artist_am", ""))))
+            if named or (draft_text and similarity(text, draft_text)["score"] >= 0.25):
+                out.append(_candidate("library", f"lyrics library: {path.parent.name}/{path.name}", stanzas,
+                                      title=meta.get("title_am") or meta.get("title_latin", "")))
+    if report is not None:
+        report["library"] = len(out)
     return out
 
 
@@ -261,34 +405,53 @@ def dedupe(cands):
     return out
 
 
-def gather(record, message_id, telegram_data, corrections_dir, duration, log=print, videos=()):
-    cands, titles, notes = [], [], {}
+def gather(record, message_id, telegram_data, corrections_dir, duration, log=print, videos=(), draft=(),
+           channels=(), library=None):
+    """All lyric candidates for one song, plus a report of what each source returned."""
+    cands, titles = [], []
+    report = {"searched title": " / ".join(x for x in [record.get("title_am"), record.get("title_latin")] if x),
+              "searched singer": " / ".join(x for x in [record.get("artist_am"), record.get("artist_latin")] if x)}
     corrected, overrides = read_correction(corrections_dir, message_id)
     if corrected:
         cands.append(_candidate("correction", f"corrections/{message_id}.txt", corrected, trusted=True))
         log("  using your corrected lyrics", flush=True)
-    cands += from_telegram(telegram_data)
-    try:
-        cands += from_lrclib(record, duration, log)
-    except Exception as error:
-        log(f"  lrclib failed: {error}", flush=True)
-    try:
-        cands += from_sites(record, log)
-    except Exception as error:
-        log(f"  lyrics sites failed: {error}", flush=True)
-    try:
-        cands += from_youtube(record, videos, log)
-    except Exception as error:
-        log(f"  youtube descriptions failed: {error}", flush=True)
+    draft_text = " ".join(w["word"] for w in draft)
+
+    def run(name, fn, *a, **k):
+        try:
+            got = fn(*a, **k)
+        except Exception as error:  # one source failing never stops the others
+            log(f"  {name} failed: {error.__class__.__name__}: {error}", flush=True)
+            got = []
+        return got
+
+    tg = from_telegram(telegram_data)
+    report["telegram (channel posts, lyrics channels, joined chats)"] = len(tg)
+    cands += tg
+    cands += run("library", from_library, record, draft_text, library, report=report)
+    got = run("lrclib", from_lrclib, record, duration, log)
+    report["lrclib"] = len(got)
+    cands += got
+    got = run("lyrics sites", from_sites, record, log)
+    report["lyrics sites (mezmuroch, legeta316, mezmurdebter)"] = len(got)
+    cands += got
+    phrases = phrases_from_draft(list(draft)) if draft else []
+    cands += run("youtube", from_youtube, record, videos, log, phrases=phrases, report=report)
+    if phrases:
+        cands += run("phrase search", from_phrases, record, phrases, channels, log, report=report)
     try:
         web_cands, titles = from_web(record, log)
-        cands += web_cands
     except Exception as error:
         log(f"  web search failed: {error}", flush=True)
+        web_cands = []
+    report["web search (title)"] = len(web_cands)
+    cands += web_cands
     from .lyrics_text import strip_header
     for c in cands:
         if not c["trusted"]:
             c["stanzas"] = strip_header(c["stanzas"], record)
             c["text"] = stanzas_text(c["stanzas"])
     cands = [c for c in cands if c["stanzas"]]
-    return dedupe(cands), titles, overrides, notes
+    cands = dedupe(cands)
+    report["distinct candidates checked"] = len(cands)
+    return cands, titles, overrides, report

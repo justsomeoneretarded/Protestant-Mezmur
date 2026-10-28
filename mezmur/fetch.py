@@ -132,7 +132,11 @@ async def run(args):
         else:
             messages = await select(tg, entity, after, args.batch_size)
         print(f"Selected {len(messages)} song(s) after message {after}", flush=True)
-        channels = [c.strip().lstrip("@") for c in (os.environ.get("LYRICS_CHANNELS") or DEFAULT_LYRICS_CHANNELS).split(",") if c.strip()]
+        channels = []
+        for c in (os.environ.get("LYRICS_CHANNELS") or DEFAULT_LYRICS_CHANNELS).split(",") + state.get("lyrics_channels", []):
+            c = c.strip().lstrip("@")
+            if c and c not in channels:
+                channels.append(c)  # channels that supplied verified lyrics before are searched too
         used = state.get("used_backgrounds", [])
         ids = []
         for message in messages:

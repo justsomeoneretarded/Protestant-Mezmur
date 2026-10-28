@@ -126,6 +126,7 @@ jobs:
       PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
       PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
       OMP_NUM_THREADS: '4'
+      LYRICS_CHANNELS: ${{ vars.LYRICS_CHANNELS }}
       MEZMUR_DEBUG: ${{ inputs.diagnostics && '1' || inputs.debug }}
     steps:
       - uses: actions/checkout@v4
@@ -158,6 +159,14 @@ jobs:
           "$RUNNER_TEMP/sep/bin/pip" install -q torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu
           "$RUNNER_TEMP/sep/bin/pip" install -q "audio-separator[cpu]>=0.39"
           echo "AUDIO_SEPARATOR_BIN=$RUNNER_TEMP/sep/bin/audio-separator" >> "$GITHUB_ENV"
+      - name: Load lyrics library (lyrics verified for earlier songs)
+        run: |
+          mkdir -p library
+          if git fetch -q --depth=1 origin mezmur-state 2>/dev/null; then
+            git archive FETCH_HEAD lyrics 2>/dev/null | tar -x -C library 2>/dev/null || true
+          fi
+          echo "MEZMUR_LIBRARY=$PWD/library/lyrics" >> "$GITHUB_ENV"
+          echo "Library: $(find library -name '*.txt' | wc -l) song(s)"
       - name: Start private search engine (SearXNG, for lyrics and photos)
         continue-on-error: true
         run: |
@@ -229,6 +238,14 @@ jobs:
         run: |
           python -m mezmur.notify --folder "output/song-${{ matrix.id }}" --message-id "${{ matrix.id }}" \
             --status "${{ job.status }}" --retention-days 3
+      - name: Keep verified lyrics for the library
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: learned-${{ matrix.id }}-${{ github.run_id }}
+          path: output/song-${{ matrix.id }}/learned/
+          if-no-files-found: ignore
+          retention-days: 2
       - name: Upload the log (only if this song failed)
         uses: actions/upload-artifact@v4
         if: failure()
@@ -265,8 +282,12 @@ jobs:
         with:
           pattern: bg-*-${{ github.run_id }}
           path: bg
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: learned-*-${{ github.run_id }}
+          path: learned
       - name: Record completed batch
-        run: python -m mezmur.finalize --plan inputs/plan.json --backgrounds bg
+        run: python -m mezmur.finalize --plan inputs/plan.json --backgrounds bg --learned learned
       - name: Where are my files?
         run: |
           echo "### Download each song from this run's **Artifacts** (mezmur-<message id>-run…)" >> "$GITHUB_STEP_SUMMARY"

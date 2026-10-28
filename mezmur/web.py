@@ -154,25 +154,68 @@ def youtube_search(query, channels=False):
     return out
 
 
-def youtube_description(video_id):
-    """Full description of a public video (lyric uploads often paste the lyrics there)."""
+def youtube_watch(video_id):
+    """Description and caption tracks of a public video (one page request)."""
     r = get("https://www.youtube.com/watch", params={"v": video_id, "hl": "en"}, max_bytes=4_000_000)
     if r is None or r.status_code != 200:
-        return ""
+        return {"description": "", "captions": []}
     r.encoding = "utf-8"
+    player = {}
     m = re.search(r"ytInitialPlayerResponse\s*=\s*(\{.+?\});\s*(?:var |</script>)", r.text, re.S)
     if m:
         try:
-            return (json.loads(m.group(1)).get("videoDetails") or {}).get("shortDescription", "") or ""
+            player = json.loads(m.group(1))
         except ValueError:
-            pass
-    m = re.search(r'"shortDescription":"((?:[^"\\]|\\.)*)"', r.text)
-    if m:
-        try:
-            return json.loads(f'"{m.group(1)}"')
-        except ValueError:
-            return ""
-    return ""
+            player = {}
+    description = (player.get("videoDetails") or {}).get("shortDescription", "") or ""
+    if not description:
+        m = re.search(r'"shortDescription":"((?:[^"\\]|\\.)*)"', r.text)
+        if m:
+            try:
+                description = json.loads(f'"{m.group(1)}"')
+            except ValueError:
+                description = ""
+    tracks = (((player.get("captions") or {}).get("playerCaptionsTracklistRenderer") or {}).get("captionTracks")) or []
+    captions = [{"url": t.get("baseUrl", ""), "lang": t.get("languageCode", ""), "auto": t.get("kind") == "asr",
+                 "name": _runs(t.get("name"))} for t in tracks if t.get("baseUrl")]
+    return {"description": description, "captions": captions}
+
+
+def youtube_description(video_id):
+    return youtube_watch(video_id)["description"]
+
+
+def youtube_caption_text(url):
+    """Text of one caption track, one caption per line (lyric videos usually caption one line at a time)."""
+    import html as _html
+    r = get(url, timeout=20)
+    if r is None or r.status_code != 200 or not r.content:
+        return ""
+    r.encoding = "utf-8"
+    parts = re.findall(r"<text[^>]*>(.*?)</text>", r.text, re.S) or re.findall(r"<p [^>]*>(.*?)</p>", r.text, re.S)
+    lines = []
+    for part in parts:
+        text = _html.unescape(re.sub(r"<[^>]+>", "", _html.unescape(part))).strip()
+        for line in text.splitlines():
+            if line.strip():
+                lines.append(line.strip())
+    return "\n".join(lines)
+
+
+def telegram_public_search(channel, query, limit=8):
+    """Search a public Telegram channel through its web preview (t.me/s/...) — no login needed."""
+    import html as _html
+    r = get(f"https://t.me/s/{channel}", params={"q": query}, timeout=20)
+    if r is None or r.status_code != 200:
+        return []
+    r.encoding = "utf-8"
+    out = []
+    for post, body in re.findall(r'data-post="([^"]+)".*?<div class="tgme_widget_message_text[^"]*"[^>]*>(.*?)</div>',
+                                 r.text, re.S)[:limit]:
+        text = re.sub(r"<br\s*/?>", "\n", body)
+        text = _html.unescape(re.sub(r"<[^>]+>", "", text))
+        out.append({"post": post, "text": text, "link": f"https://t.me/{post}"})
+    return out
 
 
 def youtube_thumbnail(video_id):

@@ -48,14 +48,19 @@ class Store:
             raise ValueError("Unsupported or corrupt saved state; refusing to reset progress")
         return {"head": head, "state": state}
 
-    def save(self, snapshot, state):
+    def save(self, snapshot, state, files=None):
+        """Write state.json (and any extra text files, e.g. the lyrics library) on top of the branch."""
         current = self.load()
         if current["head"] != snapshot["head"]:
             raise RuntimeError("Progress changed during this run; refusing to overwrite it")
-        tree = self.call("POST", "/git/trees", json={"tree": [{
-            "path": "state.json", "mode": "100644", "type": "blob",
-            "content": json.dumps(state, ensure_ascii=False, indent=2) + "\n",
-        }]}).json()["sha"]
+        entries = [{"path": "state.json", "mode": "100644", "type": "blob",
+                    "content": json.dumps(state, ensure_ascii=False, indent=2) + "\n"}]
+        for path, content in (files or {}).items():
+            entries.append({"path": path, "mode": "100644", "type": "blob", "content": content})
+        body = {"tree": entries}
+        if snapshot["head"]:  # keep every file already on the branch (the library grows over time)
+            body["base_tree"] = self.call("GET", f"/git/commits/{snapshot['head']}").json()["tree"]["sha"]
+        tree = self.call("POST", "/git/trees", json=body).json()["sha"]
         parents = [snapshot["head"]] if snapshot["head"] else []
         commit = self.call("POST", "/git/commits", json={
             "message": f"Record completed mezmur batch {os.environ.get('GITHUB_RUN_ID', 'local')}",

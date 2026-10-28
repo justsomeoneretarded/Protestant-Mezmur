@@ -18,12 +18,15 @@ For every song you get:
 
 ## How the lyrics are made accurate
 
-1. **Find the real lyrics.** For each song the pipeline searches, in this order:
-   your own `corrections/<message id>.txt` → nearby posts in the source channel → Amharic lyrics
-   channels on Telegram (and every chat your account has joined) → LRCLIB (free lyrics
-   database) → mezmur lyrics sites (mezmuroch.com, legeta316.com, mezmurdebter, wikimezmur,
-   onlinemezmur …) → a private web search engine started inside the job (SearXNG: Google, Bing,
-   Brave, Mojeek, …).
+1. **Find the real lyrics.** For each song the pipeline searches: your `corrections/<message id>.txt`
+   → its own lyrics library (every lyric verified before is saved on the `mezmur-state` branch) →
+   posts around the song in the source channel → Amharic lyrics channels on Telegram (plus every chat
+   your account has joined, plus any channel that supplied verified lyrics before) → LRCLIB → mezmur
+   lyrics sites (mezmuroch.com, legeta316.com, mezmurdebter) → up to 15 YouTube lyric videos, reading
+   both their descriptions and their caption tracks → web search (private SearXNG + a second engine).
+   Titles are searched in Amharic and in several Latin spellings, and a few clearly sung phrases from
+   the song (usually its chorus) are searched too, so lyrics are found even when the title is wrong.
+   Each song's run page lists what every source returned.
 2. **Listen to the song.** The vocals are isolated (UVR-MDX-NET) and the Amharic acoustic model
    Ethio-ASR turns them into per-moment character probabilities.
 3. **Check every candidate against the audio.** Found lyrics are aligned to the whole song. A

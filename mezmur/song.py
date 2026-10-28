@@ -292,7 +292,21 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     except Exception as error:
         log(f"  youtube search failed: {error}")
     record = names.learn_from_titles(record, [v["title"] for v in videos])
-    cands, titles, overrides, _ = gather(record, mid, tg, corrections, duration, log=log, videos=videos)
+    channels = []
+    plan_file = inp.parent / "plan.json"
+    learned = []
+    if plan_file.is_file():
+        learned = json.loads(plan_file.read_text()).get("snapshot", {}).get("state", {}).get("lyrics_channels", [])
+    from .fetch import DEFAULT_LYRICS_CHANNELS
+    for c in (os.environ.get("LYRICS_CHANNELS") or DEFAULT_LYRICS_CHANNELS).split(",") + list(learned):
+        c = c.strip().lstrip("@")
+        if c and c not in channels:
+            channels.append(c)
+    cands, titles, overrides, search_report = gather(record, mid, tg, corrections, duration, log=log, videos=videos,
+                                                     draft=draft, channels=channels,
+                                                     library=os.environ.get("MEZMUR_LIBRARY", "library/lyrics"))
+    notice(mid, "Lyrics search — " + "; ".join(
+        f"{k}: {', '.join(v) if isinstance(v, list) else v}" for k, v in search_report.items()))
     record = names.learn_from_titles(record, titles)
     for k in ["title_am", "title_latin", "artist_am", "artist_latin"]:
         if overrides.get(k):
@@ -372,6 +386,19 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
                     f"(limit {MAX_ESTIMATED:.0%}), so the karaoke would not be reliable.")
     sure = "your corrected lyrics" if chosen["trusted"] else f"{align_report['matched_share']:.0%} of the singing matched"
     notice(mid, f"Lyrics verified ({sure}) — source: {lyrics_source}")
+    if not chosen["source"].startswith("library"):
+        from .names import slug
+        learned_dir = out / "learned"
+        learned_dir.mkdir(exist_ok=True)
+        head = "\n".join(f"{k}: {record.get(k, '')}" for k in ["title_am", "title_latin", "artist_am", "artist_latin"])
+        (learned_dir / "lyrics.txt").write_text(
+            f"---\n{head}\nsource: {chosen['source']} {chosen['url']}\nmessage_id: {mid}\n---\n"
+            + stanzas_text(stanzas), encoding="utf-8")
+        channel = re.match(r"telegram:(?:channel )?@([A-Za-z0-9_]+)", chosen["source"])
+        write_json(learned_dir / "learned.json", {
+            "path": f"lyrics/{slug(record.get('artist_latin') or record.get('artist_am') or 'unknown')}/"
+                    f"{slug(record.get('title_latin') or record.get('title_am') or str(mid))}.txt",
+            "channel": channel.group(1) if channel else None})
     if not words:
         raise RuntimeError("No timed lyrics could be produced")
     cues = build_cues(words, chorus_lines=chorus)
