@@ -63,16 +63,6 @@ repeats are found automatically. The commit starts the workflow for that song by
 text is treated as correct, the timing is redone, and the video, subtitles, description and
 thumbnails are rebuilt.
 
-### Typing lyrics straight into the workflow
-
-If you have a song's lyrics at hand, you can skip the file: in **Run workflow**, enter that song's
-**message_ids** (one ID), untick **No lyrics input**, and type the lyrics in the **Lyrics** box.
-The box is one line, so put `|` between lines and `||` between verses, for example:
-
-`ዛሬም ይሰራል /3 | ዛሬም እየሱስ ይሰራል || አዝ፦ ኤልሻዳይ ነው ዛሬም ይሰራል | ኤልሻዳይ ነው ድንቅን ያደርጋል`
-
-Typed lyrics are trusted like a correction file and saved to the lyrics library.
-
 ### Your own singer photos
 
 Put a good photo in `artists/` named after the singer, for example

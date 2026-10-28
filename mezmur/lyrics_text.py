@@ -314,14 +314,3 @@ def strip_header(stanzas, record):
             break
     return [st for st in out if st["lines"]]
 
-
-def typed_lyrics(text):
-    """Lyrics typed into the one-line workflow box: '|' between lines, '||' between verses
-    (a literal '\\n' also works). Returns normal multi-line text."""
-    text = str(text).replace("\\n", "\n")
-    text = text.replace("||", "\n\n").replace("|", "\n")
-    lines = [l.strip() for l in text.split("\n")]
-    out = "\n".join(lines)
-    while "\n\n\n" in out:
-        out = out.replace("\n\n\n", "\n\n")
-    return out.strip() + "\n"
