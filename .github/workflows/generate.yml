@@ -26,6 +26,14 @@ on:
         type: choice
         options: ['1080', '720']
         default: '1080'
+      no_lyrics:
+        description: No lyrics input (untick to type the lyrics for ONE song below)
+        type: boolean
+        default: true
+      lyrics:
+        description: "Lyrics for that song — put | between lines and || between verses (needs one message_id; mark the chorus with አዝ፦)"
+        type: string
+        default: ''
       diagnostics:
         description: Save lyric-alignment details for troubleshooting (use with message_ids)
         type: boolean
@@ -94,6 +102,17 @@ jobs:
             echo "Corrections changed for: ${ids:-none}"
           fi
           echo "ids=$ids" >> "$GITHUB_OUTPUT"
+      - name: Check typed lyrics
+        if: github.event_name == 'workflow_dispatch' && inputs.no_lyrics == false
+        shell: bash
+        env:
+          IDS: ${{ inputs.message_ids }}
+          LYRICS_TEXT: ${{ inputs.lyrics }}
+        run: |
+          ids=$(echo "$IDS" | tr -d ' ')
+          if [ -z "$LYRICS_TEXT" ]; then echo "::error::You unticked 'No lyrics input' but the lyrics box is empty."; exit 1; fi
+          if ! [[ "$ids" =~ ^[0-9]+$ ]]; then echo "::error::Typed lyrics are for one song: enter exactly one message_id."; exit 1; fi
+          echo "Typed lyrics will be used for message $ids"
       - name: Install
         run: pip install -e .
       - name: Load progress
@@ -182,6 +201,20 @@ jobs:
         with:
           name: inputs-${{ github.run_id }}
           path: inputs
+      - name: Use the lyrics you typed
+        if: github.event_name == 'workflow_dispatch' && inputs.no_lyrics == false && inputs.lyrics != ''
+        env:
+          LYRICS_TEXT: ${{ inputs.lyrics }}
+        run: |
+          python - "${{ matrix.id }}" <<'PY'
+          import os, sys
+          from pathlib import Path
+          from mezmur.lyrics_text import typed_lyrics
+          path = Path("corrections") / f"{sys.argv[1]}.txt"
+          path.parent.mkdir(exist_ok=True)
+          path.write_text(typed_lyrics(os.environ["LYRICS_TEXT"]), encoding="utf-8")
+          print(path.read_text(encoding="utf-8"))
+          PY
       - name: Make video, lyrics, thumbnails and upload kit
         shell: bash
         run: |
