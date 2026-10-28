@@ -1,0 +1,54 @@
+[20] Adis Kidan — Agegnehu Yideg | በ
+2026-10-28 07:22:57.649 - INFO - cli - Separator version 0.47.1 beginning with input path(s): .runtime/work/sep_input.wav
+[0;93m2026-10-28 07:22:59.134969761 [W:onnxruntime:Default, device_discovery.cc:95 GetPciBusId] Skipping pci_bus_id for PCI path at "/sys/devices/LNXSYSTM:00/LNXSYBUS:00/ACPI0004:00/MSFT1000:00/5620e0c7-8062-4dce-aeb7-520c7ef76171" because filename "5620e0c7-8062-4dce-aeb7-520c7ef76171" did not match expected pattern of [0-9a-f]+:[0-9a-f]+:[0-9a-f]+[.][0-9a-f]+[m
+2026-10-28 07:22:59.939 - INFO - separator - Separator version 0.47.1 instantiating with output_dir: .runtime/work/stems0, output_format: WAV
+2026-10-28 07:22:59.939 - INFO - separator - Using model directory from model_file_dir parameter: /home/runner/work/Protestant-Mezmur/Protestant-Mezmur/.model-cache/separator
+2026-10-28 07:22:59.939 - INFO - separator - Operating System: Linux #17~24.04.1-Ubuntu SMP PREEMPT Thu Sep 24 18:46:57 UTC 2026
+2026-10-28 07:22:59.939 - INFO - separator - System: Linux Node: runnervm48cm3 Release: 7.0.0-1017-azure Machine: x86_64 Proc: x86_64
+2026-10-28 07:22:59.939 - INFO - separator - Python Version: 3.11.17
+2026-10-28 07:22:59.939 - INFO - separator - PyTorch Version: 2.14.1+cu130
+2026-10-28 07:22:59.951 - INFO - separator - FFmpeg installed: ffmpeg version N-128122-g215351c1c3-20261027 Copyright (c) 2000-2026 the FFmpeg developers
+2026-10-28 07:22:59.952 - INFO - separator - ONNX Runtime CPU package installed with version: 1.31.1
+2026-10-28 07:22:59.952 - INFO - separator - No hardware acceleration could be configured, running in CPU mode
+2026-10-28 07:22:59.953 - INFO - separator - Loading model UVR-MDX-NET-Voc_FT.onnx...
+2026-10-28 07:22:59.989 - INFO - separator - Hash of model file /home/runner/work/Protestant-Mezmur/Protestant-Mezmur/.model-cache/separator/UVR-MDX-NET-Voc_FT.onnx is 77d07b2667ddf05b9e3175941b4454a0
+2026-10-28 07:23:01.561 - INFO - separator - Load model duration: 00:00:01
+2026-10-28 07:23:01.561 - INFO - separator - Processing file: .runtime/work/sep_input.wav
+2026-10-28 07:23:01.561 - INFO - separator - Starting separation process for audio_file_path: .runtime/work/sep_input.wav
+2026-10-28 07:23:01.562 - INFO - common_separator - Input audio subtype: PCM_16
+2026-10-28 07:23:01.562 - INFO - common_separator - Detected input bit depth: 16-bit
+  0%|          | 0/59 [00:00<?, ?it/s]  2%|▏         | 1/59 [00:05<04:52,  5.04s/it]  3%|▎         | 2/59 [00:10<04:46,  5.03s/it]  5%|▌         | 3/59 [00:14<04:33,  4.88s/it]  7%|▋         | 4/59 [00:19<04:24,  4.82s/it]  8%|▊         | 5/59 [00:24<04:18,  4.79s/it] 10%|█         | 6/59 [00:28<04:11,  4.75s/it] 12%|█▏        | 7/59 [00:33<04:06,  4.73s/it] 14%|█▎        | 8/59 [00:38<04:01,  4.74s/it] 15%|█▌        | 9/59 [00:43<03:57,  4.74s/it] 17%|█▋        | 10/59 [00:47<03:53,  4.77s/it] 19%|█▊        | 11/59 [00:52<03:49,  4.79s/it] 20%|██        | 12/59 [00:57<03:45,  4.80s/it] 22%|██▏       | 13/59 [01:02<03:41,  4.82s/it] 24%|██▎       | 14/59 [01:07<03:37,  4.83s/it] 25%|██▌       | 15/59 [01:12<03:32,  4.82s/it] 27%|██▋       | 16/59 [01:16<03:27,  4.82s/it] 29%|██▉       | 17/59 [01:21<03:21,  4.79s/it] 31%|███       | 18/59 [01:26<03:15,  4.78s/it] 32%|███▏      | 19/59 [01:31<03:10,  4.77s/it] 34%|███▍      | 20/59 [01:35<03:05,  4.76s/it] 36%|███▌      | 21/59 [01:40<03:00,  4.75s/it] 37%|███▋      | 22/59 [01:45<02:55,  4.74s/it] 39%|███▉      | 23/59 [01:50<02:50,  4.74s/it] 41%|████      | 24/59 [01:54<02:46,  4.75s/it] 42%|████▏     | 25/59 [01:59<02:41,  4.74s/it] 44%|████▍     | 26/59 [02:04<02:36,  4.74s/it] 46%|████▌     | 27/59 [02:09<02:32,  4.75s/it] 47%|████▋     | 28/59 [02:13<02:27,  4.75s/it] 49%|████▉     | 29/59 [02:18<02:22,  4.74s/it] 51%|█████     | 30/59 [02:23<02:17,  4.74s/it] 53%|█████▎    | 31/59 [02:28<02:12,  4.73s/it] 54%|█████▍    | 32/59 [02:32<02:07,  4.71s/it] 56%|█████▌    | 33/59 [02:37<02:02,  4.70s/it] 58%|█████▊    | 34/59 [02:42<01:57,  4.69s/it] 59%|█████▉    | 35/59 [02:46<01:52,  4.69s/it] 61%|██████    | 36/59 [02:51<01:47,  4.69s/it] 63%|██████▎   | 37/59 [02:56<01:43,  4.69s/it] 64%|██████▍   | 38/59 [03:00<01:38,  4.68s/it] 66%|██████▌   | 39/59 [03:05<01:33,  4.68s/it] 68%|██████▊   | 40/59 [03:10<01:29,  4.69s/it] 69%|██████▉   | 41/59 [03:14<01:24,  4.68s/it] 71%|███████   | 42/59 [03:19<01:19,  4.68s/it] 73%|███████▎  | 43/59 [03:24<01:14,  4.68s/it] 75%|███████▍  | 44/59 [03:28<01:10,  4.68s/it] 76%|███████▋  | 45/59 [03:33<01:05,  4.68s/it] 78%|███████▊  | 46/59 [03:38<01:00,  4.68s/it] 80%|███████▉  | 47/59 [03:42<00:55,  4.66s/it] 81%|████████▏ | 48/59 [03:47<00:51,  4.66s/it] 83%|████████▎ | 49/59 [03:52<00:46,  4.67s/it] 85%|████████▍ | 50/59 [03:56<00:42,  4.67s/it] 86%|████████▋ | 51/59 [04:01<00:37,  4.68s/it] 88%|████████▊ | 52/59 [04:06<00:32,  4.69s/it] 90%|████████▉ | 53/59 [04:10<00:28,  4.70s/it] 92%|█████████▏| 54/59 [04:15<00:23,  4.70s/it] 93%|█████████▎| 55/59 [04:20<00:18,  4.70s/it] 95%|█████████▍| 56/59 [04:25<00:14,  4.70s/it] 97%|█████████▋| 57/59 [04:29<00:09,  4.69s/it] 98%|█████████▊| 58/59 [04:34<00:04,  4.68s/it]100%|██████████| 59/59 [04:39<00:00,  4.68s/it]100%|██████████| 59/59 [04:39<00:00,  4.73s/it]
+  0%|          | 0/45 [00:00<?, ?it/s]  2%|▏         | 1/45 [00:00<00:05,  8.55it/s]  4%|▍         | 2/45 [00:00<00:04,  8.60it/s]  7%|▋         | 3/45 [00:00<00:04,  8.64it/s]  9%|▉         | 4/45 [00:00<00:04,  8.63it/s] 11%|█         | 5/45 [00:00<00:04,  8.64it/s] 13%|█▎        | 6/45 [00:00<00:04,  8.66it/s] 16%|█▌        | 7/45 [00:00<00:04,  8.66it/s] 18%|█▊        | 8/45 [00:00<00:04,  8.65it/s] 20%|██        | 9/45 [00:01<00:04,  8.63it/s] 22%|██▏       | 10/45 [00:01<00:04,  8.62it/s] 24%|██▍       | 11/45 [00:01<00:03,  8.61it/s] 27%|██▋       | 12/45 [00:01<00:03,  8.61it/s] 29%|██▉       | 13/45 [00:01<00:03,  8.54it/s] 31%|███       | 14/45 [00:01<00:03,  8.70it/s] 33%|███▎      | 15/45 [00:01<00:03,  8.69it/s] 36%|███▌      | 16/45 [00:01<00:03,  8.68it/s] 38%|███▊      | 17/45 [00:01<00:03,  8.65it/s] 40%|████      | 18/45 [00:02<00:03,  8.65it/s] 42%|████▏     | 19/45 [00:02<00:03,  8.66it/s] 44%|████▍     | 20/45 [00:02<00:02,  8.66it/s] 47%|████▋     | 21/45 [00:02<00:02,  8.66it/s] 49%|████▉     | 22/45 [00:02<00:02,  8.68it/s] 51%|█████     | 23/45 [00:02<00:02,  8.69it/s] 53%|█████▎    | 24/45 [00:02<00:02,  8.69it/s] 56%|█████▌    | 25/45 [00:02<00:02,  8.68it/s] 58%|█████▊    | 26/45 [00:03<00:02,  8.54it/s] 60%|██████    | 27/45 [00:03<00:02,  8.66it/s] 62%|██████▏   | 28/45 [00:03<00:01,  8.57it/s] 64%|██████▍   | 29/45 [00:03<00:01,  8.55it/s] 67%|██████▋   | 30/45 [00:03<00:01,  8.56it/s] 69%|██████▉   | 31/45 [00:03<00:01,  8.56it/s] 71%|███████   | 32/45 [00:03<00:01,  8.54it/s] 73%|███████▎  | 33/45 [00:03<00:01,  8.50it/s] 76%|███████▌  | 34/45 [00:03<00:01,  8.55it/s] 78%|███████▊  | 35/45 [00:04<00:01,  8.57it/s] 80%|████████  | 36/45 [00:04<00:01,  8.59it/s] 82%|████████▏ | 37/45 [00:04<00:00,  8.63it/s] 84%|████████▍ | 38/45 [00:04<00:00,  8.62it/s] 87%|████████▋ | 39/45 [00:04<00:00,  8.56it/s] 89%|████████▉ | 40/45 [00:04<00:00,  8.74it/s] 91%|█████████ | 41/45 [00:04<00:00,  8.71it/s] 93%|█████████▎| 42/45 [00:04<00:00,  8.71it/s] 96%|█████████▌| 43/45 [00:04<00:00,  8.67it/s] 98%|█████████▊| 44/45 [00:05<00:00,  8.66it/s]100%|██████████| 45/45 [00:05<00:00,  8.69it/s]100%|██████████| 45/45 [00:05<00:00,  8.63it/s]
+2026-10-28 07:28:00.487 - INFO - mdx_separator - Saving Vocals stem to sep_input_(Vocals)_UVR-MDX-NET-Voc_FT.wav...
+2026-10-28 07:28:00.488 - INFO - common_separator - Audio duration is 0.07 hours (258.12 seconds).
+2026-10-28 07:28:00.488 - INFO - common_separator - Using pydub for writing.
+2026-10-28 07:28:00.506 - INFO - common_separator - Writing output with 16-bit depth
+2026-10-28 07:28:01.017 - INFO - common_separator - Clearing input audio file paths, sources and stems...
+2026-10-28 07:28:01.018 - INFO - separator - Separation duration: 00:04:59
+2026-10-28 07:28:01.018 - INFO - cli - Separation complete! Output file(s): sep_input_(Vocals)_UVR-MDX-NET-Voc_FT.wav
+  vocals isolated with UVR-MDX-NET-Voc_FT.onnx
+  acoustic model 24/258s
+  acoustic model 120/258s
+  acoustic model 216/258s
+  lrclib: 0 candidate(s)
+web: https://mezmuroch.com/artists/Agegnehu_Yideg_|_በ failed: RetryError
+  lyrics sites: 0 candidate(s)
+  youtube: 15 video(s) checked, 0 description(s), 0 caption track(s)
+search[auto] '"እግዚያብሔር አዝኖል" ግጥም': DDGSException
+search[auto] '"ፀጋግን ወረደ" ግጥም': DDGSException
+search[auto] '"ወረደ ጎልጎታ" ግጥም': DDGSException
+  phrase search ['እግዚያብሔር አዝኖል', 'ፀጋግን ወረደ', 'ወረደ ጎልጎታ']: telegram 0, web 4 candidate(s)
+search[auto] 'አዲስ ኪዳን አገኘሁ ይደግ ግጥም': DDGSException
+search[auto] 'አዲስ ኪዳን አገኘሁ ይደግ lyrics': DDGSException
+search[auto] 'Adis Kidan Agegnehu Yideg | በ lyrics': DDGSException
+search[auto] 'Adis Kidan Agegnehu Yideg lyrics': DDGSException
+search[auto] 'አዲስ ኪዳን wikimezmur': DDGSException
+search[auto] 'አዲስ ኪዳን Agegnehu Yideg | በ mezmuroch': DDGSException
+  web: 76 result(s), 0 lyric candidate(s)
+::notice title=Song 20::Lyrics search — searched title: አዲስ ኪዳን / Adis Kidan; searched singer: አገኘሁ ይደግ / Agegnehu Yideg | በ; telegram (channel posts, lyrics channels, joined chats): 4; library: 0; lrclib: 0; lyrics sites (mezmuroch, legeta316, mezmurdebter): 0; youtube videos checked: 15; youtube descriptions: 0; youtube captions: 0; phrases searched: እግዚያብሔር አዝኖል, ፀጋግን ወረደ, ወረደ ጎልጎታ; telegram by phrase: 0; web by phrase: 4; web search (title): 0; distinct candidates checked: 8
+  candidate telegram:channel @MezmurLyrics0: sim=0.131 share=0.04 gain=0.02 lines=3/46 complete=0.00 -> no
+  candidate telegram:joined chat myfellow: sim=0.109 share=0.01 gain=0.00 lines=1/4 complete=0.00 -> no
+  candidate telegram:channel @MezmurLyrics0: sim=0.097 share=0.03 gain=0.01 lines=2/46 complete=0.00 -> no
+  candidate web:ethiopiazare.com (phrase): sim=0.062 share=0.01 gain=0.00 lines=1/5 complete=0.00 -> no
+::warning title=Song 20::Skipped — The best lyrics found (telegram:channel @MezmurLyrics0 https://t.me/MezmurLyrics0/3537) did not pass: they explain only 4% of the singing (70% needed); only 3 of their 46 lines are sung in this song (70% needed — the page may hold a different version or extra lines); the words match the sound only weakly (score 0.02, 0.18 needed). Add corrections/20.txt to make it.
+[20] skipped: The best lyrics found (telegram:channel @MezmurLyrics0 https://t.me/MezmurLyrics0/3537) did not pass: they explain only 4% of the singing (70% needed); only 3 of their 46 lines are sung in this song (70% needed — the page may hold a different version or extra lines); the words match the sound only weakly (score 0.02, 0.18 needed).
