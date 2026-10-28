@@ -49,13 +49,17 @@ def test_changed_head_refuses_to_overwrite(store):
 
 
 @responses.activate
-def test_saved_state_moves_branch_without_force(store):
+def test_saved_state_moves_branch_without_force_and_keeps_library(store):
     state = saved_state()
+    responses.get(ROOT + "/git/commits/head-one", json={"tree": {"sha": "old-tree"}})
     responses.post(ROOT + "/git/trees", json={"sha": "tree"})
     responses.post(ROOT + "/git/commits", json={"sha": "new"})
     responses.patch(ROOT + "/git/refs/heads/mezmur-state", json={"object": {"sha": "new"}})
-    store.save({"head": "head-one", "state": state}, state)
+    store.save({"head": "head-one", "state": state}, state, {"lyrics/singer/song.txt": "ዛሬም ይሰራል\n"})
+    tree = json.loads(next(c for c in responses.calls if c.request.url.endswith("/git/trees")).request.body)
     commit = json.loads(responses.calls[-2].request.body)
     update = json.loads(responses.calls[-1].request.body)
+    assert tree["base_tree"] == "old-tree"  # files already on the branch (the library) are kept
+    assert {e["path"] for e in tree["tree"]} == {"state.json", "lyrics/singer/song.txt"}
     assert commit["parents"] == ["head-one"]
     assert update == {"sha": "new", "force": False}
