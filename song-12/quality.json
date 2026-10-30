@@ -1,0 +1,1626 @@
+{
+  "mode": "lyrics-aligned",
+  "candidates": [
+    {
+      "source": "telegram:channel @SongLegetaLyrics",
+      "url": "https://t.me/SongLegetaLyrics/267",
+      "similarity": {
+        "trigram_recall": 0.438,
+        "trigram_precision": 0.49,
+        "word_recall": 0.667,
+        "score": 0.528
+      },
+      "phrases": 62,
+      "matched": 62,
+      "null": 23,
+      "matched_share": 0.821,
+      "mean_deficit": 0.262,
+      "complete_share": 0.774,
+      "gain_per_vocal_frame": 0.183,
+      "score": 1076.631,
+      "lines_used": 38,
+      "lines_total": 38,
+      "lines_share": 1.0,
+      "seconds": 3.9,
+      "accepted": true
+    },
+    {
+      "source": "web:mezmurdebter.vercel.app",
+      "url": "https://mezmurdebter.vercel.app/91/91-2/1886/",
+      "similarity": {
+        "trigram_recall": 0.433,
+        "trigram_precision": 0.484,
+        "word_recall": 0.667,
+        "score": 0.525
+      },
+      "phrases": 62,
+      "matched": 62,
+      "null": 23,
+      "matched_share": 0.821,
+      "mean_deficit": 0.262,
+      "complete_share": 0.774,
+      "gain_per_vocal_frame": 0.183,
+      "score": 1075.19,
+      "lines_used": 38,
+      "lines_total": 38,
+      "lines_share": 1.0,
+      "seconds": 3.9,
+      "accepted": true
+    },
+    {
+      "source": "telegram:joined chat myfellow",
+      "url": "https://t.me/myfellow/775",
+      "similarity": {
+        "trigram_recall": 0.218,
+        "trigram_precision": 0.063,
+        "word_recall": 0.387,
+        "score": 0.246
+      },
+      "phrases": 10,
+      "matched": 10,
+      "null": 124,
+      "matched_share": 0.037,
+      "mean_deficit": 0.152,
+      "complete_share": 0.0,
+      "gain_per_vocal_frame": 0.007,
+      "score": 257.543,
+      "lines_used": 3,
+      "lines_total": 81,
+      "lines_share": 0.037,
+      "seconds": 8.7,
+      "accepted": false
+    },
+    {
+      "source": "telegram:joined chat yedestaye_elilta",
+      "url": "https://t.me/yedestaye_elilta/9369",
+      "similarity": {
+        "trigram_recall": 0.144,
+        "trigram_precision": 0.67,
+        "word_recall": 0.09,
+        "score": 0.231
+      },
+      "phrases": 8,
+      "matched": 8,
+      "null": 123,
+      "matched_share": 0.1,
+      "mean_deficit": 0.145,
+      "complete_share": 1.0,
+      "gain_per_vocal_frame": 0.034,
+      "score": 382.767,
+      "lines_used": 8,
+      "lines_total": 8,
+      "lines_share": 1.0,
+      "seconds": 1.0,
+      "accepted": false
+    },
+    {
+      "source": "telegram:channel @mezmurlyricsbb",
+      "url": "https://t.me/mezmurlyricsbb/76",
+      "similarity": {
+        "trigram_recall": 0.108,
+        "trigram_precision": 0.074,
+        "word_recall": 0.135,
+        "score": 0.11
+      },
+      "phrases": 7,
+      "matched": 7,
+      "null": 134,
+      "matched_share": 0.021,
+      "mean_deficit": 0.298,
+      "complete_share": 0.0,
+      "gain_per_vocal_frame": 0.004,
+      "score": 242.977,
+      "lines_used": 2,
+      "lines_total": 77,
+      "lines_share": 0.026,
+      "seconds": 6.7,
+      "accepted": false
+    },
+    {
+      "source": "telegram:channel @Amharic_spiritual_song_lyrics",
+      "url": "https://t.me/Amharic_spiritual_song_lyrics/42",
+      "similarity": {
+        "trigram_recall": 0.099,
+        "trigram_precision": 0.118,
+        "word_recall": 0.117,
+        "score": 0.109
+      },
+      "phrases": 12,
+      "matched": 12,
+      "null": 124,
+      "matched_share": 0.045,
+      "mean_deficit": 0.155,
+      "complete_share": 0.0,
+      "gain_per_vocal_frame": 0.011,
+      "score": 277.681,
+      "lines_used": 2,
+      "lines_total": 44,
+      "lines_share": 0.045,
+      "seconds": 4.2,
+      "accepted": false
+    },
+    {
+      "source": "telegram:channel @MezmurLyrics0",
+      "url": "https://t.me/MezmurLyrics0/3289",
+      "similarity": {
+        "trigram_recall": 0.093,
+        "trigram_precision": 0.111,
+        "word_recall": 0.117,
+        "score": 0.105
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @SongLegetaLyrics",
+      "url": "https://t.me/SongLegetaLyrics/791",
+      "similarity": {
+        "trigram_recall": 0.088,
+        "trigram_precision": 0.11,
+        "word_recall": 0.117,
+        "score": 0.103
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:joined chat yedestaye_elilta",
+      "url": "https://t.me/yedestaye_elilta/11664",
+      "similarity": {
+        "trigram_recall": 0.06,
+        "trigram_precision": 0.131,
+        "word_recall": 0.126,
+        "score": 0.098
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @mezmurlyricsbb",
+      "url": "https://t.me/mezmurlyricsbb/124",
+      "similarity": {
+        "trigram_recall": 0.058,
+        "trigram_precision": 0.129,
+        "word_recall": 0.126,
+        "score": 0.096
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @mezmuroch1",
+      "url": "https://t.me/mezmuroch1/10657",
+      "similarity": {
+        "trigram_recall": 0.093,
+        "trigram_precision": 0.063,
+        "word_recall": 0.117,
+        "score": 0.095
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:joined chat Addis_Reporter",
+      "url": "https://t.me/Addis_Reporter/31710",
+      "similarity": {
+        "trigram_recall": 0.103,
+        "trigram_precision": 0.083,
+        "word_recall": 0.09,
+        "score": 0.095
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @SongLegetaLyrics",
+      "url": "https://t.me/SongLegetaLyrics/435",
+      "similarity": {
+        "trigram_recall": 0.088,
+        "trigram_precision": 0.079,
+        "word_recall": 0.108,
+        "score": 0.093
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @SongLegetaLyrics",
+      "url": "https://t.me/SongLegetaLyrics/776",
+      "similarity": {
+        "trigram_recall": 0.075,
+        "trigram_precision": 0.13,
+        "word_recall": 0.09,
+        "score": 0.091
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @SongLegetaLyrics",
+      "url": "https://t.me/SongLegetaLyrics/479",
+      "similarity": {
+        "trigram_recall": 0.093,
+        "trigram_precision": 0.088,
+        "word_recall": 0.09,
+        "score": 0.091
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @mezmurlyricsbb",
+      "url": "https://t.me/mezmurlyricsbb/160",
+      "similarity": {
+        "trigram_recall": 0.069,
+        "trigram_precision": 0.147,
+        "word_recall": 0.081,
+        "score": 0.089
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @mezmur1",
+      "url": "https://t.me/mezmur1/2063",
+      "similarity": {
+        "trigram_recall": 0.088,
+        "trigram_precision": 0.084,
+        "word_recall": 0.09,
+        "score": 0.088
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @Amharic_spiritual_song_lyrics",
+      "url": "https://t.me/Amharic_spiritual_song_lyrics/182",
+      "similarity": {
+        "trigram_recall": 0.069,
+        "trigram_precision": 0.094,
+        "word_recall": 0.099,
+        "score": 0.085
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:joined chat NatnaelMekonnen21",
+      "url": "https://t.me/NatnaelMekonnen21/49710",
+      "similarity": {
+        "trigram_recall": 0.093,
+        "trigram_precision": 0.056,
+        "word_recall": 0.09,
+        "score": 0.084
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @mezmuroch1",
+      "url": "https://t.me/mezmuroch1/8958",
+      "similarity": {
+        "trigram_recall": 0.067,
+        "trigram_precision": 0.124,
+        "word_recall": 0.081,
+        "score": 0.083
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @mezmuroch1",
+      "url": "https://t.me/mezmuroch1/13025",
+      "similarity": {
+        "trigram_recall": 0.054,
+        "trigram_precision": 0.099,
+        "word_recall": 0.108,
+        "score": 0.082
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @MezmurLyrics0",
+      "url": "https://t.me/MezmurLyrics0/3536",
+      "similarity": {
+        "trigram_recall": 0.065,
+        "trigram_precision": 0.134,
+        "word_recall": 0.072,
+        "score": 0.081
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @mezmurlyricsbb",
+      "url": "https://t.me/mezmurlyricsbb/144",
+      "similarity": {
+        "trigram_recall": 0.065,
+        "trigram_precision": 0.13,
+        "word_recall": 0.072,
+        "score": 0.08
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @MezmurLyrics0",
+      "url": "https://t.me/MezmurLyrics0/3441",
+      "similarity": {
+        "trigram_recall": 0.062,
+        "trigram_precision": 0.082,
+        "word_recall": 0.099,
+        "score": 0.079
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:joined chat Manchesterunited_Fansz",
+      "url": "https://t.me/Manchesterunited_Fansz/60296",
+      "similarity": {
+        "trigram_recall": 0.071,
+        "trigram_precision": 0.071,
+        "word_recall": 0.09,
+        "score": 0.078
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @mezmuroch1",
+      "url": "https://t.me/mezmuroch1/8958",
+      "similarity": {
+        "trigram_recall": 0.069,
+        "trigram_precision": 0.103,
+        "word_recall": 0.072,
+        "score": 0.077
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @MezmurLyrics0",
+      "url": "https://t.me/MezmurLyrics0/3612",
+      "similarity": {
+        "trigram_recall": 0.05,
+        "trigram_precision": 0.079,
+        "word_recall": 0.108,
+        "score": 0.076
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @mezmur1",
+      "url": "https://t.me/mezmur1/89",
+      "similarity": {
+        "trigram_recall": 0.05,
+        "trigram_precision": 0.078,
+        "word_recall": 0.108,
+        "score": 0.076
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @mezmur1",
+      "url": "https://t.me/mezmur1/2086",
+      "similarity": {
+        "trigram_recall": 0.062,
+        "trigram_precision": 0.074,
+        "word_recall": 0.09,
+        "score": 0.074
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @Amharic_spiritual_song_lyrics",
+      "url": "https://t.me/Amharic_spiritual_song_lyrics/191",
+      "similarity": {
+        "trigram_recall": 0.013,
+        "trigram_precision": 0.2,
+        "word_recall": 0.081,
+        "score": 0.074
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @mezmur_lyrics",
+      "url": "https://t.me/mezmur_lyrics/98",
+      "similarity": {
+        "trigram_recall": 0.052,
+        "trigram_precision": 0.081,
+        "word_recall": 0.099,
+        "score": 0.074
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @mezmuroch1",
+      "url": "https://t.me/mezmuroch1/8958",
+      "similarity": {
+        "trigram_recall": 0.071,
+        "trigram_precision": 0.119,
+        "word_recall": 0.045,
+        "score": 0.072
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @Amharic_spiritual_song_lyrics",
+      "url": "https://t.me/Amharic_spiritual_song_lyrics/191",
+      "similarity": {
+        "trigram_recall": 0.034,
+        "trigram_precision": 0.118,
+        "word_recall": 0.09,
+        "score": 0.071
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @mezmuroch1",
+      "url": "https://t.me/mezmuroch1/8958",
+      "similarity": {
+        "trigram_recall": 0.058,
+        "trigram_precision": 0.089,
+        "word_recall": 0.072,
+        "score": 0.069
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @Amharic_spiritual_song_lyrics",
+      "url": "https://t.me/Amharic_spiritual_song_lyrics/191",
+      "similarity": {
+        "trigram_recall": 0.034,
+        "trigram_precision": 0.099,
+        "word_recall": 0.09,
+        "score": 0.067
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @mezmuroch1",
+      "url": "https://t.me/mezmuroch1/8958",
+      "similarity": {
+        "trigram_recall": 0.05,
+        "trigram_precision": 0.079,
+        "word_recall": 0.081,
+        "score": 0.066
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @mezmuroch1",
+      "url": "https://t.me/mezmuroch1/8958",
+      "similarity": {
+        "trigram_recall": 0.06,
+        "trigram_precision": 0.098,
+        "word_recall": 0.054,
+        "score": 0.066
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @mezmur1",
+      "url": "https://t.me/mezmur1/1505",
+      "similarity": {
+        "trigram_recall": 0.054,
+        "trigram_precision": 0.08,
+        "word_recall": 0.063,
+        "score": 0.062
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @mezmurlyricsbb",
+      "url": "https://t.me/mezmurlyricsbb/44",
+      "similarity": {
+        "trigram_recall": 0.054,
+        "trigram_precision": 0.08,
+        "word_recall": 0.063,
+        "score": 0.062
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @mezmuroch1",
+      "url": "https://t.me/mezmuroch1/11025",
+      "similarity": {
+        "trigram_recall": 0.054,
+        "trigram_precision": 0.095,
+        "word_recall": 0.054,
+        "score": 0.062
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @mezmurlyricsbb",
+      "url": "https://t.me/mezmurlyricsbb/124",
+      "similarity": {
+        "trigram_recall": 0.045,
+        "trigram_precision": 0.119,
+        "word_recall": 0.045,
+        "score": 0.06
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @SongLegetaLyrics",
+      "url": "https://t.me/SongLegetaLyrics/837",
+      "similarity": {
+        "trigram_recall": 0.06,
+        "trigram_precision": 0.065,
+        "word_recall": 0.054,
+        "score": 0.059
+      },
+      "rejected": "text mismatch"
+    },
+    {
+      "source": "telegram:channel @mezmuroch1",
+      "url": "https://t.me/mezmuroch1/8958",
+      "similarity": {
+        "trigram_recall": 0.052,
+        "trigram_precision": 0.078,
+        "word_recall": 0.054,
+        "score": 0.058
+      },
+      "rejected": "text mismatch"
+    },
+    {
+      "source": "telegram:channel @mezmur_lyrics",
+      "url": "https://t.me/mezmur_lyrics/178",
+      "similarity": {
+        "trigram_recall": 0.045,
+        "trigram_precision": 0.089,
+        "word_recall": 0.045,
+        "score": 0.054
+      },
+      "rejected": "text mismatch"
+    },
+    {
+      "source": "telegram:joined chat Manchesterunited_Fansz",
+      "url": "https://t.me/Manchesterunited_Fansz/52057",
+      "similarity": {
+        "trigram_recall": 0.045,
+        "trigram_precision": 0.091,
+        "word_recall": 0.045,
+        "score": 0.054
+      },
+      "rejected": "text mismatch"
+    },
+    {
+      "source": "telegram:channel @mezmuroch1",
+      "url": "https://t.me/mezmuroch1/8958",
+      "similarity": {
+        "trigram_recall": 0.054,
+        "trigram_precision": 0.098,
+        "word_recall": 0.018,
+        "score": 0.05
+      },
+      "rejected": "text mismatch"
+    },
+    {
+      "source": "telegram:channel @MezmurLyrics0",
+      "url": "https://t.me/MezmurLyrics0/3586",
+      "similarity": {
+        "trigram_recall": 0.032,
+        "trigram_precision": 0.036,
+        "word_recall": 0.054,
+        "score": 0.041
+      },
+      "rejected": "text mismatch"
+    },
+    {
+      "source": "telegram:channel @mezmur1",
+      "url": "https://t.me/mezmur1/1507",
+      "similarity": {
+        "trigram_recall": 0.013,
+        "trigram_precision": 0.08,
+        "word_recall": 0.054,
+        "score": 0.041
+      },
+      "rejected": "text mismatch"
+    },
+    {
+      "source": "telegram:channel @mezmuroch1",
+      "url": "https://t.me/mezmuroch1/10657",
+      "similarity": {
+        "trigram_recall": 0.017,
+        "trigram_precision": 0.104,
+        "word_recall": 0.036,
+        "score": 0.041
+      },
+      "rejected": "text mismatch"
+    },
+    {
+      "source": "telegram:channel @mezmuroch1",
+      "url": "https://t.me/mezmuroch1/8958",
+      "similarity": {
+        "trigram_recall": 0.045,
+        "trigram_precision": 0.069,
+        "word_recall": 0.018,
+        "score": 0.04
+      },
+      "rejected": "text mismatch"
+    },
+    {
+      "source": "telegram:channel @mezmuroch1",
+      "url": "https://t.me/mezmuroch1/8958",
+      "similarity": {
+        "trigram_recall": 0.045,
+        "trigram_precision": 0.074,
+        "word_recall": 0.009,
+        "score": 0.038
+      },
+      "rejected": "text mismatch"
+    },
+    {
+      "source": "telegram:joined chat ራግቢ entertainment ከቃሊቲ🔥 🏆 ✌️",
+      "url": "",
+      "similarity": {
+        "trigram_recall": 0.015,
+        "trigram_precision": 0.152,
+        "word_recall": 0.0,
+        "score": 0.037
+      },
+      "rejected": "text mismatch"
+    },
+    {
+      "source": "telegram:joined chat ራግቢ entertainment ከቃሊቲ🔥 🏆 ✌️",
+      "url": "",
+      "similarity": {
+        "trigram_recall": 0.019,
+        "trigram_precision": 0.09,
+        "word_recall": 0.018,
+        "score": 0.033
+      },
+      "rejected": "text mismatch"
+    },
+    {
+      "source": "telegram:channel @mezmuroch1",
+      "url": "https://t.me/mezmuroch1/8958",
+      "similarity": {
+        "trigram_recall": 0.034,
+        "trigram_precision": 0.061,
+        "word_recall": 0.009,
+        "score": 0.031
+      },
+      "rejected": "text mismatch"
+    },
+    {
+      "source": "telegram:channel @Amharic_spiritual_song_lyrics",
+      "url": "https://t.me/Amharic_spiritual_song_lyrics/191",
+      "similarity": {
+        "trigram_recall": 0.009,
+        "trigram_precision": 0.061,
+        "word_recall": 0.036,
+        "score": 0.029
+      },
+      "rejected": "text mismatch"
+    },
+    {
+      "source": "telegram:joined chat ራግቢ entertainment ከቃሊቲ🔥 🏆 ✌️",
+      "url": "",
+      "similarity": {
+        "trigram_recall": 0.004,
+        "trigram_precision": 0.04,
+        "word_recall": 0.0,
+        "score": 0.01
+      },
+      "rejected": "text mismatch"
+    },
+    {
+      "source": "telegram:joined chat ራግቢ entertainment ከቃሊቲ🔥 🏆 ✌️",
+      "url": "",
+      "similarity": {
+        "trigram_recall": 0.002,
+        "trigram_precision": 0.026,
+        "word_recall": 0.009,
+        "score": 0.009
+      },
+      "rejected": "text mismatch"
+    },
+    {
+      "source": "telegram:joined chat ራግቢ entertainment ከቃሊቲ🔥 🏆 ✌️",
+      "url": "",
+      "similarity": {
+        "trigram_recall": 0.004,
+        "trigram_precision": 0.035,
+        "word_recall": 0.0,
+        "score": 0.009
+      },
+      "rejected": "text mismatch"
+    },
+    {
+      "source": "telegram:joined chat ራግቢ entertainment ከቃሊቲ🔥 🏆 ✌️",
+      "url": "",
+      "similarity": {
+        "trigram_recall": 0.004,
+        "trigram_precision": 0.017,
+        "word_recall": 0.009,
+        "score": 0.008
+      },
+      "rejected": "text mismatch"
+    },
+    {
+      "source": "telegram:joined chat ራግቢ entertainment ከቃሊቲ🔥 🏆 ✌️",
+      "url": "",
+      "similarity": {
+        "trigram_recall": 0.004,
+        "trigram_precision": 0.028,
+        "word_recall": 0.0,
+        "score": 0.007
+      },
+      "rejected": "text mismatch"
+    },
+    {
+      "source": "telegram:joined chat ራግቢ entertainment ከቃሊቲ🔥 🏆 ✌️",
+      "url": "",
+      "similarity": {
+        "trigram_recall": 0.002,
+        "trigram_precision": 0.026,
+        "word_recall": 0.0,
+        "score": 0.006
+      },
+      "rejected": "text mismatch"
+    },
+    {
+      "source": "telegram:joined chat ራግቢ entertainment ከቃሊቲ🔥 🏆 ✌️",
+      "url": "",
+      "similarity": {
+        "trigram_recall": 0.0,
+        "trigram_precision": 0.0,
+        "word_recall": 0.0,
+        "score": 0.0
+      },
+      "rejected": "text mismatch"
+    }
+  ],
+  "lrc_check": null,
+  "alignment": {
+    "phrases": 62,
+    "matched": 62,
+    "null": 23,
+    "matched_share": 0.8206673842841765,
+    "mean_deficit": 0.26169354838709674,
+    "complete_share": 0.7741935483870968,
+    "gain_per_vocal_frame": 0.1832617098889662,
+    "score": 1076.6308574526886,
+    "lines_used": 38,
+    "lines_total": 38,
+    "completion": {
+      "filled_lines": 9,
+      "completed_lines": 9,
+      "estimated_words": 29,
+      "gaps": [
+        {
+          "start": 0.0,
+          "end": 23.8,
+          "after_line": null,
+          "before_line": 0,
+          "action": "examined"
+        },
+        {
+          "start": 0.0,
+          "end": 23.8,
+          "action": "nothing missing (instrumental)"
+        },
+        {
+          "start": 28.32,
+          "end": 31.48,
+          "after_line": 0,
+          "before_line": 1,
+          "action": "examined"
+        },
+        {
+          "start": 28.32,
+          "end": 31.48,
+          "lines": [
+            1
+          ],
+          "singing": 1.76,
+          "needed": 3.1,
+          "ratio": 0.57,
+          "heard": 0.0,
+          "action": "filled"
+        },
+        {
+          "start": 42.64,
+          "end": 64.04,
+          "after_line": 0,
+          "before_line": 2,
+          "action": "examined"
+        },
+        {
+          "start": 42.64,
+          "end": 64.04,
+          "lines": [
+            1,
+            1
+          ],
+          "singing": 11.04,
+          "needed": 6.19,
+          "ratio": 1.78,
+          "heard": 0.5,
+          "action": "filled"
+        },
+        {
+          "start": 86.16,
+          "end": 112.16,
+          "after_line": 5,
+          "before_line": 7,
+          "action": "examined"
+        },
+        {
+          "start": 86.16,
+          "end": 112.16,
+          "lines": [
+            6,
+            6
+          ],
+          "singing": 23.44,
+          "needed": 6.64,
+          "ratio": 3.53,
+          "heard": 0.88,
+          "action": "filled"
+        },
+        {
+          "start": 133.2,
+          "end": 143.16,
+          "after_line": 11,
+          "before_line": 12,
+          "action": "examined"
+        },
+        {
+          "start": 161.28,
+          "end": 184.08,
+          "after_line": 13,
+          "before_line": 15,
+          "action": "examined"
+        },
+        {
+          "start": 189.08,
+          "end": 195.52,
+          "after_line": 15,
+          "before_line": 17,
+          "action": "examined"
+        },
+        {
+          "start": 208.36,
+          "end": 217.88,
+          "after_line": 18,
+          "before_line": 19,
+          "action": "examined"
+        },
+        {
+          "start": 228.6,
+          "end": 245.44,
+          "after_line": 19,
+          "before_line": 20,
+          "action": "examined"
+        },
+        {
+          "start": 228.6,
+          "end": 245.44,
+          "action": "nothing missing (instrumental)"
+        },
+        {
+          "start": 295.52,
+          "end": 318.36,
+          "after_line": 25,
+          "before_line": 27,
+          "action": "examined"
+        },
+        {
+          "start": 323.4,
+          "end": 336.08,
+          "after_line": 27,
+          "before_line": 30,
+          "action": "examined"
+        },
+        {
+          "start": 372.6,
+          "end": 383.2,
+          "after_line": 33,
+          "before_line": 36,
+          "action": "examined"
+        },
+        {
+          "start": 406.8,
+          "end": 436.16,
+          "after_line": 37,
+          "before_line": null,
+          "action": "examined"
+        },
+        {
+          "start": 406.8,
+          "end": 436.16,
+          "lines": [
+            37,
+            37,
+            37,
+            37
+          ],
+          "singing": 23.92,
+          "needed": 1.99,
+          "ratio": 12.01,
+          "heard": 1.0,
+          "action": "filled"
+        }
+      ],
+      "recognised_in_gaps": 19
+    }
+  },
+  "phrases": [
+    {
+      "start": 23.8,
+      "end": 28.32,
+      "line": 0,
+      "words": [
+        0,
+        3
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.12
+    },
+    {
+      "start": 31.48,
+      "end": 36.36,
+      "line": 1,
+      "words": [
+        4,
+        7
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.154
+    },
+    {
+      "start": 38.84,
+      "end": 42.64,
+      "line": 0,
+      "words": [
+        0,
+        3
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.173
+    },
+    {
+      "start": 45.24,
+      "end": 46.08,
+      "line": 1,
+      "words": [
+        4,
+        4
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.0
+    },
+    {
+      "start": 64.04,
+      "end": 69.4,
+      "line": 2,
+      "words": [
+        8,
+        14
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.089
+    },
+    {
+      "start": 69.76,
+      "end": 74.76,
+      "line": 3,
+      "words": [
+        15,
+        21
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.172
+    },
+    {
+      "start": 75.52,
+      "end": 80.92,
+      "line": 4,
+      "words": [
+        22,
+        26
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.1
+    },
+    {
+      "start": 81.24,
+      "end": 86.16,
+      "line": 5,
+      "words": [
+        27,
+        31
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.089
+    },
+    {
+      "start": 92.84,
+      "end": 94.08,
+      "line": 6,
+      "words": [
+        35,
+        35
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.181
+    },
+    {
+      "start": 102.12,
+      "end": 105.52,
+      "line": 6,
+      "words": [
+        35,
+        35
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.094
+    },
+    {
+      "start": 107.16,
+      "end": 108.36,
+      "line": 6,
+      "words": [
+        35,
+        35
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.256
+    },
+    {
+      "start": 110.0,
+      "end": 111.24,
+      "line": 6,
+      "words": [
+        35,
+        35
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.26
+    },
+    {
+      "start": 112.16,
+      "end": 114.12,
+      "line": 7,
+      "words": [
+        36,
+        37
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.44
+    },
+    {
+      "start": 116.48,
+      "end": 119.76,
+      "line": 8,
+      "words": [
+        38,
+        42
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.256
+    },
+    {
+      "start": 120.92,
+      "end": 124.04,
+      "line": 9,
+      "words": [
+        43,
+        45
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.107
+    },
+    {
+      "start": 125.04,
+      "end": 128.72,
+      "line": 10,
+      "words": [
+        46,
+        50
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.469
+    },
+    {
+      "start": 128.88,
+      "end": 133.2,
+      "line": 11,
+      "words": [
+        51,
+        55
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.44
+    },
+    {
+      "start": 139.96,
+      "end": 141.2,
+      "line": 12,
+      "words": [
+        59,
+        59
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.434
+    },
+    {
+      "start": 143.16,
+      "end": 149.84,
+      "line": 12,
+      "words": [
+        56,
+        59
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.189
+    },
+    {
+      "start": 150.76,
+      "end": 152.68,
+      "line": 13,
+      "words": [
+        60,
+        61
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.36
+    },
+    {
+      "start": 153.6,
+      "end": 155.52,
+      "line": 13,
+      "words": [
+        60,
+        61
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.299
+    },
+    {
+      "start": 156.44,
+      "end": 158.36,
+      "line": 13,
+      "words": [
+        60,
+        61
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.306
+    },
+    {
+      "start": 159.32,
+      "end": 161.28,
+      "line": 13,
+      "words": [
+        60,
+        61
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.431
+    },
+    {
+      "start": 178.88,
+      "end": 183.52,
+      "line": 14,
+      "words": [
+        63,
+        68
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.104
+    },
+    {
+      "start": 184.08,
+      "end": 189.08,
+      "line": 15,
+      "words": [
+        69,
+        74
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.057
+    },
+    {
+      "start": 189.72,
+      "end": 193.24,
+      "line": 16,
+      "words": [
+        75,
+        77
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.161
+    },
+    {
+      "start": 195.52,
+      "end": 200.56,
+      "line": 17,
+      "words": [
+        81,
+        85
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.391
+    },
+    {
+      "start": 201.76,
+      "end": 208.36,
+      "line": 18,
+      "words": [
+        86,
+        89
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.205
+    },
+    {
+      "start": 215.76,
+      "end": 216.96,
+      "line": 18,
+      "words": [
+        89,
+        89
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.218
+    },
+    {
+      "start": 217.88,
+      "end": 219.84,
+      "line": 19,
+      "words": [
+        90,
+        91
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.424
+    },
+    {
+      "start": 220.76,
+      "end": 222.68,
+      "line": 19,
+      "words": [
+        90,
+        91
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.474
+    },
+    {
+      "start": 223.6,
+      "end": 225.56,
+      "line": 19,
+      "words": [
+        90,
+        91
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.4
+    },
+    {
+      "start": 226.48,
+      "end": 228.6,
+      "line": 19,
+      "words": [
+        90,
+        91
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.393
+    },
+    {
+      "start": 245.44,
+      "end": 250.8,
+      "line": 20,
+      "words": [
+        92,
+        97
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.144
+    },
+    {
+      "start": 251.2,
+      "end": 256.36,
+      "line": 21,
+      "words": [
+        98,
+        105
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.349
+    },
+    {
+      "start": 256.88,
+      "end": 262.12,
+      "line": 22,
+      "words": [
+        106,
+        113
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.274
+    },
+    {
+      "start": 262.6,
+      "end": 268.24,
+      "line": 23,
+      "words": [
+        114,
+        117
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.154
+    },
+    {
+      "start": 268.88,
+      "end": 275.52,
+      "line": 24,
+      "words": [
+        118,
+        121
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.151
+    },
+    {
+      "start": 277.52,
+      "end": 284.04,
+      "line": 24,
+      "words": [
+        118,
+        121
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.158
+    },
+    {
+      "start": 285.04,
+      "end": 286.92,
+      "line": 25,
+      "words": [
+        122,
+        123
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.323
+    },
+    {
+      "start": 287.88,
+      "end": 289.8,
+      "line": 25,
+      "words": [
+        122,
+        123
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.319
+    },
+    {
+      "start": 290.76,
+      "end": 292.68,
+      "line": 25,
+      "words": [
+        122,
+        123
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.277
+    },
+    {
+      "start": 293.64,
+      "end": 295.52,
+      "line": 25,
+      "words": [
+        122,
+        123
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.307
+    },
+    {
+      "start": 313.16,
+      "end": 317.84,
+      "line": 26,
+      "words": [
+        125,
+        130
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.1
+    },
+    {
+      "start": 318.36,
+      "end": 323.4,
+      "line": 27,
+      "words": [
+        131,
+        136
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.163
+    },
+    {
+      "start": 324.0,
+      "end": 327.52,
+      "line": 28,
+      "words": [
+        137,
+        139
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.192
+    },
+    {
+      "start": 329.8,
+      "end": 333.48,
+      "line": 29,
+      "words": [
+        143,
+        146
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.494
+    },
+    {
+      "start": 336.08,
+      "end": 343.0,
+      "line": 30,
+      "words": [
+        148,
+        151
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.203
+    },
+    {
+      "start": 344.6,
+      "end": 351.44,
+      "line": 30,
+      "words": [
+        148,
+        151
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.193
+    },
+    {
+      "start": 352.2,
+      "end": 354.28,
+      "line": 31,
+      "words": [
+        152,
+        153
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.388
+    },
+    {
+      "start": 355.04,
+      "end": 356.8,
+      "line": 31,
+      "words": [
+        152,
+        153
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.386
+    },
+    {
+      "start": 357.88,
+      "end": 360.0,
+      "line": 31,
+      "words": [
+        152,
+        153
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.283
+    },
+    {
+      "start": 360.72,
+      "end": 362.68,
+      "line": 31,
+      "words": [
+        152,
+        153
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.319
+    },
+    {
+      "start": 365.04,
+      "end": 368.36,
+      "line": 32,
+      "words": [
+        154,
+        158
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.143
+    },
+    {
+      "start": 369.48,
+      "end": 372.6,
+      "line": 33,
+      "words": [
+        159,
+        161
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.122
+    },
+    {
+      "start": 373.64,
+      "end": 375.04,
+      "line": 34,
+      "words": [
+        162,
+        163
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.444
+    },
+    {
+      "start": 377.96,
+      "end": 380.04,
+      "line": 35,
+      "words": [
+        167,
+        169
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.597
+    },
+    {
+      "start": 383.2,
+      "end": 389.84,
+      "line": 36,
+      "words": [
+        172,
+        175
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.193
+    },
+    {
+      "start": 391.8,
+      "end": 398.36,
+      "line": 36,
+      "words": [
+        172,
+        175
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.15
+    },
+    {
+      "start": 399.32,
+      "end": 401.08,
+      "line": 37,
+      "words": [
+        176,
+        177
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.368
+    },
+    {
+      "start": 402.2,
+      "end": 403.92,
+      "line": 37,
+      "words": [
+        176,
+        177
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.418
+    },
+    {
+      "start": 405.04,
+      "end": 406.8,
+      "line": 37,
+      "words": [
+        176,
+        177
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.367
+    }
+  ],
+  "draft_text": "አንተ ውነ የኔ መታ መኛ አንተ ውነ የኔ መደ ገ አንተ ውነ የኔ መታ መኛ አንተ ውነ የኔ መደ ግርሚያ እግዚያብሄ ር ትክክል ነው ነገር ሁሉ ለ በ ኮ ነው ማኒ ከራ አ ን ባው ፈሶ ይታበሳ ል ቀኑ ደርሶ መታማመኛ ው እግዚአብሔ ማረፊያውን ከ ጥላው ስር በክፉ ቀና ት ከጎኑ ሆኖልታ ል በዘመኑ ተማመ ተማመ ተማመኛ መተማመኛ ግታ መተማመኛ ታ ተማመኛ እንዳንት ያለ መልካ ው የሚራ ራ የተዋረደው ር የሚያጎ ራ አላገኝም ምኔስስ ገድሜ ል ወደ ለሁ እ ምላ መ ነ ጌ ታ መተማመኛ ጌታይ ተማመኛ ጌታይ መተማመኛ ጌታይ መተማመኛ ጌታይ ተማመኛ እጁ ስሙ እንዲጠራ ትልቅ ታሪክ በ ኔ ሰራ ተላቶቼ ን አሳፍሮ ታየ ጌታ በኔ ከብሮ አልቀረኩ እንደወድው ቤታ ልጅ ፍር አጠርከትሮ እያዘ እኖራለ እያመለ መተማመኛ አ መተማመኛ ተማመኛ ታ ተማመኛ ተማመኛ ተማመ አቅም ጉልበ ት የት ይደርሳል ትባ ው ዛሬ ታዲያ ለዚህ ሹመ ት ና ታ ሆነ የ ተስፋ መድረሽ አለው ግዝ የታመነ የአኮራ አል የሚያመልከ አ ተ መተማመኛ አ ተ መተማመኛ መተማመኛ ታይ መተማመኛ ጌታይ መተማመኛ ታ መተማመኛ እጁ ስሙ እንዲጠራ ጥልቅ ታሪክ በ ን የሰራ ጠዳቶች ን አሳፍሮ ታየ ጌታ በኔ ከብሩ አልቀረሁ እንደወደጉ ጌታ መ ች ፍር አጥር ከትሮ እኖራ መተማመኛ አ ግ መተማመኛ ተማመኛ ታ መተማመኛ ታ መተማመኛ መተማመኛ አንዳንት ያለ መልካም ለ ሰው የሚራ ራ የተዋረደ ውር የሚያጎ ራ አላገኝም ምኔስስገድሜ ወደ ለሁ ላ ግሄ መተማመኛ አ ተነ ታ መተማመኛ ገታ መተማመኛ ገታ መተማመ ታ መተማመኛ ገታ መሰማመኛ ታ ሰማ ጌታ ታ መሰማመኛ ታ መሰማመኛ ታ ሰማመ ሰማ ሰማ",
+  "draft_word_count": 237,
+  "review": {
+    "needs_review": false,
+    "reasons": [
+      "The romanized title/artist was generated automatically; check spelling in title.txt."
+    ]
+  }
+}
