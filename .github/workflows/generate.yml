@@ -30,6 +30,10 @@ on:
         description: Save lyric-alignment details for troubleshooting (use with message_ids)
         type: boolean
         default: false
+      augment_audio:
+        description: Subtle audio augmentation (changes speed and timbre; no privacy guarantee)
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths: ['corrections/**']
@@ -40,6 +44,7 @@ on:
       separator: {type: string, default: UVR-MDX-NET-Voc_FT.onnx}
       resolution: {type: string, default: '1080'}
       debug: {type: string, default: ''}
+      augment_audio: {type: boolean, default: false}
 
 permissions:
   contents: write
@@ -128,6 +133,7 @@ jobs:
       OMP_NUM_THREADS: '4'
       LYRICS_CHANNELS: ${{ vars.LYRICS_CHANNELS }}
       MEZMUR_DEBUG: ${{ inputs.diagnostics && '1' || inputs.debug }}
+      AUGMENT_AUDIO: ${{ inputs.augment_audio && 'true' || 'false' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -152,6 +158,12 @@ jobs:
           pip install torch==2.5.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cpu
           pip install -e '.[render]'
           python -c "from transformers import AutoProcessor, AutoModelForCTC; import cv2, onnxruntime; print('render env OK')"
+      - name: Install Rubber Band (optional audio augmentation)
+        if: inputs.augment_audio == true
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y librubberband2
+          python -c "from mezmur.augmentation import _rubberband; _rubberband(); print('Rubber Band ready')"
       - name: Install vocal separator (isolated)
         if: (inputs.separator || 'UVR-MDX-NET-Voc_FT.onnx') != 'none'
         run: |
@@ -186,10 +198,14 @@ jobs:
         shell: bash
         run: |
           out="output/song-${{ matrix.id }}"; mkdir -p "$out"
+          audio_args=()
+          if [ "$AUGMENT_AUDIO" = "true" ]; then
+            audio_args+=(--augment-audio)
+          fi
           set +e
           python -m mezmur.song --input "inputs/song-${{ matrix.id }}" --output "$out" \
             --work ".runtime/work" --separator "${{ inputs.separator || 'UVR-MDX-NET-Voc_FT.onnx' }}" \
-            --height "${{ inputs.resolution || '1080' }}" 2>&1 | tee "$out/run.log"
+            --height "${{ inputs.resolution || '1080' }}" "${audio_args[@]}" 2>&1 | tee "$out/run.log"
           code=${PIPESTATUS[0]}
           if [ "$code" != 0 ]; then
             echo "::error title=Song ${{ matrix.id }} failed::$(tail -n 12 "$out/run.log" | tr '\n' ' ' | cut -c1-900)"
@@ -226,6 +242,7 @@ jobs:
             output/song-${{ matrix.id }}/tags.txt
             output/song-${{ matrix.id }}/pinned_comment.txt
             output/song-${{ matrix.id }}/captions/
+            output/song-${{ matrix.id }}/augmentation.json
           if-no-files-found: error
           retention-days: 3
           compression-level: 0

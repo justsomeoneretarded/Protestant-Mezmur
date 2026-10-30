@@ -246,7 +246,8 @@ def _subs(text):
     return float(m.group(1)) * {"": 1, "K": 1e3, "M": 1e6}[m.group(2)]
 
 
-def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium", corrections="corrections"):
+def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium", corrections="corrections",
+            augment_audio=False):
     inp, out, work = Path(inp), Path(out), Path(work)
     out.mkdir(parents=True, exist_ok=True)
     work.mkdir(parents=True, exist_ok=True)
@@ -265,15 +266,20 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     log(f"[{mid}] {record.get('title_am') or record.get('title_latin')} — {record.get('artist_am') or record.get('artist_latin')}")
 
     # 2. Audio.
+    processing_audio, augmentation = audio.prepare_source(source_audio, work, augment=augment_audio, seed=mid)
+    if augmentation["enabled"]:
+        write_json(out / "augmentation.json", augmentation)
+        log(f"  audio augmentation: seed={mid}, formants={augmentation['formant_semitones']:+.3f} semitones")
     master = work / "master.wav"
-    loudness = audio.master(source_audio, master)
+    loudness = audio.master(processing_audio, master)
     duration = common_duration(master)
     timings["master"] = round(time.time() - t, 1)
 
     # 3. Vocals + acoustic model (load the model first so a broken install fails fast).
     vocab = asr.vocabulary()
     t = time.time()
-    vocals = separate(source_audio, work, model=separator, log=log)
+    # Timings must be learned from the same processed track used in the video.
+    vocals = separate(processing_audio, work, model=separator, log=log)
     timings["separation"] = round(time.time() - t, 1)
     t = time.time()
     logp, frame_s = asr.frame_log_probs(vocals, log=log)
@@ -500,6 +506,8 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
               lyrics_source, renderer.outro_start, review)
     write_json(out / "metadata.json", {
         "message_id": mid, "names": record, "duration_seconds": round(duration, 2), "loudness_before": loudness,
+        "audio_augmentation": {"enabled": augmentation["enabled"],
+                               "settings_file": "augmentation.json" if augmentation["enabled"] else None},
         "lyrics_mode": mode, "lyrics_source": lyrics_source, "artist_photo": photo_source,
         "backgrounds": clip_records, "tempo_bpm": round(feats.tempo, 1), "timings_seconds": timings,
         "review": review, "model": asr.MODEL})
@@ -519,8 +527,10 @@ def main():
     p.add_argument("--separator", default=None, help="audio-separator model, 'htdemucs' or 'none'")
     p.add_argument("--height", type=int, default=1080, choices=[720, 1080])
     p.add_argument("--preset", default="medium")
+    p.add_argument("--augment-audio", action="store_true",
+                   help="Apply subtle speed/formant augmentation before alignment and rendering")
     a = p.parse_args()
-    produce(a.input, a.output, a.work, a.separator, a.height, preset=a.preset)
+    produce(a.input, a.output, a.work, a.separator, a.height, preset=a.preset, augment_audio=a.augment_audio)
 
 
 if __name__ == "__main__":

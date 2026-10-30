@@ -106,6 +106,10 @@ YouTube channel and the web, checking that the faces agree.
   runner at the same time, so 5 songs take about as long as 1 (≈ 25–35 minutes).
 - `message_ids`: remake specific songs (e.g. `2,3`) without moving your place in the channel.
 - `separator`: vocal-isolation model (default is the fast, accurate UVR-MDX-NET).
+- `augment_audio`: optional subtle speed/formant augmentation, **off by default**.
+  When enabled, lyrics are timed against the augmented audio and the artifact
+  includes `augmentation.json`. It does not guarantee privacy or change reuse
+  rights. [Standalone Python API, setup and details](docs/audio-augmentation.md).
 
 When it finishes, open the run and download each `mezmur-<message id>-run…` artifact
 (kept 3 days — download it before then). It holds only what you upload. Anything to check before publishing (for example
@@ -134,6 +138,7 @@ have permission to republish the songs; Content ID claims and strikes apply to l
 ```sh
 pip install torch==2.5.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cpu
 pip install -e '.[render,test]'
+sudo apt-get install librubberband2  # native augmentation tests
 pytest -q
 python -m mezmur.song --input inputs/song-2 --output output/song-2   # one fetched song
 ```
@@ -141,3 +146,6 @@ python -m mezmur.song --input inputs/song-2 --output output/song-2   # one fetch
 Model credits: [Ethio-ASR Amharic](https://huggingface.co/badrex/Ethio-ASR-amharic) (CC BY 4.0),
 [audio-separator / UVR](https://github.com/nomadkaraoke/python-audio-separator),
 [OpenCV model zoo](https://github.com/opencv/opencv_zoo), [rembg U²-Net](https://github.com/danielgatis/rembg).
+
+Optional audio augmentation uses [Rubber Band](https://breakfastquay.com/rubberband/)
+(GPL-licensed; commercial licensing is also available).

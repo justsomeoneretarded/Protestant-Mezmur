@@ -2,6 +2,7 @@
 import json
 import re
 import subprocess
+import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -39,6 +40,26 @@ def cover_art(path, target):
     subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", str(path), "-an", "-map", "0:v:0",
                     "-frames:v", "1", str(target)], check=False)
     return target if Path(target).is_file() and Path(target).stat().st_size > 2000 else None
+
+
+def prepare_source(source, work, *, augment=False, seed=None):
+    """Optionally augment a decoded, peak-safe source for both rendering and ASR."""
+    source = Path(source)
+    if not augment:
+        return source, {"enabled": False}
+    from .augmentation import augment_file
+
+    work = Path(work)
+    work.mkdir(parents=True, exist_ok=True)
+    folder = Path(tempfile.mkdtemp(prefix="augmentation-", dir=work))
+    # FFmpeg accepts all Telegram audio formats, including M4A. Pre-mastering
+    # also prevents decoder overshoots from entering the normalized-float API.
+    decoded = folder / "input.wav"
+    before = master(source, decoded)
+    target = folder / "augmented.wav"
+    metadata = augment_file(decoded, target, seed=seed)
+    metadata.update({"enabled": True, "loudness_before_augmentation": before})
+    return target, metadata
 
 
 def master(source, target, lufs=-14.0, true_peak=-1.0):
