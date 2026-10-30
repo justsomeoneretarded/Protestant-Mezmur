@@ -83,7 +83,10 @@
     "commons-img:91690207",
     "commons-img:39361722",
     "commons-img:30264061",
-    "commons-img:129996392"
+    "commons-img:129996392",
+    "commons-img:11096618"
   ],
-  "lyrics_channels": []
+  "lyrics_channels": [
+    "SongLegetaLyrics"
+  ]
 }
