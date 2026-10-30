@@ -206,6 +206,20 @@ class Renderer:
         self.artist_photo = artist_photo
         self.overlays = self._overlays()
         self._vignette = self._make_vignette()
+        self._ink = None
+        try:  # decorative only: if anything goes wrong the video is made without it
+            from .ink import InkTransitions
+            from .subtitles import LEAD
+            starts, prev_end = [], 0.0
+            for i, c in enumerate(cues or []):
+                shown = max(c["start"] - LEAD, prev_end + 0.05 if i else 0.0, 0.0)
+                starts.append(shown)
+                prev_end = c["end"]
+            r, g, b = accent
+            self._ink = InkTransitions(width, height, starts, (b, g, r), center_y=height * 0.52, seed=seed)
+        except Exception as error:  # noqa: BLE001
+            print(f"  ink transitions disabled: {error.__class__.__name__}: {error}", flush=True)
+            self._ink = None
         self._init_particles()
         self.bars = np.zeros(features.bands.shape[1], np.float32)
         self._clock_cache = {}
@@ -466,7 +480,14 @@ class Renderer:
             blend(frame, o.badge[0], o.badge[1], o.badge[2], o.badge[3], opacity=max(0.0, a))
         if t >= self.outro_start:
             blend(frame, *o.outro, 0, 0, opacity=min(1.0, (t - self.outro_start) / 1.2))
-        return self._countdown(frame, t)
+        frame = self._countdown(frame, t)
+        if self._ink is not None:
+            try:
+                frame = self._ink.apply(frame, t)
+            except Exception as error:  # noqa: BLE001 - never let decoration break a render
+                print(f"  ink transitions disabled at {t:.1f}s: {error.__class__.__name__}: {error}", flush=True)
+                self._ink = None
+        return frame
 
 
 def render_video(renderer: Renderer, audio, ass_path, out_path, crf=18, preset="medium", log=print):
