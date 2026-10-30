@@ -131,7 +131,9 @@ def tags(m, album=""):
 
 
 def hashtag(text):
-    words = re.findall(r"[A-Za-z0-9ሀ-፿]+", text or "")
+    """#NameLikeThis from a singer or song name, without extra words ('Official', 'Lyrics', 'Mezmur'...)."""
+    from .names import NAME_FILLER
+    words = [w for w in re.findall(r"[A-Za-z0-9ሀ-፿]+", text or "") if w.lower() not in NAME_FILLER]
     return "#" + "".join(w[:1].upper() + w[1:] for w in words) if words else ""
 
 
@@ -156,8 +158,8 @@ def description(m, stanzas, cues, chapters, credits, lyrics_source):
             f"Singer: {a_am or a_lat}{f' / {a_lat}' if a_am and a_lat else ''}"]
     tail += [c if c.startswith("Photo:") else f"Background: {c}" for c in credits[:8]]
     tail.append("")
-    tags_line = " ".join(t for t in [hashtag(a_lat or a_am), hashtag(t_lat or t_am), "#AmharicMezmur", "#MezmurLyrics",
-                                     "#ProtestantMezmur", "#EthiopianGospel"] if t)
+    tags = ["#AmharicMezmur", "#ProtestantMezmur", "#MezmurLyrics", hashtag(a_lat or a_am), hashtag(t_lat or t_am)]
+    tags_line = " ".join(dict.fromkeys(t for t in tags if t and t != "#"))
     for with_roman in (True, False):
         body = lines + (rom_block if with_roman else []) + tail + [tags_line]
         text = "\n".join(body)
