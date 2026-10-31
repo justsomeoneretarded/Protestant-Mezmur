@@ -92,8 +92,11 @@ you have permission to process and publish.
 - Mono, stereo, and up to 32 channels use the same time map; synchronized stereo
   processing preserves mono compatibility. Input is finite floating-point PCM
   normalized to [-1, 1], at 8000..192000 Hz. Integer PCM is rejected explicitly.
-- Extremely short hits receive temporary analysis context, removed from the
-  returned result. There may be little meaningful augmentation in such clips.
+- All inputs receive 250 ms of temporary trailing analysis context, removed from
+  the returned result. This absorbs small native synthesis-boundary shortfalls
+  without inserting silence over missing song samples. Extremely short hits also
+  receive leading context. There may be little meaningful augmentation in those
+  clips. Non-finite samples and substantial truncation still fail explicitly.
 - Peaks above 0.999 are attenuated uniformly, never hard-clipped. Quiet audio is
   not boosted. If both strengths are zero, the array API returns an exact float32
   copy without native processing or gain changes.

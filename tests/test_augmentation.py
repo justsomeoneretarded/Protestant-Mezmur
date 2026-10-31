@@ -5,6 +5,7 @@ import pytest
 import soundfile as sf
 
 from mezmur.augmentation import _time_map, augment_audio, augment_file
+from mezmur import augmentation
 
 
 SR = 16000
@@ -50,6 +51,7 @@ def test_no_effects_is_an_independent_exact_copy():
     result = augment_audio(x, SR, seed=5, max_speed_change=0, max_formant_semitones=0)
     np.testing.assert_array_equal(result.audio, x)
     assert not np.shares_memory(result.audio, x)
+    assert result.metadata()["boundary_context_seconds"] == 0
 
 
 @pytest.mark.parametrize("preserve", [True, False])
@@ -73,6 +75,7 @@ def test_native_engine_preserves_shape_duration_and_stereo_coherence():
     result = augment_audio(x, SR, seed=3)
     assert result.audio.shape == x.shape
     assert result.audio.dtype == np.float32
+    assert result.metadata()["boundary_context_seconds"] == 0.25
     assert np.isfinite(result.audio).all()
     assert np.max(np.abs(result.audio)) <= 0.999001
     np.testing.assert_allclose(result.audio[:, 0], result.audio[:, 1], atol=1e-6)
@@ -101,6 +104,51 @@ def test_silence_stays_silent():
     result = augment_audio(np.zeros(SR, dtype=np.float32), SR, seed=0)
     assert len(result.audio) == SR
     assert np.max(np.abs(result.audio)) == 0
+
+
+def test_native_boundary_shortfall_does_not_remove_song_samples(monkeypatch):
+    x = np.linspace(-0.4, 0.4, SR, dtype=np.float32)
+
+    def finish_short(planar, sr, src, dst, formants):
+        assert planar.shape[1] == len(x) + round(sr * 0.25)
+        # The real song-23 failure: the native engine returned 563 fewer frames.
+        return planar[:, :-563].T.copy()
+
+    monkeypatch.setattr(augmentation, "_render_native", finish_short)
+    result = augment_audio(x, SR, seed=23, max_speed_change=0)
+    np.testing.assert_array_equal(result.audio, x)
+    assert result.audio[-1] == x[-1]
+
+
+def test_substantial_native_truncation_still_fails(monkeypatch):
+    def truncate(planar, *args):
+        return planar[:, :SR // 2].T.copy()
+
+    monkeypatch.setattr(augmentation, "_render_native", truncate)
+    with pytest.raises(RuntimeError, match="boundary context"):
+        augment_audio(tone(), SR, seed=23)
+
+
+def test_invalid_native_samples_still_fail(monkeypatch):
+    def invalid(planar, *args):
+        output = planar.T.copy()
+        output[-1, 0] = np.nan
+        return output
+
+    monkeypatch.setattr(augmentation, "_render_native", invalid)
+    with pytest.raises(RuntimeError, match="non-finite"):
+        augment_audio(tone(), SR, seed=23)
+
+
+def test_native_longer_stereo_clip_keeps_every_frame():
+    sr = 48000
+    t = np.arange(sr * 20 + 700) / sr
+    signal = (0.25 * np.sin(2 * np.pi * 220 * t) * (0.8 + 0.2 * np.sin(2 * np.pi * 3 * t)))
+    x = np.column_stack([signal, signal]).astype(np.float32)
+    result = augment_audio(x, sr, seed=23)
+    assert result.audio.shape == x.shape
+    assert np.isfinite(result.audio).all()
+    assert np.max(np.abs(result.audio[-sr // 20:])) > 0.05
 
 
 def test_short_input_and_multichannel():

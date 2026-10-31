@@ -56,16 +56,31 @@ def _pointers(planar):
 
 
 def _render(planar, sr, src, dst, formants):
+    _, n = planar.shape
+    # R3 may finish a few synthesis frames short when a variable time map is
+    # used. Supply trailing context so that only disposable silence is affected,
+    # rather than padding over missing song samples or rejecting valid audio.
+    tail = round(sr * 0.25)
+    lead = tail if n < 64 else 0
+    if max(int(src[-1]), int(dst[-1])) + lead + tail > np.iinfo(np.uint32).max:
+        raise ValueError("Audio plus boundary context exceeds the native C API's frame limit")
+    padded = np.pad(planar, ((0, 0), (lead, tail)))
+    padded_src = np.r_[src + lead, src[-1] + lead + tail]
+    padded_dst = np.r_[dst + lead, dst[-1] + lead + tail]
+    if lead:
+        padded_src, padded_dst = np.r_[0, padded_src], np.r_[0, padded_dst]
+    rendered = _render_native(padded, sr, padded_src, padded_dst, formants)
+    end = lead + int(dst[-1])
+    if not np.isfinite(rendered).all():
+        raise RuntimeError("Rubber Band returned non-finite audio samples")
+    if len(rendered) < end:
+        raise RuntimeError(f"Rubber Band returned {len(rendered)} frames; at least {end} "
+                           "are required even after adding boundary context")
+    return rendered[lead:end]
+
+
+def _render_native(planar, sr, src, dst, formants):
     channels, n = planar.shape
-    if n < 64:
-        # Extremely short hits need analysis context. Remove this temporary
-        # silence again after rendering; the returned audio has no added padding.
-        pad = round(sr * 0.25)
-        padded = np.pad(planar, ((0, 0), (pad, pad)))
-        padded_src = np.r_[0, src + pad, n + 2 * pad]
-        padded_dst = np.r_[0, dst + pad, dst[-1] + 2 * pad]
-        rendered = _render(padded, sr, padded_src, padded_dst, formants)
-        return rendered[pad:pad + dst[-1]]
     lib = _rubberband()
     # R3/Finer, synchronized stereo, formant processing, and one thread.
     # Explicit FORMANT_PRESERVED enables envelope processing on older R3 builds.
@@ -118,6 +133,7 @@ class AugmentationResult:
     output_frames: np.ndarray
     formant_semitones: float
     peak_gain: float
+    boundary_context_seconds: float = 0.0
 
     def map_times(self, input_seconds: np.ndarray) -> np.ndarray:
         """Map event times using planned anchors; allow for DSP timing tolerance."""
@@ -136,6 +152,7 @@ class AugmentationResult:
             "output_frames": self.output_frames.tolist(),
             "formant_semitones": self.formant_semitones,
             "peak_gain": self.peak_gain,
+            "boundary_context_seconds": self.boundary_context_seconds,
             "timing_note": "Planned anchors; verify fine-grained labels after processing",
             "privacy_guaranteed": False,
         }
@@ -240,15 +257,17 @@ def augment_audio(
     # convention. All channels pass through the same engine and time map.
     planar = np.ascontiguousarray(x.reshape(n, channels).T, dtype=np.float32)
     y = _render(planar, sr, src, dst, formants)
-    if len(y) != dst[-1] or not np.isfinite(y).all():
-        raise RuntimeError("Unexpected output length or non-finite audio")
+    if not np.isfinite(y).all():
+        raise RuntimeError("Rubber Band returned non-finite audio samples")
+    if len(y) != dst[-1]:
+        raise RuntimeError(f"Unexpected output length: got {len(y)} frames, expected {dst[-1]}")
     # Only attenuate overshoots; do not normalize silence or quiet recordings up.
     peak = float(np.max(np.abs(y)))
     gain = 0.999 / peak if peak > 0.999 else 1.0
     y *= gain
     if x.ndim == 1:
         y = y[:, 0]
-    return AugmentationResult(y, sr, src, dst, formants, gain)
+    return AugmentationResult(y, sr, src, dst, formants, gain, 0.25)
 
 
 def augment_file(input_path: str | Path, output_path: str | Path, **kwargs) -> dict:
