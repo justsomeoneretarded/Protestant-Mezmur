@@ -109,7 +109,7 @@ def test_silence_stays_silent():
 def test_native_boundary_shortfall_does_not_remove_song_samples(monkeypatch):
     x = np.linspace(-0.4, 0.4, SR, dtype=np.float32)
 
-    def finish_short(planar, sr, src, dst, formants):
+    def finish_short(planar, sr, src, dst, formants, pitch_semitones=0):
         assert planar.shape[1] == len(x) + round(sr * 0.25)
         # The real song-23 failure: the native engine returned 563 fewer frames.
         return planar[:, :-563].T.copy()
@@ -180,6 +180,105 @@ def test_optional_duration_change_uses_reported_length():
     result = augment_audio(tone(), SR, seed=2, preserve_duration=False)
     assert len(result.audio) == result.output_frames[-1]
     assert len(result.audio) != len(tone())
+
+
+def test_whole_mix_transposition_preserves_musical_intervals():
+    t = np.arange(SR * 3) / SR
+    x = (0.2 * np.sin(2 * np.pi * 220 * t) + 0.1 * np.sin(2 * np.pi * 330 * t)).astype(np.float32)
+    result = augment_audio(x, SR, seed=23, max_speed_change=0, max_formant_semitones=0,
+                           pitch_semitones=2)
+    middle = result.audio[SR:2 * SR]
+    spectrum = np.abs(np.fft.rfft(middle * np.hanning(SR)))
+    frequencies = np.fft.rfftfreq(SR, 1 / SR)
+    for hz in (220, 330):
+        expected = hz * 2 ** (2 / 12)
+        region = np.abs(frequencies - expected) < 5
+        peak = frequencies[region][np.argmax(spectrum[region])]
+        assert abs(peak - expected) < 2
+        assert spectrum[region].max() > 10
+    assert result.metadata()["pitch_semitones"] == 2
+
+
+def test_tempo_factor_changes_duration_without_changing_key():
+    result = augment_audio(tone(3, 440), SR, seed=2, max_speed_change=0, max_formant_semitones=0,
+                           tempo_factor=1.04, preserve_duration=False)
+    assert len(result.audio) == round(SR * 3 / 1.04)
+    spectrum = np.abs(np.fft.rfft(result.audio[SR:2 * SR]))
+    assert abs(np.argmax(spectrum) - 440) <= 2
+    assert result.map_times(np.array([3.0]))[0] == pytest.approx(len(result.audio) / SR)
+
+
+def test_quiet_noise_has_measured_snr_and_keeps_silence_clean():
+    x = np.r_[np.zeros(SR), tone(), np.zeros(SR)].astype(np.float32)
+    options = dict(seed=9, max_speed_change=0, max_formant_semitones=0, noise_snr_db=50)
+    result = augment_audio(x, SR, **options)
+    difference = result.audio - x
+    snr = 20 * np.log10(np.sqrt(np.mean(x ** 2)) / np.sqrt(np.mean(difference ** 2)))
+    assert snr == pytest.approx(50, abs=0.1)
+    assert np.all(result.audio[:SR] == 0) and np.all(result.audio[-SR:] == 0)
+    np.testing.assert_array_equal(result.audio, augment_audio(x, SR, **options).audio)
+    assert result.noise_snr_db == 50 and result.boundary_context_seconds == 0
+
+
+def test_noise_does_not_add_sound_to_a_silent_recording():
+    result = augment_audio(np.zeros(SR, dtype=np.float32), SR, noise_snr_db=50)
+    assert np.all(result.audio == 0)
+
+
+def test_noise_can_be_disabled_explicitly():
+    x = tone()
+    result = augment_audio(x, SR, max_speed_change=0, max_formant_semitones=0,
+                           noise_snr_db=50, noise_profile="off")
+    np.testing.assert_array_equal(result.audio, x)
+    assert result.noise_snr_db is None and result.noise_profile is None
+
+
+@pytest.mark.parametrize("profile", ["hiss", "vinyl", "ambient"])
+def test_overlay_profiles_are_reproducible_and_obey_snr(profile):
+    x = tone(4)
+    options = dict(seed=19, max_speed_change=0, max_formant_semitones=0,
+                   noise_snr_db=40, noise_profile=profile)
+    result = augment_audio(x, SR, **options)
+    noise = result.audio - x
+    snr = 20 * np.log10(np.sqrt(np.mean(x ** 2)) / np.sqrt(np.mean(noise ** 2)))
+    assert snr == pytest.approx(40, abs=0.1)
+    assert result.noise_profile == profile
+    np.testing.assert_array_equal(result.audio, augment_audio(x, SR, **options).audio)
+
+
+@pytest.mark.parametrize("effect", ["room", "echo"])
+@pytest.mark.parametrize("channels", [1, 2, 3])
+def test_room_and_echo_keep_layout_and_add_a_quiet_tail(effect, channels):
+    x = np.zeros((SR, channels), dtype=np.float32)
+    x[1000:1040] = np.hanning(40)[:, None] * 0.4
+    result = augment_audio(x, SR, max_speed_change=0, max_formant_semitones=0, space_effect=effect)
+    assert result.audio.shape == x.shape
+    assert np.isfinite(result.audio).all()
+    assert np.max(np.abs(result.audio)) <= 0.999001
+    assert np.max(np.abs(result.audio[1500:10000])) > 1e-6
+    assert result.space_effect == effect
+
+
+def test_room_handles_tiny_multichannel_inputs():
+    x = np.full((1, 3), 0.2, dtype=np.float32)
+    result = augment_audio(x, SR, max_speed_change=0, max_formant_semitones=0, space_effect="room")
+    assert result.audio.shape == x.shape
+    assert np.isfinite(result.audio).all()
+
+
+@pytest.mark.parametrize("kwargs", [{"noise_profile": "invalid"}, {"space_effect": "invalid"}])
+def test_invalid_overlay_selection_fails(kwargs):
+    with pytest.raises(ValueError):
+        augment_audio(tone(), SR, **kwargs)
+
+
+@pytest.mark.parametrize("kwargs", [
+    {"tempo_factor": 1.04}, {"tempo_factor": 0.5}, {"pitch_semitones": 4},
+    {"noise_snr_db": 0}, {"noise_snr_db": np.nan}, {"noise_snr_db": 81},
+])
+def test_invalid_music_settings_fail_explicitly(kwargs):
+    with pytest.raises(ValueError):
+        augment_audio(tone(), SR, **kwargs)
 
 
 def test_annotation_mapping_and_range_check():

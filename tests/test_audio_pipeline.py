@@ -32,6 +32,7 @@ def test_prepare_source_supports_m4a_and_does_not_overwrite_original(tmp_path):
     result, result_sr = sf.read(prepared, always_2d=True)
     assert source.read_bytes() == before
     assert metadata["enabled"] is True and metadata["seed"] == 21
+    assert metadata["style"] == "subtle" and metadata["noise_snr_db"] == 50
     assert metadata["privacy_guaranteed"] is False
     assert result_sr == 48000 and result.shape[1] == 2
     assert len(result) == metadata["output_frames"][-1] == metadata["input_frames"][-1]
@@ -57,9 +58,11 @@ def test_song_aligns_to_the_same_processed_source_it_masters(monkeypatch, tmp_pa
         assert path == original
         return {}
 
-    def prepare(source, folder, *, augment, seed):
+    def prepare(source, folder, *, augment, seed, style, noise_profile, space_effect):
         assert source == original and folder == work
         assert augment is True and seed == 21
+        assert style == "musical"
+        assert noise_profile == "hiss" and space_effect == "room"
         calls.append("prepare")
         return augmented, metadata
 
@@ -98,3 +101,49 @@ def test_song_cli_passes_augmentation_flag(monkeypatch, enabled):
     monkeypatch.setattr(song, "produce", lambda *a, **k: calls.append(k))
     song.main()
     assert calls[0]["augment_audio"] is enabled
+    assert calls[0]["augmentation_style"] == "musical"
+    assert calls[0]["noise_profile"] == "hiss" and calls[0]["space_effect"] == "room"
+
+
+def test_musical_preset_applies_one_key_and_tempo_to_the_mix(tmp_path):
+    source = tmp_path / "source.wav"
+    sr = 16000
+    sf.write(source, 0.3 * np.sin(2 * np.pi * 220 * np.arange(sr * 2) / sr), sr)
+    prepared, metadata = audio.prepare_source(source, tmp_path / "work", augment=True, seed=23, style="musical")
+    assert metadata["style"] == "musical"
+    assert abs(metadata["pitch_semitones"]) == 2
+    assert metadata["tempo_factor"] in (0.96, 1.04)
+    assert metadata["noise_snr_db"] == 50
+    assert sf.info(prepared).frames != metadata["input_frames"][-1]
+
+
+def test_lyrics_lookup_uses_original_duration_after_tempo_change(monkeypatch, tmp_path):
+    inp = tmp_path / "input"
+    inp.mkdir()
+    source = inp / "audio.wav"
+    source.touch()
+    (inp / "info.json").write_text(json.dumps({"message_id": 23}))
+    augmented = tmp_path / "augmented.wav"
+    monkeypatch.setattr(audio, "tags", lambda _: {})
+    monkeypatch.setattr(audio, "prepare_source", lambda *a, **k: (
+        augmented, {"enabled": True, "tempo_factor": 1.04, "formant_semitones": 0}))
+    monkeypatch.setattr(audio, "master", lambda *a: {})
+    monkeypatch.setattr(song, "common_duration", lambda path: 2 if path == source else 1.92)
+    monkeypatch.setattr(song.names, "resolve", lambda _: {})
+    monkeypatch.setattr(song.names, "learn_from_titles", lambda record, _: record)
+    monkeypatch.setattr(song.asr, "vocabulary", lambda: {})
+    monkeypatch.setattr(song, "separate", lambda *a, **k: augmented)
+    monkeypatch.setattr(song.asr, "frame_log_probs", lambda *a, **k: (np.zeros((1, 1)), 0.02))
+    monkeypatch.setattr(song.asr, "vocal_energy", lambda *a: np.ones(1))
+    monkeypatch.setattr(song.asr, "greedy_words", lambda *a: [])
+
+    class StopAtLookup(Exception):
+        pass
+
+    def gather(record, mid, tg, corrections, duration, **kwargs):
+        assert duration == 2
+        raise StopAtLookup
+
+    monkeypatch.setattr(song, "gather", gather)
+    with pytest.raises(StopAtLookup):
+        song.produce(inp, tmp_path / "output", tmp_path / "work", augment_audio=True)

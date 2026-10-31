@@ -12,7 +12,7 @@ For every song you get:
 | File | What it is |
 | --- | --- |
 | `video.mp4` | 1080p lyric video: karaoke Amharic lyrics timed word-by-word to the real singing, romanized line underneath, next line preview, one calm photograph for the whole song (waterfall, mountains, sea, sky, stars, skyline…) with nothing drawn or written on it, never reused for another video, a smooth music spectrum, title card and a clean end-screen area |
-| `thumbnail.jpg`, `thumbnail-b.jpg`, `thumbnail-c.jpg` | 1280×720 thumbnails with the singer's photo (cut out), the song name in Amharic and Latin letters and the singer's name. Three designs for YouTube's *Test & Compare* |
+| `thumbnail.jpg`, `thumbnail-b.jpg`, `thumbnail-c.jpg`, `thumbnail-d.jpg` | Four 1280×720 layouts: A centered text with a frame; B enlarged centered circular portrait with smaller text and a frame; C text without the frame; D portrait without the frame. The portrait matches the one in the video. Choose up to three for YouTube's *Test & Compare* |
 | `title.txt` | Title options, first one in the common search style: `Addisalem Assefa siwed geta ሲወድ ጌታ አዲስዓለም አሰፋ lyrics` |
 | `description.txt` | Ready to paste: both scripts, full Amharic lyrics, lyrics in Latin letters, credits, hashtags |
 | `tags.txt` | Song-specific + general tags, under YouTube's 500-character limit |
@@ -109,10 +109,17 @@ YouTube channel and the web, checking that the faces agree.
   runner at the same time, so 5 songs take about as long as 1 (≈ 25–35 minutes).
 - `message_ids`: remake specific songs (e.g. `2,3`) without moving your place in the channel.
 - `separator`: vocal-isolation model (default is the fast, accurate UVR-MDX-NET).
-- `augment_audio`: optional subtle speed/formant augmentation, **off by default**.
+- `augment_audio`: optional audio augmentation, **off by default**.
   When enabled, lyrics are timed against the augmented audio and the artifact
   includes `augmentation.json`. It does not guarantee privacy or change reuse
   rights. [Standalone Python API, setup and details](docs/audio-augmentation.md).
+- `augmentation_style`: **musical** shifts the whole mix's key by two semitones
+  and its tempo by about 4%, with quiet noise; **subtle** keeps the original key
+  and duration with smaller changes. This only applies when augmentation is on.
+- `noise_profile`: **hiss**, **vinyl** crackle, synthetic **ambient** room tone,
+  or **off**; overlays are quiet (50 dB SNR).
+- `space_effect`: **room** reverb, short **echo**, or **none**. Both effect
+  controls only apply when audio augmentation is enabled.
 
 When it finishes, open the run and download each `mezmur-<message id>-run…` artifact
 (kept 3 days — download it before then). It holds only what you upload. Anything to check before publishing (for example
@@ -129,7 +136,7 @@ don't repeat backgrounds.
 ## Costs and limits
 
 Everything is free: the repository is public, so GitHub Actions minutes are free on 4-CPU
-runners; all models (Ethio-ASR, UVR-MDX-NET, YuNet/SFace faces, U²-Net cutout, PP-OCR text
+runners; all models (Ethio-ASR, UVR-MDX-NET, YuNet/SFace faces, PP-OCR text
 detection) are open and run on the runner; Telegram, LRCLIB, Wikimedia, Pexels and Pixabay are free.
 Model files are cached between runs (Actions cache, 10 GB).
 
@@ -151,4 +158,5 @@ Model credits: [Ethio-ASR Amharic](https://huggingface.co/badrex/Ethio-ASR-amhar
 [OpenCV model zoo](https://github.com/opencv/opencv_zoo), [rembg U²-Net](https://github.com/danielgatis/rembg).
 
 Optional audio augmentation uses [Rubber Band](https://breakfastquay.com/rubberband/)
-(GPL-licensed; commercial licensing is also available).
+(GPL-licensed; commercial licensing is also available) and
+[Pedalboard](https://github.com/spotify/pedalboard) (GPL-licensed).

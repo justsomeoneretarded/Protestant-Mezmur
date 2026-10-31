@@ -1,4 +1,4 @@
-# Subtle Audio Augmentation
+# Audio Augmentation
 
 A standalone Python utility for speech, music, percussion, and mixed recordings.
 Rubber Band's established R3 engine handles the signal processing. Use it as a
@@ -49,14 +49,44 @@ new_event_times = result.map_times([0.1, 0.4])
 python -m mezmur.augmentation input.wav augmented.wav --seed 42
 # Or use the installed entry point:
 mezmur-augment input.wav augmented.wav --seed 42
+# A stronger, coherent change to the whole mix:
+mezmur-augment input.wav musical.wav --seed 42 --pitch 2 --tempo 1.04 --noise-snr 50 --allow-duration-change
+# Vinyl-style texture and small-room space:
+mezmur-augment input.wav textured.wav --noise-snr 50 --noise-profile vinyl --space-effect room --seed 42
 ```
 
 ## GitHub Actions Integration
 
-In **Actions > Generate Mezmur Videos > Run workflow**, check **Subtle audio
+In **Actions > Generate Mezmur Videos > Run workflow**, check **Audio
 augmentation** (`augment_audio`) to enable it. It is off by default: ordinary
 runs retain the original audio-processing path. Reusable workflows can pass
 `augment_audio: true` as well.
+
+Choose `augmentation_style`:
+
+- **musical** (default when augmentation is enabled): the entire mix moves by
+  +2 or -2 semitones and its nominal tempo changes by about 4%. Every instrument
+  and voice receives the same transposition; no random notes or replacement beats
+  are introduced. Smaller local timing/formant variations and 50 dB SNR noise are
+  also applied. Duration changes, and lyrics are aligned afterward.
+- **subtle**: keeps the original key and duration, applies the original small
+  timing/formant variations, and adds the same quiet 50 dB SNR noise.
+
+`noise_profile` selects **hiss**, **vinyl** (synthetic sparse crackle over hiss),
+**ambient** (soft synthetic room tone, not a field recording), or **off**. All
+enabled overlays are mixed at 50 dB SNR in the video pipeline. The standalone
+API/CLI accepts 20..80 dB when a different training strength is wanted.
+
+`space_effect` selects **room** (default; a small, damped room with a quiet wet
+signal), **echo** (80 ms slapback with low feedback), or **none**. Pedalboard's
+existing reverb/delay engines process stereo pairs. Effects keep the planned
+frame count and blend back to dry at the end; they do not append a long tail.
+Reverb and echo deliberately add decay into pauses, while the noise gate keeps
+otherwise silent samples clean. Original timing is never reused after processing.
+
+These are changes to the original recording, not promises of improved sound or
+anonymity. The standalone API retains its conservative defaults: no intentional
+key/nominal-tempo change and no noise unless explicitly requested.
 
 The runner installs the native library automatically when enabled. Each song
 uses its Telegram message ID as the seed, keeping replays reproducible. The
@@ -72,6 +102,8 @@ to upload to YouTube. Local rendering supports the same option:
 
 ```bash
 python -m mezmur.song --input inputs/song-21 --output output/song-21 --augment-audio
+# Keep the earlier, quieter transformation instead:
+python -m mezmur.song --input inputs/song-21 --output output/song-21 --augment-audio --augmentation-style subtle
 ```
 
 The integration is not a copyright, Content ID, or privacy workaround. Use audio
@@ -83,10 +115,15 @@ you have permission to process and publish.
   The planned local speed differs by at most approximately 1.5% by default,
   subject to sample rounding. The native engine may deviate around transients.
 - A small independent spectral-envelope shift changes timbre without an
-  intentional musical-pitch shift. This is not simply resampling or pitch shifting.
+  intentional musical-pitch shift by default. Explicit transposition moves all
+  pitched parts together and compensates the formant envelope independently.
+- Optional band-limited noise is added at a measured signal-to-noise ratio.
+  Higher dB is quieter. Noise is the same across channels to preserve stereo
+  coherence, and exact digital silence remains silent. Quiet noise may be removed
+  by final AAC compression; it does not reliably hide a song's identity.
 - Identical settings and seed produce reproducible parameters. Exact output
   samples may differ across native library versions and platforms.
-- The default preserves the original frame count. Internal word, beat, and event
+- The default array API preserves the original frame count. Internal word, beat, and event
   positions can still change. Use the planned mapping for approximate labels and
   validate any sample-accurate or word-level ground truth after transformation.
 - Mono, stereo, and up to 32 channels use the same time map; synchronized stereo
@@ -98,7 +135,7 @@ you have permission to process and publish.
   receive leading context. There may be little meaningful augmentation in those
   clips. Non-finite samples and substantial truncation still fail explicitly.
 - Peaks above 0.999 are attenuated uniformly, never hard-clipped. Quiet audio is
-  not boosted. If both strengths are zero, the array API returns an exact float32
+  not boosted. If all effects are disabled, the array API returns an exact float32
   copy without native processing or gain changes.
 - Input decoding depends on libsndfile's codecs. Output is 24-bit WAV or FLAC.
   The file API refuses existing output paths and never changes the original.
@@ -121,8 +158,9 @@ The output file and JSON do not copy source tags or source filenames. The JSON
 contains the seed and time-map parameters for reproducibility; keep that sidecar
 internal if your research requires the augmentation parameters not to be shared.
 
-Rubber Band is GPL-licensed, with commercial licensing also available. Review its
-licensing terms before redistributing software that integrates the library.
+Rubber Band is GPL-licensed, with commercial licensing also available. Room and
+echo effects use [Pedalboard](https://github.com/spotify/pedalboard), which is
+GPL-licensed as well. Review their terms before redistributing integrated software.
 
 ## Test
 
@@ -132,6 +170,7 @@ python -m pytest -q tests/test_augmentation.py
 ```
 
 Tests exercise the actual native engine, not just mocks: seed reproducibility,
-pitch stability, formant-envelope change, stereo coherence, percussion timing,
+pitch stability, coherent transposition, tempo changes, measured noise SNR,
+noise profiles, room/echo effects, formant-envelope change, stereo coherence, percussion timing,
 silence, short hits, invalid inputs, lossless export, and original-file protection.
 They do not certify perceptual quality or anonymity on real-world datasets.

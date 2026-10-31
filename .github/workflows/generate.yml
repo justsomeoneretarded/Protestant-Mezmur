@@ -31,9 +31,24 @@ on:
         type: boolean
         default: false
       augment_audio:
-        description: Subtle audio augmentation (changes speed and timbre; no privacy guarantee)
+        description: Audio augmentation (changes the original mix; no privacy guarantee)
         type: boolean
         default: false
+      augmentation_style:
+        description: Musical changes the whole mix's key and tempo; subtle keeps the original key
+        type: choice
+        options: ['musical', 'subtle']
+        default: musical
+      noise_profile:
+        description: Noise overlay (only when audio augmentation is enabled)
+        type: choice
+        options: ['hiss', 'vinyl', 'ambient', 'off']
+        default: hiss
+      space_effect:
+        description: Room space or short echo (only when audio augmentation is enabled)
+        type: choice
+        options: ['room', 'echo', 'none']
+        default: room
   push:
     branches: [main]
     paths: ['corrections/**']
@@ -45,6 +60,9 @@ on:
       resolution: {type: string, default: '1080'}
       debug: {type: string, default: ''}
       augment_audio: {type: boolean, default: false}
+      augmentation_style: {type: string, default: musical}
+      noise_profile: {type: string, default: hiss}
+      space_effect: {type: string, default: room}
 
 permissions:
   contents: write
@@ -134,6 +152,9 @@ jobs:
       LYRICS_CHANNELS: ${{ vars.LYRICS_CHANNELS }}
       MEZMUR_DEBUG: ${{ inputs.diagnostics && '1' || inputs.debug }}
       AUGMENT_AUDIO: ${{ inputs.augment_audio && 'true' || 'false' }}
+      AUGMENTATION_STYLE: ${{ inputs.augmentation_style || 'musical' }}
+      NOISE_PROFILE: ${{ inputs.noise_profile || 'hiss' }}
+      SPACE_EFFECT: ${{ inputs.space_effect || 'room' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -163,6 +184,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y librubberband2
+          pip install -e '.[augmentation]'
           python -c "from mezmur.augmentation import _rubberband; _rubberband(); print('Rubber Band ready')"
       - name: Install vocal separator (isolated)
         if: (inputs.separator || 'UVR-MDX-NET-Voc_FT.onnx') != 'none'
@@ -200,7 +222,7 @@ jobs:
           out="output/song-${{ matrix.id }}"; mkdir -p "$out"
           audio_args=()
           if [ "$AUGMENT_AUDIO" = "true" ]; then
-            audio_args+=(--augment-audio)
+            audio_args+=(--augment-audio --augmentation-style "$AUGMENTATION_STYLE" --noise-profile "$NOISE_PROFILE" --space-effect "$SPACE_EFFECT")
           fi
           set +e
           python -m mezmur.song --input "inputs/song-${{ matrix.id }}" --output "$out" \
@@ -237,6 +259,7 @@ jobs:
             output/song-${{ matrix.id }}/thumbnail.jpg
             output/song-${{ matrix.id }}/thumbnail-b.jpg
             output/song-${{ matrix.id }}/thumbnail-c.jpg
+            output/song-${{ matrix.id }}/thumbnail-d.jpg
             output/song-${{ matrix.id }}/title.txt
             output/song-${{ matrix.id }}/description.txt
             output/song-${{ matrix.id }}/tags.txt
@@ -308,5 +331,5 @@ jobs:
       - name: Where are my files?
         run: |
           echo "### Download each song from this run's **Artifacts** (mezmur-<message id>-run…)" >> "$GITHUB_STEP_SUMMARY"
-          echo "Inside: video.mp4, thumbnail.jpg (+ -b, -c), title.txt, description.txt, tags.txt, pinned_comment.txt, captions/" >> "$GITHUB_STEP_SUMMARY"
+          echo "Inside: video.mp4, thumbnail.jpg (+ -b, -c, -d), title.txt, description.txt, tags.txt, pinned_comment.txt, captions/" >> "$GITHUB_STEP_SUMMARY"
           echo "Anything to check before publishing is listed per song above." >> "$GITHUB_STEP_SUMMARY"

@@ -377,6 +377,16 @@ def _person(canvas, person, side, accent):
 def _wrap(text, mixed, width):
     words, lines, cur = text.split(), [], ""
     for w in words:
+        if mixed.length(w) > width:
+            if cur:
+                lines.append(cur)
+            cur = ""
+            for char in w:
+                if cur and mixed.length(cur + char) > width:
+                    lines.append(cur)
+                    cur = ""
+                cur += char
+            continue
         test = (cur + " " + w).strip()
         if mixed.length(test) <= width or not cur:
             cur = test
@@ -388,49 +398,40 @@ def _wrap(text, mixed, width):
     return lines
 
 
-def _text_block(canvas, meta, x, width, align, accent, accent_dark):
+def _text_block(canvas, meta, accent, accent_dark, top=54, bottom=666, compact=False):
+    """Fit the complete centered bilingual block into its assigned vertical band."""
+    width = W - 160
     title = meta.get("title_am") or meta.get("title_latin", "")
-    size = 170
-    while size > 70:
-        f = Mixed("black", size)
-        lines = _wrap(title, f, width)
-        if len(lines) <= 2 and all(f.length(l) <= width for l in lines):
-            break
-        size -= 6
-    anchor = "la" if align == "left" else ("ma" if align == "center" else "ra")
-    ax = x if align == "left" else (x + width // 2 if align == "center" else x + width)
     roman = (meta.get("title_latin") or "").upper() if meta.get("title_am") else ""
     artist_am = meta.get("artist_am") or ""
     artist_lat = meta.get("artist_latin") or ""
-    rf = fit("black", roman, 64, width) if roman else None
-    block_h = 64 + len(lines) * int(size * 1.08) + (int(rf.size * 1.3) if rf else 0) + 120
-    y = max(36, (H - block_h) // 2 - 10)
-    # Pill.
-    tag = "ግጥም • LYRICS"
-    pf = Mixed("black", 30)
-    tw = pf.length(tag)
-    px = ax if align == "left" else (ax - tw / 2 if align == "center" else ax - tw)
-    d = ImageDraw.Draw(canvas)
-    d.rounded_rectangle((px - 22, y, px + tw + 22, y + 52), radius=26, fill=accent + (255,))
-    pf.draw(d, (px + tw / 2, y + 26), tag, (25, 14, 4, 255), anchor="mm")
-    y += 74
-    for line in lines:
-        gradient_text(canvas, (ax, y), line, Mixed("black", size), (255, 244, 200), accent_dark,
-                      anchor=anchor, stroke=max(4, size // 22), offset=6, blur=12)
-        y += int(size * 1.08)
-    if rf:
-        shadow_text(canvas, (ax, y + 4), roman, rf, (255, 255, 255, 255), anchor=anchor, blur=8, offset=4,
-                    stroke=3, stroke_fill=(10, 6, 2, 255))
-        y += int(rf.size * 1.35)
-    if artist_am or artist_lat:
-        af = fit("bold", artist_am or artist_lat, 50, width)
-        shadow_text(canvas, (ax, y + 12), artist_am or artist_lat, af, (255, 255, 255, 250), anchor=anchor, blur=6,
-                    stroke=2, stroke_fill=(10, 6, 2, 255))
-        y += int(af.size * 1.25) + 12
-        if artist_am and artist_lat:
-            lf = fit("bold", artist_lat, 36, width)
-            shadow_text(canvas, (ax, y + 6), artist_lat, lf, accent + (255,), anchor=anchor, blur=5,
-                        stroke=2, stroke_fill=(10, 6, 2, 255))
+    for size in range(60 if compact else 132, 7, -2):
+        f = Mixed("black", size)
+        rows = [("MEZMUR / LYRICS", Mixed("semibold", min(18 if compact else 24, max(10, size // 3))), "accent")]
+        rows += [(line, f, "title") for line in _wrap(title, f, width)]
+        for text, weight, maximum, color in (
+            (roman, "semibold", max(12, round(size * 0.43)), "white"),
+            (artist_am or artist_lat, "bold", min(30 if compact else 44, max(12, size // 2)), "white"),
+            (artist_lat if artist_am else "", "medium", min(22 if compact else 32, max(10, round(size * 0.4))), "accent"),
+        ):
+            if text:
+                font = fit(weight, text, maximum, width, min_size=8)
+                rows += [(line, font, color) for line in _wrap(text, font, width)]
+        heights = [sum(font.metrics()) for _, font, _ in rows]
+        gap = max(4, round(size * 0.05))
+        block_h = sum(heights) + gap * (len(rows) - 1)
+        if block_h <= bottom - top:
+            break
+    y = top + max(0, (bottom - top - block_h) // 2)
+    for (text, font, kind), line_h in zip(rows, heights):
+        if kind == "title":
+            gradient_text(canvas, (W // 2, y), text, font, (255, 244, 200), accent_dark,
+                          anchor="ma", stroke=max(1, font.size // 32), offset=3, blur=6)
+        else:
+            fill = accent if kind == "accent" else (255, 255, 255)
+            shadow_text(canvas, (W // 2, y), text, font, fill + (255,), anchor="ma", blur=3,
+                        offset=2, stroke=1, stroke_fill=(10, 6, 2, 255))
+        y += line_h + gap
 
 
 PALETTES = {
@@ -443,74 +444,25 @@ PALETTES = {
 def compose(meta, background=None, person=None, photo=None, variant="a", seed=0):
     """Build one 1280x720 thumbnail.
 
-    variant a: cutout right, text left (gold) · b: cutout left, text right (sky) ·
-    c: full-bleed photo with bottom title (rose) · fallback: centered text.
+    a/c: centered text only, with/without the outer frame.
+    b/d: the video's circular portrait above smaller centered text, with/without
+    the outer frame. Missing portraits fall back to text, never a guessed face.
+    The legacy person argument is accepted but cutouts are no longer drawn.
     """
-    accent, accent_dark, warm = PALETTES[{"a": "gold", "b": "sky", "c": "rose"}.get(variant, "gold")]
-    if variant == "c" and (photo is not None or background is not None):
-        source = photo if photo is not None else background
-        blurred = cv2.GaussianBlur(source, (0, 0), 18)
-        canvas = _bg(blurred, warm)
-        canvas.alpha_composite(Image.new("RGBA", (W, H), (8, 5, 3, 90)))
-        _rays(canvas, (int(W * 0.5), -60), accent, n=12, seed=seed + 1)
-        if person is not None:
-            _glow_behind(canvas, (int(W * 0.5), int(H * 0.40)), 280, accent)
-            small = person.copy()
-            scale = (H * 0.78) / small.height
-            small = small.resize((int(small.width * scale), int(small.height * scale)), Image.LANCZOS)
-            small.info.update(person.info)
-            if "face" in person.info:
-                fx, fy, fw, fh = person.info["face"]
-                small.info["face"] = (fx * scale, fy * scale, fw * scale, fh * scale)
-            px = (W - small.width) // 2
-            alpha = small.getchannel("A")
-            glow = Image.new("RGBA", small.size, accent + (0,))
-            glow.putalpha(alpha.filter(ImageFilter.MaxFilter(9)).filter(ImageFilter.GaussianBlur(18)).point(lambda v: int(v * 0.7)))
-            canvas.alpha_composite(glow, (px, 0))
-            canvas.alpha_composite(small, (px, 0))
-        grad = Image.new("L", (1, H))
-        for yy in range(H):
-            grad.putpixel((0, yy), int(255 * max(0, (yy / H - 0.40) / 0.60) ** 1.3))
-        dark = Image.new("RGBA", (W, H), (5, 3, 2, 255))
-        dark.putalpha(grad.resize((W, H)))
-        canvas.alpha_composite(dark)
-        title = meta.get("title_am") or meta.get("title_latin", "")
-        f = fit("black", title, 150, int(W * 0.9))
-        gradient_text(canvas, (W // 2, int(H * 0.72)), title, f, (255, 244, 200), accent_dark, anchor="mm",
-                      stroke=max(4, f.size // 22), offset=6, blur=12)
-        sub = "  •  ".join(p for p in [(meta.get("title_latin") or "").upper() if meta.get("title_am") else "",
-                                       meta.get("artist_am") or meta.get("artist_latin")] if p)
-        shadow_text(canvas, (W // 2, int(H * 0.88)), sub, fit("bold", sub, 46, int(W * 0.9)), (255, 255, 255, 255),
-                    anchor="mm", blur=6, stroke=2, stroke_fill=(10, 6, 2, 255))
-        tag = "ግጥም • LYRICS"
-        pf = Mixed("black", 30)
-        d = ImageDraw.Draw(canvas)
-        tw = pf.length(tag)
-        d.rounded_rectangle((40, 36, 40 + tw + 44, 88), radius=26, fill=accent + (255,))
-        pf.draw(d, (62 + tw / 2, 62), tag, (25, 14, 4, 255), anchor="mm")
-        d.rectangle((10, 10, W - 11, H - 11), outline=accent + (160,), width=3)
-        return canvas.convert("RGB")
+    if variant not in ("a", "b", "c", "d"):
+        raise ValueError("Unknown thumbnail variant")
+    accent, accent_dark, warm = PALETTES["gold" if variant in ("a", "c") else "sky"]
     canvas = _bg(background, warm)
-    side = "right" if variant == "a" else "left"
-    if person is not None:
-        _side_shade(canvas, "left" if side == "right" else "right")
-        _rays(canvas, (int(W * (0.74 if side == "right" else 0.26)), -40), accent, seed=seed)
-        _glow_behind(canvas, (int(W * (0.74 if side == "right" else 0.26)), int(H * 0.45)), 300, accent)
-        left, right = _person(canvas, person, side, accent)
-        if side == "right":
-            width = int(min(W * 0.58, max(W * 0.42, left - 40 - 54)))
-            _text_block(canvas, meta, 54, width, "left", accent, accent_dark)
-        else:
-            x0 = int(max(W * 0.40, min(W * 0.58, right + 40)))
-            _text_block(canvas, meta, x0, W - 54 - x0, "right", accent, accent_dark)
+    canvas.alpha_composite(Image.new("RGBA", (W, H), (5, 5, 8, 110)))
+    if variant in ("b", "d") and photo is not None:
+        from .visuals import circle_photo
+        portrait = circle_photo(photo, 316, ring=accent, ring_w=4)
+        canvas.alpha_composite(portrait, ((W - portrait.width) // 2, 80))
+        _text_block(canvas, meta, accent, accent_dark, top=428, compact=True)
     else:
-        shade = Image.new("RGBA", (W, H), (5, 3, 2, 120))
-        canvas.alpha_composite(shade)
-        _rays(canvas, (W // 2, -60), accent, n=12, seed=seed)
-        _text_block(canvas, meta, 80, W - 160, "center", accent, accent_dark)
-    # Thin frame for a finished look.
-    d = ImageDraw.Draw(canvas)
-    d.rectangle((10, 10, W - 11, H - 11), outline=accent + (160,), width=3)
+        _text_block(canvas, meta, accent, accent_dark)
+    if variant in ("a", "b"):
+        ImageDraw.Draw(canvas).rectangle((10, 10, W - 11, H - 11), outline=accent + (160,), width=3)
     return canvas.convert("RGB")
 
 

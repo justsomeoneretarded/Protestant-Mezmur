@@ -247,7 +247,7 @@ def _subs(text):
 
 
 def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium", corrections="corrections",
-            augment_audio=False):
+            augment_audio=False, augmentation_style="musical", noise_profile="hiss", space_effect="room"):
     inp, out, work = Path(inp), Path(out), Path(work)
     out.mkdir(parents=True, exist_ok=True)
     work.mkdir(parents=True, exist_ok=True)
@@ -266,13 +266,20 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     log(f"[{mid}] {record.get('title_am') or record.get('title_latin')} — {record.get('artist_am') or record.get('artist_latin')}")
 
     # 2. Audio.
-    processing_audio, augmentation = audio.prepare_source(source_audio, work, augment=augment_audio, seed=mid)
+    processing_audio, augmentation = audio.prepare_source(source_audio, work, augment=augment_audio, seed=mid,
+                                                         style=augmentation_style, noise_profile=noise_profile,
+                                                         space_effect=space_effect)
     if augmentation["enabled"]:
         write_json(out / "augmentation.json", augmentation)
-        log(f"  audio augmentation: seed={mid}, formants={augmentation['formant_semitones']:+.3f} semitones")
+        log(f"  audio augmentation: style={augmentation_style}, seed={mid}, "
+            f"pitch={augmentation.get('pitch_semitones', 0):+.1f} semitones, "
+            f"tempo={augmentation.get('tempo_factor', 1):.3f}, "
+            f"noise={augmentation.get('noise_profile')}, space={augmentation.get('space_effect')}")
     master = work / "master.wav"
     loudness = audio.master(processing_audio, master)
     duration = common_duration(master)
+    # Catalogue matching identifies the original recording, not its new tempo.
+    lookup_duration = common_duration(source_audio) if augmentation.get("tempo_factor", 1) != 1 else duration
     timings["master"] = round(time.time() - t, 1)
 
     # 3. Vocals + acoustic model (load the model first so a broken install fails fast).
@@ -308,7 +315,7 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
         c = c.strip().lstrip("@")
         if c and c not in channels:
             channels.append(c)
-    cands, titles, overrides, search_report = gather(record, mid, tg, corrections, duration, log=log, videos=videos,
+    cands, titles, overrides, search_report = gather(record, mid, tg, corrections, lookup_duration, log=log, videos=videos,
                                                      draft=draft, channels=channels,
                                                      library=os.environ.get("MEZMUR_LIBRARY", "library/lyrics"))
     notice(mid, "Lyrics search — " + "; ".join(
@@ -428,20 +435,15 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     t = time.time()
     photo_cands = photo_candidates(work, inp, record, videos)
     ranked = thumbnail.rank_photos(photo_cands, log=log) if photo_cands else []
-    person, badge_photo, photo_img, photo_source = None, None, None, None
+    badge_photo, photo_source = None, None
     photo_credit = None
     confirmed = [i for i in ranked if i.get("same_person")]
     for item in confirmed[:4]:
         img = cv2.imread(str(item["path"]))
-        cut = thumbnail.cutout(img, item["face"])
-        if cut is not None:
-            person, photo_img, photo_source = cut, img, item["source"]
+        if img is not None:
+            badge_photo, photo_source = face_square(img, item["face"]), item["source"]
             photo_credit = item.get("credit")
-            badge_photo = face_square(img, item["face"])
             break
-    if person is None and confirmed:
-        img = cv2.imread(str(confirmed[0]["path"]))
-        photo_img, badge_photo, photo_source = img, face_square(img, confirmed[0]["face"]), confirmed[0]["source"]
     if badge_photo is None:
         review["reasons"].append("No photo could be confirmed as this singer; thumbnails use the text design.")
     timings["photos"] = round(time.time() - t, 1)
@@ -477,8 +479,9 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     # 9. Thumbnails.
     meta = {k: record.get(k, "") for k in ["title_am", "title_latin", "artist_am", "artist_latin"]}
     bg_img = cv2.imread(still.path) if still is not None and still.path else None
-    for variant, name in [("a", "thumbnail.jpg"), ("b", "thumbnail-b.jpg"), ("c", "thumbnail-c.jpg")]:
-        img = thumbnail.compose(meta, background=bg_img, person=person, photo=photo_img, variant=variant, seed=mid)
+    for variant, name in [("a", "thumbnail.jpg"), ("b", "thumbnail-b.jpg"),
+                          ("c", "thumbnail-c.jpg"), ("d", "thumbnail-d.jpg")]:
+        img = thumbnail.compose(meta, background=bg_img, photo=badge_photo, variant=variant, seed=mid)
         thumbnail.save(img, out / name)
 
     # 10. Video.
@@ -528,9 +531,13 @@ def main():
     p.add_argument("--height", type=int, default=1080, choices=[720, 1080])
     p.add_argument("--preset", default="medium")
     p.add_argument("--augment-audio", action="store_true",
-                   help="Apply subtle speed/formant augmentation before alignment and rendering")
+                   help="Apply the selected audio augmentation before alignment and rendering")
+    p.add_argument("--augmentation-style", choices=["subtle", "musical"], default="musical")
+    p.add_argument("--noise-profile", choices=["off", "hiss", "vinyl", "ambient"], default="hiss")
+    p.add_argument("--space-effect", choices=["none", "room", "echo"], default="room")
     a = p.parse_args()
-    produce(a.input, a.output, a.work, a.separator, a.height, preset=a.preset, augment_audio=a.augment_audio)
+    produce(a.input, a.output, a.work, a.separator, a.height, preset=a.preset, augment_audio=a.augment_audio,
+            augmentation_style=a.augmentation_style, noise_profile=a.noise_profile, space_effect=a.space_effect)
 
 
 if __name__ == "__main__":

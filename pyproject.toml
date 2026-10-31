@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-augmentation = ["soundfile==0.13.1"]
+augmentation = ["soundfile==0.13.1", "pedalboard==0.9.26"]
 # Everything the per-song render job needs (torch is installed from the CPU index first).
 render = [
     "torch==2.5.1", "transformers==4.57.3", "huggingface-hub==0.36.0", "tokenizers==0.22.1",

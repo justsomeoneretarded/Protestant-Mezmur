@@ -1,4 +1,4 @@
-"""Subtle audio augmentation using Rubber Band R3, not a privacy guarantee."""
+"""Coherent audio augmentation using Rubber Band R3, not a privacy guarantee."""
 from __future__ import annotations
 
 import argparse
@@ -55,7 +55,7 @@ def _pointers(planar):
     return (FLOAT_PTR * len(planar))(*(row.ctypes.data_as(FLOAT_PTR) for row in planar))
 
 
-def _render(planar, sr, src, dst, formants):
+def _render(planar, sr, src, dst, formants, pitch_semitones=0.0):
     _, n = planar.shape
     # R3 may finish a few synthesis frames short when a variable time map is
     # used. Supply trailing context so that only disposable silence is affected,
@@ -69,7 +69,7 @@ def _render(planar, sr, src, dst, formants):
     padded_dst = np.r_[dst + lead, dst[-1] + lead + tail]
     if lead:
         padded_src, padded_dst = np.r_[0, padded_src], np.r_[0, padded_dst]
-    rendered = _render_native(padded, sr, padded_src, padded_dst, formants)
+    rendered = _render_native(padded, sr, padded_src, padded_dst, formants, pitch_semitones)
     end = lead + int(dst[-1])
     if not np.isfinite(rendered).all():
         raise RuntimeError("Rubber Band returned non-finite audio samples")
@@ -79,19 +79,22 @@ def _render(planar, sr, src, dst, formants):
     return rendered[lead:end]
 
 
-def _render_native(planar, sr, src, dst, formants):
+def _render_native(planar, sr, src, dst, formants, pitch_semitones=0.0):
     channels, n = planar.shape
     lib = _rubberband()
     # R3/Finer, synchronized stereo, formant processing, and one thread.
     # Explicit FORMANT_PRESERVED enables envelope processing on older R3 builds.
     options = 0x20000000 | 0x10000000 | 0x01000000 | 0x00010000
-    handle = lib.rubberband_new(sr, channels, options, int(dst[-1]) / n, 1.0)
+    pitch_scale = 2.0 ** (pitch_semitones / 12.0)
+    handle = lib.rubberband_new(sr, channels, options, int(dst[-1]) / n, pitch_scale)
     if not handle:
         raise RuntimeError("Could not allocate a Rubber Band stretcher")
     try:
         if lib.rubberband_get_engine_version(handle) != 3:
             raise RuntimeError("Rubber Band R3 is required for formant shifting")
-        lib.rubberband_set_formant_scale(handle, 2.0 ** (formants / 12.0))
+        # Compensate the whole-mix transposition to keep the independent formant
+        # control absolute, rather than shifting voices by the pitch interval too.
+        lib.rubberband_set_formant_scale(handle, 2.0 ** (formants / 12.0) / pitch_scale)
         lib.rubberband_set_expected_input_duration(handle, n)
         block_size = 8192
         lib.rubberband_set_max_process_size(handle, block_size)
@@ -134,6 +137,11 @@ class AugmentationResult:
     formant_semitones: float
     peak_gain: float
     boundary_context_seconds: float = 0.0
+    pitch_semitones: float = 0.0
+    tempo_factor: float = 1.0
+    noise_snr_db: float | None = None
+    noise_profile: str | None = None
+    space_effect: str = "none"
 
     def map_times(self, input_seconds: np.ndarray) -> np.ndarray:
         """Map event times using planned anchors; allow for DSP timing tolerance."""
@@ -153,6 +161,11 @@ class AugmentationResult:
             "formant_semitones": self.formant_semitones,
             "peak_gain": self.peak_gain,
             "boundary_context_seconds": self.boundary_context_seconds,
+            "pitch_semitones": self.pitch_semitones,
+            "tempo_factor": self.tempo_factor,
+            "noise_snr_db": self.noise_snr_db,
+            "noise_profile": self.noise_profile,
+            "space_effect": self.space_effect,
             "timing_note": "Planned anchors; verify fine-grained labels after processing",
             "privacy_guaranteed": False,
         }
@@ -185,6 +198,58 @@ def _time_map(n, sr, rng, strength, control_seconds, preserve_duration):
     return src, dst
 
 
+def _mix_noise(samples, sr, rng, snr_db, profile):
+    """Add band-limited mono noise at a measured SNR, gated out of silent gaps."""
+    from scipy.ndimage import uniform_filter1d
+    from scipy.signal import butter, sosfilt
+
+    signal_rms = float(np.sqrt(np.mean(samples.astype(np.float64) ** 2)))
+    if signal_rms == 0:
+        return samples
+    power = np.mean(samples ** 2, axis=1)
+    envelope = np.sqrt(np.maximum(0, uniform_filter1d(power, max(1, round(sr * 0.02)))))
+    floor = max(1e-6, signal_rms * 0.001)
+    gate = np.clip((envelope - floor) / (floor * 3), 0, 1)
+    gate *= np.any(samples != 0, axis=1)
+    high = 1200 if profile == "ambient" else 8000
+    filt = butter(2, [80, min(high, sr * 0.4)], btype="bandpass", fs=sr, output="sos")
+    noise = sosfilt(filt, rng.standard_normal(len(samples))).astype(np.float32)
+    if profile == "vinyl":
+        # Sparse, band-limited synthetic pops over a quieter steady noise bed.
+        impulses = np.zeros(len(samples), dtype=np.float32)
+        count = int(rng.poisson(1.5 * len(samples) / sr))
+        positions = rng.integers(0, len(samples), count)
+        np.add.at(impulses, positions, rng.uniform(-1, 1, count))
+        noise = noise * 0.35 + sosfilt(filt, impulses).astype(np.float32) * 12
+    noise *= gate
+    noise_rms = float(np.sqrt(np.mean(noise.astype(np.float64) ** 2)))
+    if noise_rms > 0:
+        noise *= signal_rms / (10 ** (snr_db / 20) * noise_rms)
+        samples = samples + noise[:, None]
+    return samples
+
+
+def _apply_space(samples, sr, effect):
+    """Use established delay/reverb engines, retaining the original frame count."""
+    from pedalboard import Delay, Pedalboard, Reverb
+
+    output = np.empty_like(samples)
+    # Process stereo pairs (or a final mono channel) for multichannel inputs.
+    for start in range(0, samples.shape[1], 2):
+        plugin = (Reverb(room_size=0.2, damping=0.7, wet_level=0.08, dry_level=1.0, width=0.7)
+                  if effect == "room" else Delay(delay_seconds=0.08, feedback=0.12, mix=0.12))
+        board = Pedalboard([plugin])
+        group = np.ascontiguousarray(samples[:, start:start + 2].T)
+        if len(samples) < 64:
+            group = np.pad(group, ((0, 0), (0, 64 - len(samples))))
+        output[:, start:start + 2] = board(group, sr, reset=True).T[:len(samples)]
+    # Blend the effect back to dry at EOF instead of ending on a cut-off echo.
+    fade = min(len(output), max(1, round(sr * 0.05)))
+    weight = np.linspace(1, 0, fade + 1, dtype=np.float32)[1:, None]
+    output[-fade:] = output[-fade:] * weight + samples[-fade:] * (1 - weight)
+    return output
+
+
 def augment_audio(
     samples: np.ndarray,
     sample_rate: int,
@@ -194,8 +259,13 @@ def augment_audio(
     max_formant_semitones: float = 0.3,
     control_seconds: float = 2.0,
     preserve_duration: bool = True,
+    pitch_semitones: float = 0.0,
+    tempo_factor: float = 1.0,
+    noise_snr_db: float | None = None,
+    noise_profile: str = "hiss",
+    space_effect: str = "none",
 ) -> AugmentationResult:
-    """Augment speech, music, percussion, or mixed audio without intentional pitch shift.
+    """Augment speech, music, percussion, or mixed audio with coherent transforms.
 
     Args:
         samples: Floating-point audio in [-1, 1], shaped (frames,) or
@@ -210,6 +280,14 @@ def augment_audio(
         control_seconds: Spacing of slow, cosine-interpolated random controls.
         preserve_duration: Keep the original number of frames; internal event
             positions still change. False permits a small duration change.
+        pitch_semitones: Whole-mix transposition; every pitched part moves by the
+            same interval, preserving their musical relationships (default 0).
+        tempo_factor: Nominal playback speed, independent of pitch (default 1).
+            Non-unity values require preserve_duration=False.
+        noise_snr_db: Optional band-limited noise at this signal-to-noise ratio.
+            Higher is quieter; 50 dB is conservative, not guaranteed inaudible.
+        noise_profile: hiss, synthetic vinyl crackle, synthetic ambient room tone, or off.
+        space_effect: none, small-room reverb, or a short slapback echo.
 
     Returns:
         Float32 audio with the original channel layout, plus timing metadata.
@@ -235,39 +313,64 @@ def augment_audio(
         ("max_speed_change", max_speed_change, 0, 0.05),
         ("max_formant_semitones", max_formant_semitones, 0, 1),
         ("control_seconds", control_seconds, 0.25, 60),
+        ("pitch_semitones", pitch_semitones, -3, 3),
+        ("tempo_factor", tempo_factor, 0.9, 1.1),
     ):
         if not np.isfinite(value) or not lower <= value <= upper:
             raise ValueError(f"{name} must be finite and in [{lower}, {upper}]")
     if not isinstance(preserve_duration, (bool, np.bool_)):
         raise TypeError("preserve_duration must be boolean")
+    if preserve_duration and tempo_factor != 1:
+        raise ValueError("Changing tempo requires preserve_duration=False")
+    if noise_snr_db is not None and (not np.isfinite(noise_snr_db) or not 20 <= noise_snr_db <= 80):
+        raise ValueError("noise_snr_db must be None or finite and in [20, 80]")
+    if noise_profile not in ("hiss", "vinyl", "ambient", "off"):
+        raise ValueError("noise_profile must be hiss, vinyl, ambient, or off")
+    if noise_profile == "off":
+        noise_snr_db = None
+    if space_effect not in ("none", "room", "echo"):
+        raise ValueError("space_effect must be none, room, or echo")
 
     n, sr = len(x), int(sample_rate)
     if n > np.iinfo(np.uint32).max:
         raise ValueError("Input exceeds the native C API's 32-bit frame limit")
     rng = np.random.default_rng(seed)
     src, dst = _time_map(n, sr, rng, max_speed_change, control_seconds, preserve_duration)
+    dst = np.rint(dst / tempo_factor).astype(np.int64)
     if dst[-1] > np.iinfo(np.uint32).max:
         raise ValueError("Output exceeds the native C API's 32-bit frame limit")
     formants = float(rng.uniform(-max_formant_semitones, max_formant_semitones))
     # A disabled augmentation is an exact float32 copy, not a DSP round trip.
-    if max_speed_change == 0 and max_formant_semitones == 0:
+    needs_dsp = any((max_speed_change, max_formant_semitones, pitch_semitones, tempo_factor != 1))
+    if not needs_dsp and noise_snr_db is None and space_effect == "none":
         return AugmentationResult(x.astype(np.float32, copy=True), sr, src, dst, 0, 1)
 
     # Rubber Band uses planar channel-first float32 arrays; callers use SoundFile
     # convention. All channels pass through the same engine and time map.
-    planar = np.ascontiguousarray(x.reshape(n, channels).T, dtype=np.float32)
-    y = _render(planar, sr, src, dst, formants)
+    if needs_dsp:
+        planar = np.ascontiguousarray(x.reshape(n, channels).T, dtype=np.float32)
+        y = _render(planar, sr, src, dst, formants, pitch_semitones)
+    else:
+        y = x.reshape(n, channels).astype(np.float32, copy=True)
     if not np.isfinite(y).all():
         raise RuntimeError("Rubber Band returned non-finite audio samples")
     if len(y) != dst[-1]:
         raise RuntimeError(f"Unexpected output length: got {len(y)} frames, expected {dst[-1]}")
+    if space_effect != "none":
+        y = _apply_space(y, sr, space_effect)
+    if noise_snr_db is not None:
+        y = _mix_noise(y, sr, rng, noise_snr_db, noise_profile)
+    if not np.isfinite(y).all():
+        raise RuntimeError("Audio effects returned non-finite samples")
     # Only attenuate overshoots; do not normalize silence or quiet recordings up.
     peak = float(np.max(np.abs(y)))
     gain = 0.999 / peak if peak > 0.999 else 1.0
     y *= gain
     if x.ndim == 1:
         y = y[:, 0]
-    return AugmentationResult(y, sr, src, dst, formants, gain, 0.25)
+    return AugmentationResult(y, sr, src, dst, formants, gain, 0.25 if needs_dsp else 0,
+                              pitch_semitones, tempo_factor, noise_snr_db,
+                              noise_profile if noise_snr_db is not None else None, space_effect)
 
 
 def augment_file(input_path: str | Path, output_path: str | Path, **kwargs) -> dict:
@@ -303,11 +406,18 @@ def main() -> None:
                         help="Maximum absolute formant shift in semitones (default 0.3)")
     parser.add_argument("--control-seconds", type=float, default=2.0)
     parser.add_argument("--allow-duration-change", action="store_true")
+    parser.add_argument("--pitch", type=float, default=0, help="Whole-mix transposition in semitones")
+    parser.add_argument("--tempo", type=float, default=1, help="Nominal tempo factor; 1.04 is 4 percent faster")
+    parser.add_argument("--noise-snr", type=float, default=None, help="Optional noise SNR in dB; higher is quieter")
+    parser.add_argument("--noise-profile", choices=["hiss", "vinyl", "ambient", "off"], default="hiss")
+    parser.add_argument("--space-effect", choices=["none", "room", "echo"], default="none")
     args = parser.parse_args()
     metadata = augment_file(args.input, args.output, seed=args.seed,
                             max_speed_change=args.speed, max_formant_semitones=args.formant,
                             control_seconds=args.control_seconds,
-                            preserve_duration=not args.allow_duration_change)
+                            preserve_duration=not args.allow_duration_change,
+                            pitch_semitones=args.pitch, tempo_factor=args.tempo, noise_snr_db=args.noise_snr,
+                            noise_profile=args.noise_profile, space_effect=args.space_effect)
     print(f"Wrote {args.output}; formant shift: {metadata['formant_semitones']:+.3f} semitones")
 
 

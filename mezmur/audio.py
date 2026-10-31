@@ -42,11 +42,16 @@ def cover_art(path, target):
     return target if Path(target).is_file() and Path(target).stat().st_size > 2000 else None
 
 
-def prepare_source(source, work, *, augment=False, seed=None):
+def prepare_source(source, work, *, augment=False, seed=None, style="subtle",
+                   noise_profile="hiss", space_effect="none"):
     """Optionally augment a decoded, peak-safe source for both rendering and ASR."""
     source = Path(source)
     if not augment:
         return source, {"enabled": False}
+    if style not in ("subtle", "musical"):
+        raise ValueError("Unknown augmentation style")
+    if noise_profile not in ("off", "hiss", "vinyl", "ambient") or space_effect not in ("none", "room", "echo"):
+        raise ValueError("Unknown noise profile or space effect")
     from .augmentation import augment_file
 
     work = Path(work)
@@ -57,8 +62,17 @@ def prepare_source(source, work, *, augment=False, seed=None):
     decoded = folder / "input.wav"
     before = master(source, decoded)
     target = folder / "augmented.wav"
-    metadata = augment_file(decoded, target, seed=seed)
-    metadata.update({"enabled": True, "loudness_before_augmentation": before})
+    settings = {"seed": seed, "noise_snr_db": None if noise_profile == "off" else 50.0,
+                "noise_profile": noise_profile,
+                "space_effect": space_effect}
+    if style == "musical":
+        rng = np.random.default_rng(seed)
+        settings.update({"pitch_semitones": float(rng.choice([-2, 2])),
+                         "tempo_factor": float(rng.choice([0.96, 1.04])),
+                         "max_speed_change": 0.01, "max_formant_semitones": 0.15,
+                         "preserve_duration": False})
+    metadata = augment_file(decoded, target, **settings)
+    metadata.update({"enabled": True, "style": style, "loudness_before_augmentation": before})
     return target, metadata
 
 
