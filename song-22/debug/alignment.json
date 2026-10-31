@@ -1,0 +1,1680 @@
+{
+  "timeline": "original",
+  "lyrics_source": "library",
+  "url": "lyrics library: tekeste-getnet/eyesus.txt",
+  "lines": [
+    "ትዝ እያለኝ ትውስ እያለኝ",
+    "በፃድቃን ጉባኤ ላመልክህ ቆምኩኝ",
+    "ትዝ እያለኝ ትውስ እያለኝ",
+    "ከሚወዱህ ጋራ ላመልክህ ቆምኩኝ",
+    "እየሱስ",
+    "ቸርነትህ የገባው ባንተ የተጎበኘ",
+    "ሊወድስህ ሊያከብርህ ባደባባይ ተገኘ",
+    "አልቀረም ቅጭ እንዳለ ከችግሩ ተጣብቆ",
+    "ያከብርሃል በሰው ፊት ማቁን ከላዩ አውልቆ",
+    "እየሱስ",
+    "ወዳንተ የማጣውን ሁሉን ደህና አድርገህ",
+    "አቀርቅሮ እንዳይመለስ ቀንበሩን ትሰብራለህ",
+    "መፍትሄ ከታጣለት ተስፋ ከሌለው ጉዳይ",
+    "እፎይ አለ ስንቱ ሰው ሆነህለት ገላጋይ",
+    "እውራን አይተዋል እየሱስ",
+    "ለምፃሞችም ነፁ እየሱስ",
+    "አንካሶች ዘለዋል እየሱስ",
+    "ሙታንም ተነሱ እየሱስ",
+    "ክንድህ አልደከመ እየሱስ",
+    "ሁሌም ትሰራለህ እየሱስ",
+    "ትላንትናም ዛሬም እየሱስ",
+    "ዘላለም ህያው ነህ እየሱስ",
+    "ስላንተማ ይወራ ስላንተማ ይነገር",
+    "ለጭኩኑ ባትደርስ እንዴትስ ይሆን ነበር",
+    "ውሎ አደረ በሰላም ምህረትህን ተማምኖ",
+    "ክብር ያየ በቤትህ አይጠግብም አመስግኖ",
+    "እየሱስ",
+    "ትዝ እያለኝ ትውስ እያለኝ",
+    "በፃድቃን ጉባኤ ላመልክህ ቆምኩኝ",
+    "ትዝ እያለኝ ትውስ እያለኝ",
+    "ከሚወዱህ ጋራ ላመልክህ ቆምኩኝ"
+  ],
+  "repeats": [
+    1,
+    1,
+    1,
+    1,
+    8,
+    1,
+    1,
+    1,
+    1,
+    8,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    8,
+    1,
+    1,
+    1,
+    1
+  ],
+  "first_pass": [
+    {
+      "start": 24.36,
+      "end": 28.88,
+      "line": 0,
+      "words": [
+        0,
+        3
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.085
+    },
+    {
+      "start": 29.88,
+      "end": 34.96,
+      "line": 1,
+      "words": [
+        4,
+        7
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.093
+    },
+    {
+      "start": 35.92,
+      "end": 40.48,
+      "line": 2,
+      "words": [
+        8,
+        11
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.102
+    },
+    {
+      "start": 41.52,
+      "end": 46.52,
+      "line": 3,
+      "words": [
+        12,
+        15
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.212
+    },
+    {
+      "start": 47.32,
+      "end": 49.8,
+      "line": 4,
+      "words": [
+        16,
+        16
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.0
+    },
+    {
+      "start": 50.24,
+      "end": 52.76,
+      "line": 4,
+      "words": [
+        16,
+        16
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.051
+    },
+    {
+      "start": 53.16,
+      "end": 55.64,
+      "line": 4,
+      "words": [
+        16,
+        16
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.067
+    },
+    {
+      "start": 56.04,
+      "end": 58.32,
+      "line": 4,
+      "words": [
+        16,
+        16
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.089
+    },
+    {
+      "start": 58.92,
+      "end": 61.48,
+      "line": 4,
+      "words": [
+        16,
+        16
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.012
+    },
+    {
+      "start": 61.84,
+      "end": 64.36,
+      "line": 4,
+      "words": [
+        16,
+        16
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.037
+    },
+    {
+      "start": 64.76,
+      "end": 67.28,
+      "line": 4,
+      "words": [
+        16,
+        16
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.076
+    },
+    {
+      "start": 67.68,
+      "end": 69.96,
+      "line": 4,
+      "words": [
+        16,
+        16
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.109
+    },
+    {
+      "start": 83.84,
+      "end": 87.16,
+      "line": 5,
+      "words": [
+        18,
+        20
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.0
+    },
+    {
+      "start": 88.4,
+      "end": 93.0,
+      "line": 6,
+      "words": [
+        21,
+        24
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.233
+    },
+    {
+      "start": 94.2,
+      "end": 98.92,
+      "line": 7,
+      "words": [
+        25,
+        29
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.149
+    },
+    {
+      "start": 100.04,
+      "end": 104.68,
+      "line": 8,
+      "words": [
+        30,
+        35
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.149
+    },
+    {
+      "start": 105.4,
+      "end": 107.88,
+      "line": 9,
+      "words": [
+        36,
+        36
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.084
+    },
+    {
+      "start": 108.32,
+      "end": 110.8,
+      "line": 9,
+      "words": [
+        36,
+        36
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.061
+    },
+    {
+      "start": 111.2,
+      "end": 113.72,
+      "line": 9,
+      "words": [
+        36,
+        36
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.08
+    },
+    {
+      "start": 114.12,
+      "end": 116.4,
+      "line": 9,
+      "words": [
+        36,
+        36
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.107
+    },
+    {
+      "start": 117.0,
+      "end": 119.52,
+      "line": 9,
+      "words": [
+        36,
+        36
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.041
+    },
+    {
+      "start": 119.92,
+      "end": 121.12,
+      "line": 9,
+      "words": [
+        36,
+        36
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.004
+    },
+    {
+      "start": 122.84,
+      "end": 125.32,
+      "line": 9,
+      "words": [
+        36,
+        36
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.017
+    },
+    {
+      "start": 125.72,
+      "end": 128.0,
+      "line": 9,
+      "words": [
+        36,
+        36
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.015
+    },
+    {
+      "start": 140.68,
+      "end": 145.88,
+      "line": 10,
+      "words": [
+        37,
+        41
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.188
+    },
+    {
+      "start": 146.52,
+      "end": 151.32,
+      "line": 11,
+      "words": [
+        42,
+        45
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.143
+    },
+    {
+      "start": 152.24,
+      "end": 157.52,
+      "line": 12,
+      "words": [
+        46,
+        50
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.073
+    },
+    {
+      "start": 158.08,
+      "end": 164.44,
+      "line": 13,
+      "words": [
+        51,
+        56
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.116
+    },
+    {
+      "start": 167.72,
+      "end": 169.88,
+      "line": 15,
+      "words": [
+        60,
+        62
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.347
+    },
+    {
+      "start": 172.0,
+      "end": 176.2,
+      "line": 16,
+      "words": [
+        63,
+        65
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.051
+    },
+    {
+      "start": 176.48,
+      "end": 178.6,
+      "line": 17,
+      "words": [
+        66,
+        68
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.298
+    },
+    {
+      "start": 180.84,
+      "end": 184.92,
+      "line": 18,
+      "words": [
+        69,
+        71
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.106
+    },
+    {
+      "start": 185.16,
+      "end": 187.28,
+      "line": 19,
+      "words": [
+        72,
+        74
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.326
+    },
+    {
+      "start": 189.56,
+      "end": 193.56,
+      "line": 20,
+      "words": [
+        75,
+        77
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.174
+    },
+    {
+      "start": 193.92,
+      "end": 195.0,
+      "line": 21,
+      "words": [
+        78,
+        79
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.227
+    },
+    {
+      "start": 198.76,
+      "end": 204.16,
+      "line": 22,
+      "words": [
+        82,
+        85
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.121
+    },
+    {
+      "start": 204.6,
+      "end": 209.85,
+      "line": 23,
+      "words": [
+        86,
+        90
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.053
+    },
+    {
+      "start": 210.37,
+      "end": 215.09,
+      "line": 24,
+      "words": [
+        91,
+        95
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.1
+    },
+    {
+      "start": 216.21,
+      "end": 220.77,
+      "line": 25,
+      "words": [
+        96,
+        100
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.2
+    },
+    {
+      "start": 221.53,
+      "end": 224.01,
+      "line": 26,
+      "words": [
+        101,
+        101
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.068
+    },
+    {
+      "start": 224.45,
+      "end": 226.97,
+      "line": 26,
+      "words": [
+        101,
+        101
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.105
+    },
+    {
+      "start": 227.33,
+      "end": 229.85,
+      "line": 26,
+      "words": [
+        101,
+        101
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.08
+    },
+    {
+      "start": 230.25,
+      "end": 232.53,
+      "line": 26,
+      "words": [
+        101,
+        101
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.088
+    },
+    {
+      "start": 233.13,
+      "end": 235.65,
+      "line": 26,
+      "words": [
+        101,
+        101
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.056
+    },
+    {
+      "start": 236.05,
+      "end": 238.57,
+      "line": 26,
+      "words": [
+        101,
+        101
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.07
+    },
+    {
+      "start": 238.97,
+      "end": 241.49,
+      "line": 26,
+      "words": [
+        101,
+        101
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.072
+    },
+    {
+      "start": 241.85,
+      "end": 244.13,
+      "line": 26,
+      "words": [
+        101,
+        101
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.092
+    },
+    {
+      "start": 244.97,
+      "end": 249.53,
+      "line": 27,
+      "words": [
+        102,
+        105
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.1
+    },
+    {
+      "start": 250.53,
+      "end": 255.61,
+      "line": 28,
+      "words": [
+        106,
+        109
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.127
+    },
+    {
+      "start": 256.57,
+      "end": 261.13,
+      "line": 29,
+      "words": [
+        110,
+        113
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.05
+    },
+    {
+      "start": 262.17,
+      "end": 267.17,
+      "line": 30,
+      "words": [
+        114,
+        117
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.182
+    }
+  ],
+  "gap_decisions": [
+    {
+      "start": 0.0,
+      "end": 24.36,
+      "after_line": null,
+      "before_line": 0,
+      "action": "examined"
+    },
+    {
+      "start": 0.0,
+      "end": 24.36,
+      "action": "nothing missing (instrumental)"
+    },
+    {
+      "start": 69.96,
+      "end": 88.4,
+      "after_line": 4,
+      "before_line": 6,
+      "action": "examined"
+    },
+    {
+      "start": 128.0,
+      "end": 140.68,
+      "after_line": 9,
+      "before_line": 10,
+      "action": "examined"
+    },
+    {
+      "start": 128.0,
+      "end": 140.68,
+      "action": "nothing missing (instrumental)"
+    },
+    {
+      "start": 164.44,
+      "end": 167.72,
+      "after_line": 13,
+      "before_line": 15,
+      "action": "examined"
+    },
+    {
+      "start": 164.44,
+      "end": 167.72,
+      "lines": [
+        14
+      ],
+      "singing": 3.0,
+      "needed": 4.56,
+      "ratio": 0.66,
+      "heard": 0.0,
+      "action": "filled"
+    },
+    {
+      "start": 193.56,
+      "end": 198.76,
+      "after_line": 20,
+      "before_line": 22,
+      "action": "examined"
+    },
+    {
+      "start": 267.17,
+      "end": 281.97,
+      "after_line": 30,
+      "before_line": null,
+      "action": "examined"
+    },
+    {
+      "start": 267.17,
+      "end": 281.97,
+      "action": "nothing missing (instrumental)"
+    }
+  ],
+  "final": [
+    {
+      "line": 0,
+      "word": "ትዝ",
+      "start": 24.36,
+      "end": 25.08,
+      "heard": true
+    },
+    {
+      "line": 0,
+      "word": "እያለኝ",
+      "start": 25.32,
+      "end": 26.0,
+      "heard": true
+    },
+    {
+      "line": 0,
+      "word": "ትውስ",
+      "start": 26.96,
+      "end": 27.92,
+      "heard": true
+    },
+    {
+      "line": 0,
+      "word": "እያለኝ",
+      "start": 28.08,
+      "end": 28.88,
+      "heard": true
+    },
+    {
+      "line": 1,
+      "word": "በፃድቃን",
+      "start": 29.88,
+      "end": 31.16,
+      "heard": true
+    },
+    {
+      "line": 1,
+      "word": "ጉባኤ",
+      "start": 31.32,
+      "end": 31.8,
+      "heard": true
+    },
+    {
+      "line": 1,
+      "word": "ላመልክህ",
+      "start": 32.76,
+      "end": 34.08,
+      "heard": true
+    },
+    {
+      "line": 1,
+      "word": "ቆምኩኝ",
+      "start": 34.28,
+      "end": 34.96,
+      "heard": true
+    },
+    {
+      "line": 2,
+      "word": "ትዝ",
+      "start": 35.92,
+      "end": 36.64,
+      "heard": true
+    },
+    {
+      "line": 2,
+      "word": "እያለኝ",
+      "start": 36.92,
+      "end": 37.56,
+      "heard": true
+    },
+    {
+      "line": 2,
+      "word": "ትውስ",
+      "start": 38.56,
+      "end": 39.56,
+      "heard": true
+    },
+    {
+      "line": 2,
+      "word": "እያለኝ",
+      "start": 39.68,
+      "end": 40.48,
+      "heard": true
+    },
+    {
+      "line": 3,
+      "word": "ከሚወዱህ",
+      "start": 41.52,
+      "end": 43.08,
+      "heard": true
+    },
+    {
+      "line": 3,
+      "word": "ጋራ",
+      "start": 43.2,
+      "end": 43.4,
+      "heard": true
+    },
+    {
+      "line": 3,
+      "word": "ላመልክህ",
+      "start": 44.4,
+      "end": 45.6,
+      "heard": true
+    },
+    {
+      "line": 3,
+      "word": "ቆምኩኝ",
+      "start": 45.88,
+      "end": 46.52,
+      "heard": true
+    },
+    {
+      "line": 4,
+      "word": "እየሱስ",
+      "start": 47.32,
+      "end": 49.8,
+      "heard": true
+    },
+    {
+      "line": 4,
+      "word": "እየሱስ",
+      "start": 50.24,
+      "end": 52.76,
+      "heard": true
+    },
+    {
+      "line": 4,
+      "word": "እየሱስ",
+      "start": 53.16,
+      "end": 55.64,
+      "heard": true
+    },
+    {
+      "line": 4,
+      "word": "እየሱስ",
+      "start": 56.04,
+      "end": 58.32,
+      "heard": true
+    },
+    {
+      "line": 4,
+      "word": "እየሱስ",
+      "start": 58.92,
+      "end": 61.48,
+      "heard": true
+    },
+    {
+      "line": 4,
+      "word": "እየሱስ",
+      "start": 61.84,
+      "end": 64.36,
+      "heard": true
+    },
+    {
+      "line": 4,
+      "word": "እየሱስ",
+      "start": 64.76,
+      "end": 67.28,
+      "heard": true
+    },
+    {
+      "line": 4,
+      "word": "እየሱስ",
+      "start": 67.68,
+      "end": 69.96,
+      "heard": true
+    },
+    {
+      "line": 5,
+      "word": "ቸርነትህ",
+      "start": 82.09,
+      "end": 83.7,
+      "heard": false
+    },
+    {
+      "line": 5,
+      "word": "የገባው",
+      "start": 83.84,
+      "end": 84.6,
+      "heard": true
+    },
+    {
+      "line": 5,
+      "word": "ባንተ",
+      "start": 85.56,
+      "end": 85.84,
+      "heard": true
+    },
+    {
+      "line": 5,
+      "word": "የተጎበኘ",
+      "start": 86.12,
+      "end": 87.16,
+      "heard": true
+    },
+    {
+      "line": 6,
+      "word": "ሊወድስህ",
+      "start": 88.4,
+      "end": 89.52,
+      "heard": true
+    },
+    {
+      "line": 6,
+      "word": "ሊያከብርህ",
+      "start": 89.6,
+      "end": 90.8,
+      "heard": true
+    },
+    {
+      "line": 6,
+      "word": "ባደባባይ",
+      "start": 91.32,
+      "end": 92.44,
+      "heard": true
+    },
+    {
+      "line": 6,
+      "word": "ተገኘ",
+      "start": 92.56,
+      "end": 93.0,
+      "heard": true
+    },
+    {
+      "line": 7,
+      "word": "አልቀረም",
+      "start": 94.2,
+      "end": 94.84,
+      "heard": true
+    },
+    {
+      "line": 7,
+      "word": "ቅጭ",
+      "start": 94.96,
+      "end": 95.48,
+      "heard": true
+    },
+    {
+      "line": 7,
+      "word": "እንዳለ",
+      "start": 95.52,
+      "end": 95.92,
+      "heard": true
+    },
+    {
+      "line": 7,
+      "word": "ከችግሩ",
+      "start": 97.2,
+      "end": 97.84,
+      "heard": true
+    },
+    {
+      "line": 7,
+      "word": "ተጣብቆ",
+      "start": 98.36,
+      "end": 98.92,
+      "heard": true
+    },
+    {
+      "line": 8,
+      "word": "ያከብርሃል",
+      "start": 100.04,
+      "end": 101.08,
+      "heard": true
+    },
+    {
+      "line": 8,
+      "word": "በሰው",
+      "start": 101.28,
+      "end": 101.6,
+      "heard": true
+    },
+    {
+      "line": 8,
+      "word": "ፊት",
+      "start": 101.8,
+      "end": 102.48,
+      "heard": true
+    },
+    {
+      "line": 8,
+      "word": "ማቁን",
+      "start": 102.92,
+      "end": 103.32,
+      "heard": true
+    },
+    {
+      "line": 8,
+      "word": "ከላዩ",
+      "start": 103.44,
+      "end": 104.04,
+      "heard": true
+    },
+    {
+      "line": 8,
+      "word": "አውልቆ",
+      "start": 104.16,
+      "end": 104.68,
+      "heard": true
+    },
+    {
+      "line": 9,
+      "word": "እየሱስ",
+      "start": 105.4,
+      "end": 107.88,
+      "heard": true
+    },
+    {
+      "line": 9,
+      "word": "እየሱስ",
+      "start": 108.32,
+      "end": 110.8,
+      "heard": true
+    },
+    {
+      "line": 9,
+      "word": "እየሱስ",
+      "start": 111.2,
+      "end": 113.72,
+      "heard": true
+    },
+    {
+      "line": 9,
+      "word": "እየሱስ",
+      "start": 114.12,
+      "end": 116.4,
+      "heard": true
+    },
+    {
+      "line": 9,
+      "word": "እየሱስ",
+      "start": 117.0,
+      "end": 119.52,
+      "heard": true
+    },
+    {
+      "line": 9,
+      "word": "እየሱስ",
+      "start": 119.92,
+      "end": 121.12,
+      "heard": true
+    },
+    {
+      "line": 9,
+      "word": "እየሱስ",
+      "start": 122.84,
+      "end": 125.32,
+      "heard": true
+    },
+    {
+      "line": 9,
+      "word": "እየሱስ",
+      "start": 125.72,
+      "end": 128.0,
+      "heard": true
+    },
+    {
+      "line": 10,
+      "word": "ወዳንተ",
+      "start": 140.68,
+      "end": 141.24,
+      "heard": true
+    },
+    {
+      "line": 10,
+      "word": "የማጣውን",
+      "start": 141.4,
+      "end": 142.96,
+      "heard": true
+    },
+    {
+      "line": 10,
+      "word": "ሁሉን",
+      "start": 143.56,
+      "end": 143.96,
+      "heard": true
+    },
+    {
+      "line": 10,
+      "word": "ደህና",
+      "start": 144.12,
+      "end": 144.28,
+      "heard": true
+    },
+    {
+      "line": 10,
+      "word": "አድርገህ",
+      "start": 144.8,
+      "end": 145.88,
+      "heard": true
+    },
+    {
+      "line": 11,
+      "word": "አቀርቅሮ",
+      "start": 146.52,
+      "end": 147.2,
+      "heard": true
+    },
+    {
+      "line": 11,
+      "word": "እንዳይመለስ",
+      "start": 147.52,
+      "end": 148.96,
+      "heard": true
+    },
+    {
+      "line": 11,
+      "word": "ቀንበሩን",
+      "start": 149.4,
+      "end": 150.0,
+      "heard": true
+    },
+    {
+      "line": 11,
+      "word": "ትሰብራለህ",
+      "start": 150.12,
+      "end": 151.32,
+      "heard": true
+    },
+    {
+      "line": 12,
+      "word": "መፍትሄ",
+      "start": 152.24,
+      "end": 152.72,
+      "heard": true
+    },
+    {
+      "line": 12,
+      "word": "ከታጣለት",
+      "start": 153.0,
+      "end": 154.8,
+      "heard": true
+    },
+    {
+      "line": 12,
+      "word": "ተስፋ",
+      "start": 155.2,
+      "end": 155.4,
+      "heard": true
+    },
+    {
+      "line": 12,
+      "word": "ከሌለው",
+      "start": 155.76,
+      "end": 156.52,
+      "heard": true
+    },
+    {
+      "line": 12,
+      "word": "ጉዳይ",
+      "start": 156.64,
+      "end": 157.52,
+      "heard": true
+    },
+    {
+      "line": 13,
+      "word": "እፎይ",
+      "start": 158.08,
+      "end": 158.52,
+      "heard": true
+    },
+    {
+      "line": 13,
+      "word": "አለ",
+      "start": 158.56,
+      "end": 158.8,
+      "heard": true
+    },
+    {
+      "line": 13,
+      "word": "ስንቱ",
+      "start": 159.32,
+      "end": 159.6,
+      "heard": true
+    },
+    {
+      "line": 13,
+      "word": "ሰው",
+      "start": 159.88,
+      "end": 160.52,
+      "heard": true
+    },
+    {
+      "line": 13,
+      "word": "ሆነህለት",
+      "start": 161.04,
+      "end": 161.92,
+      "heard": true
+    },
+    {
+      "line": 13,
+      "word": "ገላጋይ",
+      "start": 162.24,
+      "end": 164.44,
+      "heard": true
+    },
+    {
+      "line": 14,
+      "word": "እውራን",
+      "start": 164.52,
+      "end": 164.68,
+      "heard": false
+    },
+    {
+      "line": 14,
+      "word": "አይተዋል",
+      "start": 164.68,
+      "end": 165.04,
+      "heard": false
+    },
+    {
+      "line": 14,
+      "word": "እየሱስ",
+      "start": 165.08,
+      "end": 166.88,
+      "heard": false
+    },
+    {
+      "line": 15,
+      "word": "ለምፃሞችም",
+      "start": 167.72,
+      "end": 168.64,
+      "heard": true
+    },
+    {
+      "line": 15,
+      "word": "ነፁ",
+      "start": 168.76,
+      "end": 169.0,
+      "heard": true
+    },
+    {
+      "line": 15,
+      "word": "እየሱስ",
+      "start": 169.36,
+      "end": 169.88,
+      "heard": true
+    },
+    {
+      "line": 16,
+      "word": "አንካሶች",
+      "start": 172.0,
+      "end": 172.76,
+      "heard": true
+    },
+    {
+      "line": 16,
+      "word": "ዘለዋል",
+      "start": 172.88,
+      "end": 173.6,
+      "heard": true
+    },
+    {
+      "line": 16,
+      "word": "እየሱስ",
+      "start": 173.72,
+      "end": 176.2,
+      "heard": true
+    },
+    {
+      "line": 17,
+      "word": "ሙታንም",
+      "start": 176.48,
+      "end": 177.08,
+      "heard": true
+    },
+    {
+      "line": 17,
+      "word": "ተነሱ",
+      "start": 177.24,
+      "end": 177.68,
+      "heard": true
+    },
+    {
+      "line": 17,
+      "word": "እየሱስ",
+      "start": 178.04,
+      "end": 178.6,
+      "heard": true
+    },
+    {
+      "line": 18,
+      "word": "ክንድህ",
+      "start": 180.84,
+      "end": 181.28,
+      "heard": true
+    },
+    {
+      "line": 18,
+      "word": "አልደከመ",
+      "start": 181.36,
+      "end": 182.24,
+      "heard": true
+    },
+    {
+      "line": 18,
+      "word": "እየሱስ",
+      "start": 182.4,
+      "end": 184.92,
+      "heard": true
+    },
+    {
+      "line": 19,
+      "word": "ሁሌም",
+      "start": 185.16,
+      "end": 185.6,
+      "heard": true
+    },
+    {
+      "line": 19,
+      "word": "ትሰራለህ",
+      "start": 185.72,
+      "end": 186.48,
+      "heard": true
+    },
+    {
+      "line": 19,
+      "word": "እየሱስ",
+      "start": 186.76,
+      "end": 187.28,
+      "heard": true
+    },
+    {
+      "line": 20,
+      "word": "ትላንትናም",
+      "start": 189.56,
+      "end": 190.64,
+      "heard": true
+    },
+    {
+      "line": 20,
+      "word": "ዛሬም",
+      "start": 190.72,
+      "end": 191.04,
+      "heard": true
+    },
+    {
+      "line": 20,
+      "word": "እየሱስ",
+      "start": 191.12,
+      "end": 193.56,
+      "heard": true
+    },
+    {
+      "line": 21,
+      "word": "ዘላለም",
+      "start": 193.92,
+      "end": 194.6,
+      "heard": true
+    },
+    {
+      "line": 21,
+      "word": "ህያው",
+      "start": 194.64,
+      "end": 195.0,
+      "heard": true
+    },
+    {
+      "line": 21,
+      "word": "ነህ",
+      "start": 195.04,
+      "end": 195.65,
+      "heard": false
+    },
+    {
+      "line": 21,
+      "word": "እየሱስ",
+      "start": 195.75,
+      "end": 197.0,
+      "heard": false
+    },
+    {
+      "line": 22,
+      "word": "ስላንተማ",
+      "start": 198.76,
+      "end": 199.44,
+      "heard": true
+    },
+    {
+      "line": 22,
+      "word": "ይወራ",
+      "start": 199.92,
+      "end": 200.44,
+      "heard": true
+    },
+    {
+      "line": 22,
+      "word": "ስላንተማ",
+      "start": 201.68,
+      "end": 202.32,
+      "heard": true
+    },
+    {
+      "line": 22,
+      "word": "ይነገር",
+      "start": 202.84,
+      "end": 204.16,
+      "heard": true
+    },
+    {
+      "line": 23,
+      "word": "ለጭኩኑ",
+      "start": 204.6,
+      "end": 205.28,
+      "heard": true
+    },
+    {
+      "line": 23,
+      "word": "ባትደርስ",
+      "start": 205.76,
+      "end": 207.05,
+      "heard": true
+    },
+    {
+      "line": 23,
+      "word": "እንዴትስ",
+      "start": 207.45,
+      "end": 208.13,
+      "heard": true
+    },
+    {
+      "line": 23,
+      "word": "ይሆን",
+      "start": 208.25,
+      "end": 208.77,
+      "heard": true
+    },
+    {
+      "line": 23,
+      "word": "ነበር",
+      "start": 208.93,
+      "end": 209.85,
+      "heard": true
+    },
+    {
+      "line": 24,
+      "word": "ውሎ",
+      "start": 210.37,
+      "end": 210.53,
+      "heard": true
+    },
+    {
+      "line": 24,
+      "word": "አደረ",
+      "start": 210.69,
+      "end": 211.05,
+      "heard": true
+    },
+    {
+      "line": 24,
+      "word": "በሰላም",
+      "start": 211.57,
+      "end": 212.89,
+      "heard": true
+    },
+    {
+      "line": 24,
+      "word": "ምህረትህን",
+      "start": 213.33,
+      "end": 214.21,
+      "heard": true
+    },
+    {
+      "line": 24,
+      "word": "ተማምኖ",
+      "start": 214.49,
+      "end": 215.09,
+      "heard": true
+    },
+    {
+      "line": 25,
+      "word": "ክብር",
+      "start": 216.21,
+      "end": 216.61,
+      "heard": true
+    },
+    {
+      "line": 25,
+      "word": "ያየ",
+      "start": 216.73,
+      "end": 217.05,
+      "heard": true
+    },
+    {
+      "line": 25,
+      "word": "በቤትህ",
+      "start": 217.37,
+      "end": 218.73,
+      "heard": true
+    },
+    {
+      "line": 25,
+      "word": "አይጠግብም",
+      "start": 219.09,
+      "end": 219.77,
+      "heard": true
+    },
+    {
+      "line": 25,
+      "word": "አመስግኖ",
+      "start": 220.21,
+      "end": 220.77,
+      "heard": true
+    },
+    {
+      "line": 26,
+      "word": "እየሱስ",
+      "start": 221.53,
+      "end": 224.01,
+      "heard": true
+    },
+    {
+      "line": 26,
+      "word": "እየሱስ",
+      "start": 224.45,
+      "end": 226.97,
+      "heard": true
+    },
+    {
+      "line": 26,
+      "word": "እየሱስ",
+      "start": 227.33,
+      "end": 229.85,
+      "heard": true
+    },
+    {
+      "line": 26,
+      "word": "እየሱስ",
+      "start": 230.25,
+      "end": 232.53,
+      "heard": true
+    },
+    {
+      "line": 26,
+      "word": "እየሱስ",
+      "start": 233.13,
+      "end": 235.65,
+      "heard": true
+    },
+    {
+      "line": 26,
+      "word": "እየሱስ",
+      "start": 236.05,
+      "end": 238.57,
+      "heard": true
+    },
+    {
+      "line": 26,
+      "word": "እየሱስ",
+      "start": 238.97,
+      "end": 241.49,
+      "heard": true
+    },
+    {
+      "line": 26,
+      "word": "እየሱስ",
+      "start": 241.85,
+      "end": 244.13,
+      "heard": true
+    },
+    {
+      "line": 27,
+      "word": "ትዝ",
+      "start": 244.97,
+      "end": 245.73,
+      "heard": true
+    },
+    {
+      "line": 27,
+      "word": "እያለኝ",
+      "start": 245.93,
+      "end": 246.65,
+      "heard": true
+    },
+    {
+      "line": 27,
+      "word": "ትውስ",
+      "start": 247.61,
+      "end": 248.61,
+      "heard": true
+    },
+    {
+      "line": 27,
+      "word": "እያለኝ",
+      "start": 248.73,
+      "end": 249.53,
+      "heard": true
+    },
+    {
+      "line": 28,
+      "word": "በፃድቃን",
+      "start": 250.53,
+      "end": 251.81,
+      "heard": true
+    },
+    {
+      "line": 28,
+      "word": "ጉባኤ",
+      "start": 252.01,
+      "end": 252.45,
+      "heard": true
+    },
+    {
+      "line": 28,
+      "word": "ላመልክህ",
+      "start": 253.41,
+      "end": 254.73,
+      "heard": true
+    },
+    {
+      "line": 28,
+      "word": "ቆምኩኝ",
+      "start": 254.97,
+      "end": 255.61,
+      "heard": true
+    },
+    {
+      "line": 29,
+      "word": "ትዝ",
+      "start": 256.57,
+      "end": 257.29,
+      "heard": true
+    },
+    {
+      "line": 29,
+      "word": "እያለኝ",
+      "start": 257.45,
+      "end": 258.21,
+      "heard": true
+    },
+    {
+      "line": 29,
+      "word": "ትውስ",
+      "start": 259.21,
+      "end": 260.21,
+      "heard": true
+    },
+    {
+      "line": 29,
+      "word": "እያለኝ",
+      "start": 260.37,
+      "end": 261.13,
+      "heard": true
+    },
+    {
+      "line": 30,
+      "word": "ከሚወዱህ",
+      "start": 262.17,
+      "end": 263.85,
+      "heard": true
+    },
+    {
+      "line": 30,
+      "word": "ጋራ",
+      "start": 263.89,
+      "end": 264.05,
+      "heard": true
+    },
+    {
+      "line": 30,
+      "word": "ላመልክህ",
+      "start": 265.05,
+      "end": 266.41,
+      "heard": true
+    },
+    {
+      "line": 30,
+      "word": "ቆምኩኝ",
+      "start": 266.57,
+      "end": 267.17,
+      "heard": true
+    }
+  ]
+}

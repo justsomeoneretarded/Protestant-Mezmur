@@ -1,0 +1,75 @@
+[22] Eyesus — Tekeste Getnet
+2026-10-31 16:52:56.461 - INFO - cli - Separator version 0.48.0 beginning with input path(s): .runtime/work/sep_input.wav
+[0;93m2026-10-31 16:52:57.432257843 [W:onnxruntime:Default, device_discovery.cc:95 GetPciBusId] Skipping pci_bus_id for PCI path at "/sys/devices/LNXSYSTM:00/LNXSYBUS:00/ACPI0004:00/MSFT1000:00/5620e0c7-8062-4dce-aeb7-520c7ef76171" because filename "5620e0c7-8062-4dce-aeb7-520c7ef76171" did not match expected pattern of [0-9a-f]+:[0-9a-f]+:[0-9a-f]+[.][0-9a-f]+[m
+2026-10-31 16:52:57.934 - INFO - separator - Separator version 0.48.0 instantiating with output_dir: .runtime/work/stems0, output_format: WAV
+2026-10-31 16:52:57.934 - INFO - separator - Using model directory from model_file_dir parameter: /home/runner/work/Protestant-Mezmur/Protestant-Mezmur/.model-cache/separator
+2026-10-31 16:52:57.934 - INFO - separator - Operating System: Linux #17~24.04.1-Ubuntu SMP PREEMPT Thu Sep 24 18:46:57 UTC 2026
+2026-10-31 16:52:57.934 - INFO - separator - System: Linux Node: runnervm48cm3 Release: 7.0.0-1017-azure Machine: x86_64 Proc: x86_64
+2026-10-31 16:52:57.934 - INFO - separator - Python Version: 3.11.17
+2026-10-31 16:52:57.934 - INFO - separator - PyTorch Version: 2.15.0+cu132
+2026-10-31 16:52:57.943 - INFO - separator - FFmpeg installed: ffmpeg version N-128227-g4811625b5f-20261031 Copyright (c) 2000-2026 the FFmpeg developers
+2026-10-31 16:52:57.944 - INFO - separator - ONNX Runtime CPU package installed with version: 1.31.1
+2026-10-31 16:52:57.944 - INFO - separator - No hardware acceleration could be configured, running in CPU mode
+2026-10-31 16:52:57.944 - INFO - separator - Loading model UVR-MDX-NET-Voc_FT.onnx...
+2026-10-31 16:52:58.088 - INFO - separator - Hash of model file /home/runner/work/Protestant-Mezmur/Protestant-Mezmur/.model-cache/separator/UVR-MDX-NET-Voc_FT.onnx is 77d07b2667ddf05b9e3175941b4454a0
+2026-10-31 16:52:59.280 - INFO - separator - Load model duration: 00:00:01
+2026-10-31 16:52:59.280 - INFO - separator - Processing file: .runtime/work/sep_input.wav
+2026-10-31 16:52:59.280 - INFO - separator - Starting separation process for audio_file_path: .runtime/work/sep_input.wav
+2026-10-31 16:52:59.281 - INFO - common_separator - Input audio subtype: PCM_16
+2026-10-31 16:52:59.281 - INFO - common_separator - Detected input bit depth: 16-bit
+  0%|          | 0/65 [00:00<?, ?it/s]  2%|▏         | 1/65 [00:02<02:19,  2.17s/it]  3%|▎         | 2/65 [00:04<02:17,  2.18s/it]  5%|▍         | 3/65 [00:06<02:07,  2.05s/it]  6%|▌         | 4/65 [00:08<02:01,  1.99s/it]  8%|▊         | 5/65 [00:10<01:59,  1.99s/it]  9%|▉         | 6/65 [00:12<01:55,  1.96s/it] 11%|█         | 7/65 [00:13<01:52,  1.94s/it] 12%|█▏        | 8/65 [00:15<01:49,  1.93s/it] 14%|█▍        | 9/65 [00:17<01:47,  1.92s/it] 15%|█▌        | 10/65 [00:19<01:44,  1.90s/it] 17%|█▋        | 11/65 [00:21<01:42,  1.91s/it] 18%|█▊        | 12/65 [00:23<01:39,  1.89s/it] 20%|██        | 13/65 [00:25<01:38,  1.89s/it] 22%|██▏       | 14/65 [00:27<01:35,  1.87s/it] 23%|██▎       | 15/65 [00:28<01:33,  1.87s/it] 25%|██▍       | 16/65 [00:30<01:34,  1.92s/it] 26%|██▌       | 17/65 [00:32<01:31,  1.91s/it] 28%|██▊       | 18/65 [00:34<01:30,  1.93s/it] 29%|██▉       | 19/65 [00:36<01:28,  1.91s/it] 31%|███       | 20/65 [00:38<01:26,  1.92s/it] 32%|███▏      | 21/65 [00:40<01:23,  1.90s/it] 34%|███▍      | 22/65 [00:42<01:21,  1.88s/it] 35%|███▌      | 23/65 [00:44<01:18,  1.87s/it] 37%|███▋      | 24/65 [00:46<01:16,  1.87s/it] 38%|███▊      | 25/65 [00:47<01:14,  1.85s/it] 40%|████      | 26/65 [00:49<01:11,  1.84s/it] 42%|████▏     | 27/65 [00:51<01:10,  1.86s/it] 43%|████▎     | 28/65 [00:53<01:09,  1.88s/it] 45%|████▍     | 29/65 [00:55<01:08,  1.90s/it] 46%|████▌     | 30/65 [00:57<01:06,  1.91s/it] 48%|████▊     | 31/65 [00:59<01:04,  1.90s/it] 49%|████▉     | 32/65 [01:01<01:02,  1.88s/it] 51%|█████     | 33/65 [01:02<00:59,  1.87s/it] 52%|█████▏    | 34/65 [01:04<00:58,  1.90s/it] 54%|█████▍    | 35/65 [01:06<00:57,  1.91s/it] 55%|█████▌    | 36/65 [01:08<00:55,  1.91s/it] 57%|█████▋    | 37/65 [01:10<00:52,  1.89s/it] 58%|█████▊    | 38/65 [01:12<00:50,  1.89s/it] 60%|██████    | 39/65 [01:14<00:49,  1.89s/it] 62%|██████▏   | 40/65 [01:16<00:46,  1.88s/it] 63%|██████▎   | 41/65 [01:18<00:44,  1.87s/it] 65%|██████▍   | 42/65 [01:20<00:43,  1.89s/it] 66%|██████▌   | 43/65 [01:21<00:41,  1.89s/it] 68%|██████▊   | 44/65 [01:23<00:39,  1.87s/it] 69%|██████▉   | 45/65 [01:25<00:37,  1.88s/it] 71%|███████   | 46/65 [01:27<00:36,  1.90s/it] 72%|███████▏  | 47/65 [01:29<00:34,  1.91s/it] 74%|███████▍  | 48/65 [01:31<00:32,  1.90s/it] 75%|███████▌  | 49/65 [01:33<00:30,  1.89s/it] 77%|███████▋  | 50/65 [01:35<00:28,  1.89s/it] 78%|███████▊  | 51/65 [01:36<00:26,  1.87s/it] 80%|████████  | 52/65 [01:38<00:24,  1.85s/it] 82%|████████▏ | 53/65 [01:40<00:22,  1.84s/it] 83%|████████▎ | 54/65 [01:42<00:20,  1.83s/it] 85%|████████▍ | 55/65 [01:44<00:18,  1.85s/it] 86%|████████▌ | 56/65 [01:46<00:16,  1.85s/it] 88%|████████▊ | 57/65 [01:47<00:14,  1.85s/it] 89%|████████▉ | 58/65 [01:49<00:13,  1.87s/it] 91%|█████████ | 59/65 [01:51<00:11,  1.89s/it] 92%|█████████▏| 60/65 [01:53<00:09,  1.91s/it] 94%|█████████▍| 61/65 [01:55<00:07,  1.91s/it] 95%|█████████▌| 62/65 [01:57<00:05,  1.91s/it] 97%|█████████▋| 63/65 [01:59<00:03,  1.89s/it] 98%|█████████▊| 64/65 [02:01<00:01,  1.88s/it]100%|██████████| 65/65 [02:03<00:00,  1.87s/it]100%|██████████| 65/65 [02:03<00:00,  1.89s/it]
+  0%|          | 0/50 [00:00<?, ?it/s]  4%|▍         | 2/50 [00:00<00:03, 13.08it/s]  8%|▊         | 4/50 [00:00<00:03, 12.60it/s] 12%|█▏        | 6/50 [00:00<00:03, 12.87it/s] 16%|█▌        | 8/50 [00:00<00:03, 12.90it/s] 20%|██        | 10/50 [00:00<00:03, 12.84it/s] 24%|██▍       | 12/50 [00:00<00:02, 13.00it/s] 28%|██▊       | 14/50 [00:01<00:02, 13.05it/s] 32%|███▏      | 16/50 [00:01<00:02, 13.22it/s] 36%|███▌      | 18/50 [00:01<00:02, 13.22it/s] 40%|████      | 20/50 [00:01<00:02, 13.18it/s] 44%|████▍     | 22/50 [00:01<00:02, 13.30it/s] 48%|████▊     | 24/50 [00:01<00:01, 13.21it/s] 52%|█████▏    | 26/50 [00:01<00:01, 13.29it/s] 56%|█████▌    | 28/50 [00:02<00:01, 13.29it/s] 60%|██████    | 30/50 [00:02<00:01, 13.30it/s] 64%|██████▍   | 32/50 [00:02<00:01, 13.13it/s] 68%|██████▊   | 34/50 [00:02<00:01, 13.00it/s] 72%|███████▏  | 36/50 [00:02<00:01, 13.17it/s] 76%|███████▌  | 38/50 [00:02<00:00, 13.25it/s] 80%|████████  | 40/50 [00:03<00:00, 13.35it/s] 84%|████████▍ | 42/50 [00:03<00:00, 13.25it/s] 88%|████████▊ | 44/50 [00:03<00:00, 13.13it/s] 92%|█████████▏| 46/50 [00:03<00:00, 13.15it/s] 96%|█████████▌| 48/50 [00:03<00:00, 13.05it/s]100%|██████████| 50/50 [00:03<00:00, 13.26it/s]100%|██████████| 50/50 [00:03<00:00, 13.15it/s]
+2026-10-31 16:55:16.632 - INFO - mdx_separator - Saving Vocals stem to sep_input_(Vocals)_UVR-MDX-NET-Voc_FT.wav...
+2026-10-31 16:55:16.632 - INFO - common_separator - Audio duration is 0.08 hours (281.97 seconds).
+2026-10-31 16:55:16.632 - INFO - common_separator - Using pydub for writing.
+2026-10-31 16:55:16.646 - INFO - common_separator - Writing output with 16-bit depth
+2026-10-31 16:55:17.379 - INFO - common_separator - Clearing input audio file paths, sources and stems...
+2026-10-31 16:55:17.381 - INFO - separator - Separation duration: 00:02:18
+2026-10-31 16:55:17.381 - INFO - cli - Separation complete! Output file(s): sep_input_(Vocals)_UVR-MDX-NET-Voc_FT.wav
+  vocals isolated with UVR-MDX-NET-Voc_FT.onnx
+  acoustic model 24/282s
+  acoustic model 120/282s
+  acoustic model 216/282s
+web: https://lrclib.net/api/search failed: RetryError
+web: https://lrclib.net/api/search failed: RetryError
+web: https://lrclib.net/api/search failed: RetryError
+web: https://lrclib.net/api/search failed: RetryError
+  lrclib: 0 candidate(s)
+web: https://legeta316.com/search failed: SSLError
+web: https://legeta316.com/search failed: SSLError
+  lyrics sites: 0 candidate(s)
+  youtube: 15 video(s) checked, 0 description(s), 0 caption track(s)
+search[auto] '"ልክ ቆምኩኝ" ግጥም': DDGSException
+search[auto] '"እየሱ እየሶ" ግጥም': DDGSException
+search[auto] '"ትው ያለኝ" ግጥም': DDGSException
+  phrase search ['ልክ ቆምኩኝ', 'እየሱ እየሶ', 'ትው ያለኝ']: telegram 0, web 4 candidate(s)
+search[auto] 'እየሱስ ፓስተር ተከስተ ጌትነት ግጥም': DDGSException
+search[auto] '"እየሱስ" መዝሙር ግጥም': DDGSException
+  web: 54 result(s), 4 lyric candidate(s)
+::notice title=Song 22::Lyrics search — searched title: እየሱስ / Eyesus; searched singer: ፓስተር ተከስተ ጌትነት / Tekeste Getnet; telegram (channel posts, lyrics channels, joined chats): 12; library: 1; lrclib: 0; lyrics sites (mezmuroch, legeta316, mezmurdebter): 0; youtube videos checked: 15; youtube descriptions: 0; youtube captions: 0; phrases searched: ልክ ቆምኩኝ, እየሱ እየሶ, ትው ያለኝ; telegram by phrase: 0; web by phrase: 4; web search (title): 4; distinct candidates checked: 15
+  candidate library: sim=0.453 share=0.86 gain=0.23 lines=30/31 complete=0.96 -> OK
+  candidate web:ameco.et (phrase): sim=0.187 share=0.00 gain=0.00 lines=0/61 complete=0.00 -> no
+  candidate telegram:channel @MezmurLyrics0: sim=0.086 share=0.07 gain=0.00 lines=1/42 complete=0.00 -> no
+  candidate web:ewnetone.com (phrase): sim=0.072 share=0.00 gain=0.00 lines=0/13 complete=0.00 -> no
+  candidate telegram:channel @MezmurLyrics0: sim=0.065 share=0.06 gain=0.01 lines=2/32 complete=0.00 -> no
+::notice title=Song 22::Lyrics verified (86% of the singing matched) — source: library lyrics library: tekeste-getnet/eyesus.txt
+  render-only audio augmentation: style=musical, seed=22, pitch=+2.0 semitones, tempo=0.960, noise=hiss, space=room; 139 verified word timings mapped from the original recording
+  photo embedded cover art: score 4.46 same=True faces=1
+  photo youtube video 3tBwAPupfJA: score 0.60 same=False faces=1
+  photo youtube channel Pastor Tekeste Getenet #1: score 0.60 same=False faces=1
+  photo youtube channel Pastor Tekeste Getnet official channel: score 0.36 same=False faces=1
+  photo web image youtube.com: score 0.30 same=False faces=1
+  photo web image youtube.com: score 0.30 same=False faces=1
+  background: Girasoli nella campagna di Reggello (Firenze) 3.jpg — PROPOLI87 (CC BY-SA 4.0)
+  look: bright daytime picture, lyric style 'bold-white'
+  render 0/294s
+  render 30/294s
+  render 60/294s
+  render 90/294s
+  render 120/294s
+  render 150/294s
+  render 180/294s
+  render 210/294s
+  render 240/294s
+  render 270/294s
+[22] done in 677s · lyrics-aligned · {'master': 9.3, 'separation': 142.5, 'acoustic_model': 200.4, 'lyrics_search': 91.8, 'alignment': 7.6, 'augmentation': 43.4, 'photos': 4.8, 'footage': 1.6, 'render': 176.0}
