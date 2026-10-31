@@ -68,7 +68,8 @@ Choose `augmentation_style`:
   +2 or -2 semitones and its nominal tempo changes by about 4%. Every instrument
   and voice receives the same transposition; no random notes or replacement beats
   are introduced. Smaller local timing/formant variations and 50 dB SNR noise are
-  also applied. Duration changes, and lyrics are aligned afterward.
+  also applied. Lyrics are verified on the original recording before any effects;
+  their timestamps are then mapped to the changed duration.
 - **subtle**: keeps the original key and duration, applies the original small
   timing/formant variations, and adds the same quiet 50 dB SNR noise.
 
@@ -82,7 +83,8 @@ signal), **echo** (80 ms slapback with low feedback), or **none**. Pedalboard's
 existing reverb/delay engines process stereo pairs. Effects keep the planned
 frame count and blend back to dry at the end; they do not append a long tail.
 Reverb and echo deliberately add decay into pauses, while the noise gate keeps
-otherwise silent samples clean. Original timing is never reused after processing.
+otherwise silent samples clean. Captions use the saved time map, including local
+speed variations even when the total duration stays unchanged.
 
 These are changes to the original recording, not promises of improved sound or
 anonymity. The standalone API retains its conservative defaults: no intentional
@@ -92,13 +94,26 @@ The runner installs the native library automatically when enabled. Each song
 uses its Telegram message ID as the seed, keeping replays reproducible. The
 source is decoded and pre-mastered through FFmpeg so Telegram's M4A, Ogg, MP3,
 and other supported formats are accepted without decoder clipping. The
-augmented track then goes through final mastering for the video; vocal
-separation and word alignment use that same augmented source, not old timings.
-Original source tags and cover art remain available for the upload kit.
+original recording is used for vocal separation, recognition, lyric search,
+verification, word alignment and synced-lyrics cross-checks. The same strict
+acceptance thresholds apply whether augmentation is enabled or not. Songs that
+fail verification are skipped before effects run.
+
+Only verified songs are augmented and finally mastered for the video. Every
+word's start and end are remapped through the saved input/output frame anchors;
+SRT, ASS karaoke, on-screen lyrics and upload-kit chapters use the remapped
+timeline. This is not just a global tempo adjustment: subtle mode can move words
+within a track without changing its total length. Anchors describe planned DSP
+timing, so small transient/word-boundary deviations still need listening checks.
+Inconsistent or missing maps fail explicitly instead of silently mis-syncing
+lyrics. Original source tags and cover art remain available for the upload kit.
 
 Enabled runs include `augmentation.json` in the song's artifact with the seed,
-parameters and planned timing anchors. This is diagnostic metadata, not a file
-to upload to YouTube. Local rendering supports the same option:
+parameters, planned timing anchors and original/render duration provenance.
+`quality.json` and debug acoustic/alignment diagnostics refer to the original
+recording; `words.json`, subtitles and the video refer to the final audio.
+This is diagnostic metadata, not a file to upload to YouTube. Local rendering
+supports the same option:
 
 ```bash
 python -m mezmur.song --input inputs/song-21 --output output/song-21 --augment-audio

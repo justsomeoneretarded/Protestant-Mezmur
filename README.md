@@ -30,8 +30,9 @@ For every song you get:
    Titles are searched in Amharic and in several Latin spellings, and a few clearly sung phrases from
    the song (usually its chorus) are searched too, so lyrics are found even when the title is wrong.
    Each song's run page lists what every source returned.
-2. **Listen to the song.** The vocals are isolated (UVR-MDX-NET) and the Amharic acoustic model
-   Ethio-ASR turns them into per-moment character probabilities.
+2. **Listen to the original song.** Before any optional audio effects, the vocals are isolated
+   (UVR-MDX-NET) and the Amharic acoustic model Ethio-ASR turns them into per-moment character
+   probabilities. Key, tempo, noise and reverb effects cannot weaken this lyric-matching step.
 3. **Check every candidate against the audio.** Found lyrics are aligned to the whole song. A
    candidate is used only if it explains most of the singing; lyrics for a different song with
    the same title fail this check.
@@ -110,7 +111,8 @@ YouTube channel and the web, checking that the faces agree.
 - `message_ids`: remake specific songs (e.g. `2,3`) without moving your place in the channel.
 - `separator`: vocal-isolation model (default is the fast, accurate UVR-MDX-NET).
 - `augment_audio`: optional audio augmentation, **off by default**.
-  When enabled, lyrics are timed against the augmented audio and the artifact
+  When enabled, lyrics are verified and aligned on the original audio first, then
+  retimed through the augmentation's saved time map for the final video. The artifact
   includes `augmentation.json`. It does not guarantee privacy or change reuse
   rights. [Standalone Python API, setup and details](docs/audio-augmentation.md).
 - `augmentation_style`: **musical** shifts the whole mix's key by two semitones

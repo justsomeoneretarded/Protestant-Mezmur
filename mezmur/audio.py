@@ -44,7 +44,7 @@ def cover_art(path, target):
 
 def prepare_source(source, work, *, augment=False, seed=None, style="subtle",
                    noise_profile="hiss", space_effect="none"):
-    """Optionally augment a decoded, peak-safe source for both rendering and ASR."""
+    """Optionally augment a decoded, peak-safe source for final rendering only."""
     source = Path(source)
     if not augment:
         return source, {"enabled": False}
@@ -74,6 +74,44 @@ def prepare_source(source, work, *, augment=False, seed=None, style="subtle",
     metadata = augment_file(decoded, target, **settings)
     metadata.update({"enabled": True, "style": style, "loudness_before_augmentation": before})
     return target, metadata
+
+
+def retime_words(words, metadata, source_duration, output_duration):
+    """Copy clean-audio word timings onto the processed track's planned time map.
+
+    Anchors describe the DSP's intended timing, not sample-accurate alignment.
+    Reject inconsistent maps rather than silently putting lyrics on the wrong clock.
+    """
+    try:
+        sr = float(metadata["sample_rate"])
+        source_duration, output_duration = float(source_duration), float(output_duration)
+        src = np.asarray(metadata["input_frames"], dtype=np.float64)
+        dst = np.asarray(metadata["output_frames"], dtype=np.float64)
+    except (KeyError, TypeError, ValueError) as error:
+        raise ValueError("Augmentation timing metadata is missing or invalid") from error
+    if not np.isfinite([sr, source_duration, output_duration]).all() or min(sr, source_duration, output_duration) <= 0:
+        raise ValueError("Timing sample rate and durations must be finite and positive")
+    if (src.ndim != 1 or dst.ndim != 1 or len(src) < 2 or src.shape != dst.shape
+            or not np.isfinite(src).all() or not np.isfinite(dst).all()
+            or src[0] != 0 or dst[0] != 0 or np.any(np.diff(src) <= 0) or np.any(np.diff(dst) <= 0)):
+        raise ValueError("Augmentation timing anchors must be finite, increasing and start at zero")
+    src, dst = src / sr, dst / sr
+    # Decoding/resampling may round the last sample, but must not hide a wrong or truncated track.
+    tolerance = max(0.02, 2 / sr)
+    if abs(src[-1] - source_duration) > tolerance or abs(dst[-1] - output_duration) > tolerance:
+        raise ValueError("Augmentation timing map does not match the source and rendered durations")
+    result = []
+    for word in words:
+        start, end = float(word["start"]), float(word["end"])
+        if not np.isfinite([start, end]).all() or start < 0 or start >= source_duration or end <= start:
+            raise ValueError("Word timings must be finite, ordered and within the original recording")
+        # Smoothing can extend the last word slightly beyond the recording; cap it at the song end.
+        mapped = np.interp([start, min(end, source_duration)], src, dst)
+        mapped = np.clip(mapped, 0, output_duration)
+        if mapped[1] <= mapped[0]:
+            raise ValueError("Augmentation timing map collapsed a word's duration")
+        result.append({**word, "start": float(mapped[0]), "end": float(mapped[1])})
+    return result
 
 
 def master(source, target, lufs=-14.0, true_peak=-1.0):
