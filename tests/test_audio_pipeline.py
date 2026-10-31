@@ -44,43 +44,32 @@ def test_prepare_source_supports_m4a_and_does_not_overwrite_original(tmp_path):
     np.testing.assert_array_equal(sf.read(replay)[0], sf.read(prepared)[0])
 
 
-def test_song_aligns_to_the_same_processed_source_it_masters(monkeypatch, tmp_path):
+def test_song_separates_original_before_augmentation(monkeypatch, tmp_path):
     inp, out, work = [tmp_path / name for name in ("input", "output", "work")]
     inp.mkdir()
     original = inp / "audio.wav"
     original.touch()
     (inp / "info.json").write_text(json.dumps({"message_id": 21}))
-    augmented = tmp_path / "augmented.wav"
-    metadata = {"enabled": True, "formant_semitones": 0.1, "seed": 21}
     calls = []
 
-    def tags(path):
-        assert path == original
-        return {}
-
-    def prepare(source, folder, *, augment, seed, style, noise_profile, space_effect):
-        assert source == original and folder == work
-        assert augment is True and seed == 21
-        assert style == "musical"
-        assert noise_profile == "hiss" and space_effect == "room"
-        calls.append("prepare")
-        return augmented, metadata
+    def prepare(*args, **kwargs):
+        pytest.fail("Effects must not run before the original lyrics pass verification")
 
     def master(source, target):
-        assert source == augmented and target == work / "master.wav"
-        calls.append("master")
+        assert source == original and target == work / "master.wav"
+        calls.append("master-original")
         return {}
 
     class StopBeforeInference(Exception):
         pass
 
     def separate(source, folder, **kwargs):
-        assert source == augmented and folder == work
-        assert calls == ["prepare", "master"]
-        assert json.loads((out / "augmentation.json").read_text()) == metadata
+        assert source == original and folder == work
+        assert calls == ["master-original"]
+        assert not (out / "augmentation.json").exists()
         raise StopBeforeInference
 
-    monkeypatch.setattr(audio, "tags", tags)
+    monkeypatch.setattr(audio, "tags", lambda path: {})
     monkeypatch.setattr(audio, "prepare_source", prepare)
     monkeypatch.setattr(audio, "master", master)
     monkeypatch.setattr(song.names, "resolve", lambda _: {})
@@ -117,22 +106,20 @@ def test_musical_preset_applies_one_key_and_tempo_to_the_mix(tmp_path):
     assert sf.info(prepared).frames != metadata["input_frames"][-1]
 
 
-def test_lyrics_lookup_uses_original_duration_after_tempo_change(monkeypatch, tmp_path):
+def test_lyrics_lookup_uses_original_before_any_tempo_change(monkeypatch, tmp_path):
     inp = tmp_path / "input"
     inp.mkdir()
     source = inp / "audio.wav"
     source.touch()
     (inp / "info.json").write_text(json.dumps({"message_id": 23}))
-    augmented = tmp_path / "augmented.wav"
     monkeypatch.setattr(audio, "tags", lambda _: {})
-    monkeypatch.setattr(audio, "prepare_source", lambda *a, **k: (
-        augmented, {"enabled": True, "tempo_factor": 1.04, "formant_semitones": 0}))
+    monkeypatch.setattr(audio, "prepare_source", lambda *a, **k: pytest.fail("Premature audio effects"))
     monkeypatch.setattr(audio, "master", lambda *a: {})
-    monkeypatch.setattr(song, "common_duration", lambda path: 2 if path == source else 1.92)
+    monkeypatch.setattr(song, "common_duration", lambda path: 2)
     monkeypatch.setattr(song.names, "resolve", lambda _: {})
     monkeypatch.setattr(song.names, "learn_from_titles", lambda record, _: record)
     monkeypatch.setattr(song.asr, "vocabulary", lambda: {})
-    monkeypatch.setattr(song, "separate", lambda *a, **k: augmented)
+    monkeypatch.setattr(song, "separate", lambda path, *a, **k: path)
     monkeypatch.setattr(song.asr, "frame_log_probs", lambda *a, **k: (np.zeros((1, 1)), 0.02))
     monkeypatch.setattr(song.asr, "vocal_energy", lambda *a: np.ones(1))
     monkeypatch.setattr(song.asr, "greedy_words", lambda *a: [])

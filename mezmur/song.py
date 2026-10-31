@@ -4,6 +4,7 @@ input folder (written by `mezmur.fetch`):  audio.*, info.json, telegram.json, ph
 output folder: video.mp4, thumbnails, captions, lyrics, YouTube upload kit, diagnostics.
 """
 import argparse
+import gc
 import json
 import re
 import os
@@ -265,28 +266,19 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     record["album"] = file_tags.get("album", "")
     log(f"[{mid}] {record.get('title_am') or record.get('title_latin')} — {record.get('artist_am') or record.get('artist_latin')}")
 
-    # 2. Audio.
-    processing_audio, augmentation = audio.prepare_source(source_audio, work, augment=augment_audio, seed=mid,
-                                                         style=augmentation_style, noise_profile=noise_profile,
-                                                         space_effect=space_effect)
-    if augmentation["enabled"]:
-        write_json(out / "augmentation.json", augmentation)
-        log(f"  audio augmentation: style={augmentation_style}, seed={mid}, "
-            f"pitch={augmentation.get('pitch_semitones', 0):+.1f} semitones, "
-            f"tempo={augmentation.get('tempo_factor', 1):.3f}, "
-            f"noise={augmentation.get('noise_profile')}, space={augmentation.get('space_effect')}")
+    # 2. Keep recognition and catalogue matching on the unmodified recording.
+    augmentation = {"enabled": False}
     master = work / "master.wav"
-    loudness = audio.master(processing_audio, master)
+    loudness = audio.master(source_audio, master)
     duration = common_duration(master)
-    # Catalogue matching identifies the original recording, not its new tempo.
-    lookup_duration = common_duration(source_audio) if augmentation.get("tempo_factor", 1) != 1 else duration
+    original_duration = duration
     timings["master"] = round(time.time() - t, 1)
 
     # 3. Vocals + acoustic model (load the model first so a broken install fails fast).
     vocab = asr.vocabulary()
     t = time.time()
-    # Timings must be learned from the same processed track used in the video.
-    vocals = separate(processing_audio, work, model=separator, log=log)
+    # Key, tempo, noise and reverb changes must not weaken lyric verification.
+    vocals = separate(source_audio, work, model=separator, log=log)
     timings["separation"] = round(time.time() - t, 1)
     t = time.time()
     logp, frame_s = asr.frame_log_probs(vocals, log=log)
@@ -315,7 +307,7 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
         c = c.strip().lstrip("@")
         if c and c not in channels:
             channels.append(c)
-    cands, titles, overrides, search_report = gather(record, mid, tg, corrections, lookup_duration, log=log, videos=videos,
+    cands, titles, overrides, search_report = gather(record, mid, tg, corrections, original_duration, log=log, videos=videos,
                                                      draft=draft, channels=channels,
                                                      library=os.environ.get("MEZMUR_LIBRARY", "library/lyrics"))
     notice(mid, "Lyrics search — " + "; ".join(
@@ -356,6 +348,7 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
             dbg = out / "debug"
             dbg.mkdir(exist_ok=True)
             write_json(dbg / "alignment.json", {
+                "timeline": "original",
                 "lyrics_source": chosen["source"], "url": chosen["url"], "lines": [" ".join(l) for l in lines],
                 "repeats": line_repeats(stanzas),
                 "first_pass": [{k: v for k, v in d.items()} for d in align_report.get("phrase_details", [])],
@@ -420,6 +413,31 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     if lrc and lrc["median_seconds"] > 1.0:
         review["reasons"].append(f"Line timing differs from LRCLIB's synced lyrics by {lrc['median_seconds']} s (median); "
                                  "spot-check the karaoke timing.")
+
+    # Effects are render-only: verify and cross-check clean timings before changing the mix.
+    if augment_audio:
+        t = time.time()
+        # The acoustic model is no longer needed; leave RAM for the whole-song DSP buffers.
+        asr.load_model.cache_clear()
+        gc.collect()
+        processing_audio, augmentation = audio.prepare_source(
+            source_audio, work, augment=True, seed=mid, style=augmentation_style,
+            noise_profile=noise_profile, space_effect=space_effect)
+        loudness = audio.master(processing_audio, master)
+        duration = common_duration(master)
+        words = audio.retime_words(words, augmentation, original_duration, duration)
+        cues = build_cues(words, chorus_lines=chorus)
+        augmentation.update({"alignment_timeline": "original",
+                             "lyrics_timing": "mapped_from_original",
+                             "original_duration_seconds": original_duration,
+                             "render_duration_seconds": duration})
+        write_json(out / "augmentation.json", augmentation)
+        log(f"  render-only audio augmentation: style={augmentation_style}, seed={mid}, "
+            f"pitch={augmentation.get('pitch_semitones', 0):+.1f} semitones, "
+            f"tempo={augmentation.get('tempo_factor', 1):.3f}, "
+            f"noise={augmentation.get('noise_profile')}, space={augmentation.get('space_effect')}; "
+            f"{len(words)} verified word timings mapped from the original recording")
+        timings["augmentation"] = round(time.time() - t, 1)
 
     # 6. Subtitles & lyrics files.
     (out / "captions").mkdir(exist_ok=True)
@@ -508,13 +526,16 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     write_kit(out, {**meta, "album": record.get("album", "")}, stanzas, cues, duration, chorus, credits,
               lyrics_source, renderer.outro_start, review)
     write_json(out / "metadata.json", {
-        "message_id": mid, "names": record, "duration_seconds": round(duration, 2), "loudness_before": loudness,
+        "message_id": mid, "names": record, "duration_seconds": round(duration, 2),
+        "original_duration_seconds": round(original_duration, 2), "loudness_before": loudness,
         "audio_augmentation": {"enabled": augmentation["enabled"],
-                               "settings_file": "augmentation.json" if augmentation["enabled"] else None},
+                               "settings_file": "augmentation.json" if augmentation["enabled"] else None,
+                               "lyrics_timing": "mapped_from_original" if augmentation["enabled"] else "original"},
         "lyrics_mode": mode, "lyrics_source": lyrics_source, "artist_photo": photo_source,
         "backgrounds": clip_records, "tempo_bpm": round(feats.tempo, 1), "timings_seconds": timings,
         "review": review, "model": asr.MODEL})
-    write_json(out / "quality.json", {"mode": mode, "candidates": cand_reports, "lrc_check": lrc, "alignment": {
+    write_json(out / "quality.json", {"mode": mode, "alignment_timeline": "original",
+        "candidates": cand_reports, "lrc_check": lrc, "alignment": {
         k: v for k, v in align_report.items() if k != "phrase_details"}, "phrases": align_report.get("phrase_details", []),
         "draft_text": draft_text, "draft_word_count": len(draft), "review": review})
     write_json(out / "backgrounds.json", [c["id"] for c in clip_records])
