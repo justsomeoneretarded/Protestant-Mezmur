@@ -14,6 +14,7 @@ from .textdraw import Mixed, fit, shadow_text, gradient_text
 FONTS = Path(__file__).parent / "assets" / "fonts"
 GOLD = (255, 214, 140)
 WHITE = (255, 255, 255)
+WATERMARK_TEXT = "Rehoboth Mezmur"
 
 
 @dataclass
@@ -182,6 +183,7 @@ def blend(frame, rgb, alpha, x=0, y=0, opacity=1.0):
 @dataclass
 class Overlays:
     badge: tuple = None        # (rgb, alpha, x, y)
+    watermark: tuple = None
     intro: tuple = None        # (rgb, alpha)
     outro: tuple = None
     labels: dict = field(default_factory=dict)
@@ -267,6 +269,18 @@ class Renderer:
         sub = "  •  ".join(p for p in [name_lat, m.get("title_am", ""), m.get("title_latin", "")] if p)
         shadow_text(badge, (x + 2, 80), sub, fit("semibold", sub, 25, 720), GOLD + (235,), blur=4)
         o.badge = (*to_rgba_array(badge), 48, 34)
+        font = fit("semibold", WATERMARK_TEXT, max(9, round(self.H * 0.026)), self.W * 0.20, min_size=8)
+        pad = max(2, round(self.H * 0.004))
+        ascent, descent = font.metrics()
+        stamp = Image.new("RGBA", (math.ceil(font.length(WATERMARK_TEXT)) + 2 * pad,
+                                   ascent + descent + 2 * pad), (0, 0, 0, 0))
+        color = (25, 28, 32) if self.bright else WHITE
+        shadow = WHITE if self.bright else (0, 0, 0)
+        shadow_text(stamp, (pad, pad), WATERMARK_TEXT, font, color + (96,),
+                    shadow=shadow + (48,), offset=1, blur=1)
+        stamp = stamp.crop(stamp.getbbox())
+        o.watermark = (*to_rgba_array(stamp), self.W - round(self.W * 0.025) - stamp.width,
+                       round(self.H * 0.035))
         o.intro = to_rgba_array(self._title_card())
         o.outro = to_rgba_array(self._outro_card())
         return o
@@ -487,6 +501,9 @@ class Renderer:
             except Exception as error:  # noqa: BLE001 - never let decoration break a render
                 print(f"  ink transitions disabled at {t:.1f}s: {error.__class__.__name__}: {error}", flush=True)
                 self._ink = None
+        # Keep branding visible through the intro, lyrics, transitions, and outro.
+        if o.watermark is not None:
+            blend(frame, *o.watermark)
         return frame
 
 

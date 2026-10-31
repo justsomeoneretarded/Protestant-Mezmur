@@ -4,6 +4,9 @@ Turns songs from a Telegram channel into **YouTube-ready Amharic lyric videos**,
 inside GitHub Actions, with free tools only. You download the finished folder and upload it
 yourself.
 
+Every generated video automatically carries a small, faded **Rehoboth Mezmur**
+text watermark in the top-right corner, including the intro and outro.
+
 For every song you get:
 
 | File | What it is |
