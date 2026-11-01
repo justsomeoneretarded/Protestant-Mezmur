@@ -19,7 +19,9 @@ real credentials into chat, source files, repository variables or public artifac
    click Get started, and enter the app name **Rehoboth Mezmur** and your support email.
 4. Choose **External** audience, enter your contact email, accept the terms and Create.
    In Audience, add your own channel account under Test users if the app is in Testing.
-5. For unattended use, set the app's publishing status to **In production** before
+5. Complete the app name, support email, homepage URL and privacy URL in Branding.
+   [The exact values and free Pages setup are listed here](oauth-branding.md).
+   For unattended use, set the app's publishing status to **In production** before
    issuing the long-term token; complete verification if Google requires it.
    Testing-mode grants can expire quickly and need reauthorization.
 6. Under Clients, create an OAuth client of type **Web application**.

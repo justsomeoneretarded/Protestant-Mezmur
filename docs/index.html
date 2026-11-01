@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Rehoboth Mezmur is an owner-operated Amharic lyric-video generator and YouTube publishing tool.">
+  <title>Home | Rehoboth Mezmur</title>
+  <link rel="stylesheet" href="site.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <strong><a href="./">Rehoboth Mezmur</a></strong>
+    <a href="privacy.html">Privacy</a>
+    <a href="terms.html">Terms</a>
+    <a href="https://github.com/justsomeoneretarded/Protestant-Mezmur">Source</a>
+  </nav></header>
+  <main>
+    <h1>Rehoboth Mezmur</h1>
+    <p>An owner-operated tool that creates Amharic Protestant mezmur lyric videos from audio selected from Telegram, then optionally uploads them to the owner's YouTube channel.</p>
+    <p>The workflow verifies and times lyrics, produces the finished video and thumbnail, and prepares upload metadata. When YouTube uploading is enabled, new videos start private and are scheduled to become public five hours after upload and thumbnail preparation.</p>
+    <figure>
+      <img src="scenery.png" alt="Bundled scenery asset used by the lyric video renderer" loading="lazy">
+      <figcaption>A scenery asset included with the video renderer.</figcaption>
+    </figure>
+    <h2>Google account access</h2>
+    <p>This application uses YouTube API Services. Authorization is granted directly through Google. It checks the intended channel, uploads the owner's generated videos and thumbnails, and manages the publication schedule. It does not upload separate subtitle tracks.</p>
+    <p>This website does not collect Google passwords, accept credentials, or provide a public sign-in service. Publishing is operated through GitHub Actions with credentials supplied by the channel owner.</p>
+    <h2>Privacy and control</h2>
+    <p>Read the <a href="privacy.html">privacy policy</a> and <a href="terms.html">terms of use</a> before authorization. This is a public repository: generated artifacts and saved upload identifiers can be publicly accessible even when the YouTube video is private.</p>
+    <p>You can stop workflow runs, change a video's visibility in YouTube Studio, and <a href="https://myaccount.google.com/permissions">revoke Google's authorization</a>.</p>
+    <h2>Project and support</h2>
+    <p>The app is maintained by the owner of the <a href="https://github.com/justsomeoneretarded/Protestant-Mezmur">Protestant-Mezmur repository</a>. Contact the operator using the support email shown on the Google consent screen. For non-sensitive technical questions, use the <a href="https://github.com/justsomeoneretarded/Protestant-Mezmur/issues">project issue tracker</a>. Never post credentials or private account data in an issue.</p>
+  </main>
+  <footer>Rehoboth Mezmur. Independently operated; not affiliated with or endorsed by Google or YouTube.</footer>
+</body>
+</html>
