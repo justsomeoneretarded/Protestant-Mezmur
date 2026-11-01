@@ -1,54 +1,95 @@
 # Automatic YouTube Uploads
 
 The normal workflow can generate videos and upload them to your own YouTube
-channel. Uploading is opt-in and defaults to **private**. Google OAuth is required
+channel. Uploading is opt-in: videos start **private** and are scheduled to become
+**public five hours after the upload/thumbnail work succeeds**. Google OAuth is required
 for uploading; open-source transcription and rendering still run on GitHub Actions.
 An API key or service account cannot replace channel-owner authorization.
 
-## One-Time Setup
+## Browser-Only One-Time Setup
 
-1. In [Google Cloud Console](https://console.cloud.google.com/), create a project
-   and enable **YouTube Data API v3**.
-2. Configure the OAuth consent screen / Google Auth Platform audience. For initial
-   testing, add your own Google account as a test user. Follow Google's consent
-   and verification requirements for your intended use.
-3. Create an OAuth client of type **Desktop app**, then download its JSON.
-   Keep it outside Git or name it with the ignored pattern `client_secret*.json`.
-4. On your own computer, inside this repository:
+Use the Google account that manages the intended YouTube channel. Never paste
+real credentials into chat, source files, repository variables or public artifacts.
 
-   ```bash
-   python -m pip install -e '.[upload]'
-   python scripts/youtube_authorize.py --client-secrets /path/to/client_secret.json
+1. Create or select **Rehoboth Mezmur** in [Google Cloud](https://console.cloud.google.com/projectcreate).
+   If you already created it, reuse it; do not create another project.
+2. Enable [YouTube Data API v3](https://console.cloud.google.com/apis/library/youtube.googleapis.com)
+   in that project. The button becomes Manage when enabled.
+3. Open [Google Auth Platform](https://console.cloud.google.com/auth/overview),
+   click Get started, and enter the app name **Rehoboth Mezmur** and your support email.
+4. Choose **External** audience, enter your contact email, accept the terms and Create.
+   In Audience, add your own channel account under Test users if the app is in Testing.
+5. For unattended use, set the app's publishing status to **In production** before
+   issuing the long-term token; complete verification if Google requires it.
+   Testing-mode grants can expire quickly and need reauthorization.
+6. Under Clients, create an OAuth client of type **Web application**.
+   Name it **Rehoboth GitHub Uploader**. Leave JavaScript origins empty and add
+   this exact Authorized redirect URI (no trailing slash):
+
+   ```text
+   https://developers.google.com/oauthplayground
    ```
 
-5. Complete Google's browser authorization, selecting the **correct YouTube
-   channel or Brand Account**. The script uses a loopback callback bound to
-   `127.0.0.1`, requests offline access with PKCE, and writes a private
-   `.runtime/youtube-oauth.json` file. It prints your public `UC...` channel ID,
-   never the refresh token or client secret.
-6. In **Settings > Secrets and variables > Actions**, add:
-   - **Secret** `YOUTUBE_OAUTH_JSON`: the full contents of that private file.
-   - **Variable** `YOUTUBE_CHANNEL_ID`: the exact `UC...` ID printed by the script.
+7. Create the client and keep its Client ID and Client secret private.
+8. Open [Google OAuth Playground](https://developers.google.com/oauthplayground/).
+   Open its gear/settings, keep Google endpoints and Server-side flow, choose
+   **Access type: Offline**, **Force prompt: Consent Screen**, and check
+   **Use your own OAuth credentials**. Enter your own Client ID and secret.
+   Without this setting, Playground tokens are revoked after 24 hours.
+9. In Step 1, enter this scope in the custom scopes field and click Authorize APIs:
 
-   With GitHub CLI, from the repository:
-
-   ```bash
-   gh secret set YOUTUBE_OAUTH_JSON < .runtime/youtube-oauth.json
-   gh variable set YOUTUBE_CHANNEL_ID --body UC_REPLACE_WITH_YOUR_CHANNEL_ID
+   ```text
+   https://www.googleapis.com/auth/youtube.force-ssl
    ```
 
-   Never send credentials in chat, commit them, or add them to artifacts. OAuth
-   can manage this channel's videos and caption tracks. Revoke the grant in your
-   Google account if you stop using the uploader.
+10. Sign in, select the intended YouTube channel / Brand Account when prompted,
+    and approve access to your own application.
+11. In Playground Step 2, click **Exchange authorization code for tokens**.
+    Use the **Refresh token**, not the Access token. Never share a credential
+    link containing tokens or send the values in chat.
+12. In this repository's Settings > Secrets and variables > Actions > Secrets,
+    create **YOUTUBE_OAUTH_JSON** with this JSON, replacing all three values
+    directly in GitHub's secret editor:
 
+    ```json
+    {
+      "client_id": "YOUR_CLIENT_ID",
+      "client_secret": "YOUR_CLIENT_SECRET",
+      "refresh_token": "YOUR_REFRESH_TOKEN"
+    }
+    ```
+
+13. Switch YouTube to the intended channel and open
+    [Advanced settings](https://www.youtube.com/account_advanced) for its **UC... Channel ID**.
+14. In the repository's Actions **Variables** tab, create **YOUTUBE_CHANNEL_ID**
+    containing that ID, not the channel name or @handle.
+15. Optionally set **YOUTUBE_THUMBNAIL** to a, b, c or d (default a).
+    Keep your existing Telegram secrets unchanged.
+16. Run Generate Mezmur Videos on main and check Automatically upload finished
+    videos to YouTube. For an initial test, use one song.
+
+## Local Authorization Alternative
+
+The existing helper is optional, for a computer with Python. Unlike the browser
+method above, it needs a **Desktop app** OAuth client JSON:
+
+```bash
+python -m pip install -e '.[upload]'
+python scripts/youtube_authorize.py --client-secrets /path/to/client_secret.json
+gh secret set YOUTUBE_OAUTH_JSON < .runtime/youtube-oauth.json
+```
+
+It binds its browser callback to 127.0.0.1, uses PKCE/offline access and creates
+a mode-0600 .runtime/youtube-oauth.json file. Never commit it. The printed UC...
+channel ID is public; the client secret and refresh token must remain private.
 A refresh token is not guaranteed to last forever. Testing-mode grants can
 expire quickly; Google may revoke grants or require reauthorization. For unattended
 use, configure your app's publishing status appropriately and complete any required
 verification. A refresh failure requires running the authorization script again
 with a new output path and updating the secret.
 
-The scope is `youtube.force-ssl`, not upload-only, because
-[caption uploads require it](https://developers.google.com/youtube/v3/docs/captions/insert#authorization).
+The scope is `youtube.force-ssl` for channel ownership checks and managing the
+uploaded video's publication status. No subtitle API calls are made.
 No Google password is stored. API quotas, channel upload limits, account restrictions
 and copyright enforcement still apply. Only process/publish audio you have rights to use.
 
@@ -62,29 +103,43 @@ song jobs and progress finalization succeed, it calls the publisher. Existing
 video/lyrics/thumbnail artifacts remain available if a later upload fails.
 Unchecked means no YouTube authorization or upload occurs.
 
-Repository **Variables** control optional settings:
-
-| Variable | Default | Values |
-| --- | --- | --- |
-| `YOUTUBE_PRIVACY` | `private` | `private`, `unlisted`, `public` |
-| `YOUTUBE_THUMBNAIL` | `a` | `a`, `b`, `c`, `d` |
+Only **YOUTUBE_THUMBNAIL** (a, b, c or d; default a) changes the upload layout.
+The workflow always requests the five-hour public schedule. A previously configured
+YOUTUBE_PRIVACY variable no longer changes workflow behavior.
 
 Every new video initially uploads as **private**, with the recommended title,
 description, tags, Music category, Amharic metadata/audio language and the existing
-not-made-for-kids setting. One selected thumbnail and both timed caption tracks
-are uploaded. Amharic and Amharic (Latin letters) use language `am` with distinct
-track names. Existing SRT timing is retained; deprecated automatic caption
-synchronization is not requested.
+not-made-for-kids setting. It uploads one selected thumbnail and **never uploads
+subtitle/caption tracks**. Burned-in video lyrics remain unchanged; SRT files
+can remain in the download kit for your own use.
 
-Only after those steps succeed may the uploader apply `unlisted` or `public`.
-**Any review warning keeps the video private**, even if public was requested.
-Approve those videos yourself in YouTube Studio. Posting/pinning comments, end
-screens and thumbnail Test & Compare remain manual Studio tasks.
+After video/thumbnail work succeeds, the uploader checkpoints a UTC publishAt
+deadline five hours ahead and sets it on the existing private video. YouTube
+handles publication; no five-hour runner wait or GitHub cron is needed.
+[YouTube requires private status for scheduling](https://developers.google.com/youtube/v3/docs/videos#status.publishAt),
+so an unlisted video cannot simultaneously carry this native schedule.
 
-The description respects YouTube's **5000-byte UTF-8 limit**, not just 5000
-characters. When necessary, the optional romanized block is omitted and long
-lyrics are shortened while credits/hashtags are retained. Complete lyrics in
-both scripts remain separate artifact files.
+The deadline is fixed on retries. An expired, failed schedule is moved five hours
+ahead from the retry, never submitted as a past time that could publish immediately.
+If YouTube already published an accepted schedule, recovery records that outcome
+without making the video private again. Completed uploads are not changed.
+
+Only verified, aligned lyric videos are eligible. Review notes remain in the kit
+but no longer silently cancel automatic scheduling. Older unfinished reservations
+retain their saved visibility/review policy. Posting/pinning comments, end screens
+and thumbnail Test & Compare remain manual Studio tasks.
+
+Title, description and tags are sanitized and shortened **before any upload**:
+
+- Title: at most **100 characters**.
+- Description: at most **5000 UTF-8 bytes**, without splitting Amharic characters.
+- Tags: at most **500 total characters**, counting commas and implicit quotes.
+  The duplicate-protection source tag is included in this same budget.
+
+Newly generated descriptions reserve room for credits/hashtags and omit the
+optional romanized block first when necessary. Complete lyrics in both scripts
+remain separate artifact files. Upload-time corrections are listed in the receipt
+as metadata_adjusted; overlong metadata does not cause an avoidable API rejection.
 
 ## Retry Without Rendering
 
@@ -112,15 +167,15 @@ finalizes progress *before* publishing, so upload checkpoints cannot invalidate
 the generation snapshot.
 
 - A durable reservation is saved **before** any video-upload request.
-- The accepted video ID is saved before thumbnail/caption work.
+- The accepted video ID is saved before thumbnail/scheduling work.
 - Completed songs are skipped on replays, even when rendered again.
   Existing videos are never automatically replaced or deleted.
-- Partial uploads with known IDs resume thumbnail/caption work on the same video.
-  Existing named caption tracks are reconciled rather than duplicated.
+- Partial uploads with known IDs resume thumbnail/scheduling work on the same video.
+  No caption tracks are inserted, updated or deleted, including during retries.
 - Retry using the **original artifact's video bytes**, not a regenerated video
   whose timing files could mismatch the existing upload.
-- The original visibility/review policy stays in force on retries. Changing retry
-  settings cannot unexpectedly publish an unfinished private upload.
+- The reserved visibility and saved schedule stay in force on retries. Changing
+  retry inputs cannot trigger an immediate publication.
 
 Exactly-once posting across two services cannot be guaranteed if a connection
 dies just as YouTube accepts a video. If the response/checkpoint is lost, the
@@ -144,7 +199,7 @@ are not printed because they can contain sensitive URLs.
 ```bash
 python -m mezmur.upload --folder output/song-22 --dry-run
 # With YOUTUBE_OAUTH_JSON, YOUTUBE_CHANNEL_ID, GITHUB_REPOSITORY and GH_TOKEN configured:
-python -m mezmur.upload --folder output/song-22 --visibility private --thumbnail b
+python -m mezmur.upload --folder output/song-22 --visibility public --thumbnail b
 ```
 
 Dry run validates the kit without OAuth refresh, network requests, state writes
@@ -153,5 +208,6 @@ construction. Live uploads require your own channel authorization and quota.
 
 Official references: [video upload](https://developers.google.com/youtube/v3/docs/videos/insert),
 [metadata limits](https://developers.google.com/youtube/v3/docs/videos#snippet.description),
-[caption uploads](https://developers.google.com/youtube/v3/docs/captions/insert),
+[native scheduling](https://developers.google.com/youtube/v3/docs/videos#status.publishAt),
+[OAuth Playground](https://developers.google.com/oauthplayground/),
 [Desktop app OAuth](https://developers.google.com/identity/protocols/oauth2/native-app).

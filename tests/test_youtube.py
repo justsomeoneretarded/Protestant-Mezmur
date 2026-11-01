@@ -37,3 +37,33 @@ def test_description_fits_api_byte_limit_and_keeps_credits_and_hashtags():
     assert "\ufffd" not in text
     assert "Photo: Example credit" in text
     assert "#AmharicMezmur" in text and "#ProtestantMezmur" in text
+
+
+
+def test_very_long_generated_names_still_produce_nonempty_valid_titles():
+    long = {key: "worship " * 100 for key in M}
+    assert all(0 < len(title) <= 100 for title in titles(long))
+
+
+def test_title_limiter_shortens_and_cleans_invalid_characters():
+    from mezmur.youtube import limit_title
+
+    result = limit_title("  <Worship>\n" + "A" * 200)
+    assert result.startswith("Worship ") and len(result) == 100
+    assert "<" not in result and ">" not in result and "\n" not in result
+
+
+def test_description_limiter_does_not_split_multibyte_characters():
+    from mezmur.youtube import limit_description
+
+    result = limit_description("\u12a0" * 2000)
+    assert len(result.encode("utf-8")) <= 5000 and len(result) == 1666
+    assert "\ufffd" not in result
+
+
+def test_tag_limiter_counts_implicit_quotes_commas_and_duplicates():
+    from mezmur.youtube import limit_tags
+
+    result = limit_tags(["worship song", "WORSHIP SONG", "a" * 600, "gospel"] * 100)
+    cost = sum(len(t) + (2 if " " in t else 0) for t in result) + len(result) - 1
+    assert result == ["worship song", "gospel"] and cost <= 500

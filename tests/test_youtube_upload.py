@@ -1,6 +1,7 @@
 import copy
 import json
 import sys
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -45,9 +46,6 @@ def folder(tmp_path):
     (root / "video.mp4").write_bytes(b"video-payload")
     for name in upload.THUMBNAILS.values():
         (root / name).write_bytes(b"jpeg-data")
-    (root / "captions").mkdir()
-    for relative, _ in upload.CAPTIONS:
-        (root / relative).write_text("1\n00:00:01,000 --> 00:00:02,000\nLyrics\n")
     return root
 
 
@@ -55,7 +53,9 @@ def folder(tmp_path):
 def service(monkeypatch):
     monkeypatch.setattr(upload, "media", lambda path, mime, resumable=False: (path.name, mime, resumable))
     api = MagicMock()
-    state = {"video": None, "tracks": [], "insert_count": 0, "next_error": None, "caption_error": False}
+    monkeypatch.setattr(upload, "utc_now", lambda: datetime(2026, 11, 1, 12, tzinfo=timezone.utc))
+    state = {"video": None, "insert_count": 0, "next_error": None,
+             "thumbnail_error": False, "schedule_error": False, "reject_schedule": False}
 
     def execute(value):
         request = MagicMock()
@@ -80,33 +80,28 @@ def service(monkeypatch):
         return execute({"items": [state["video"]] if state["video"] else []})
 
     def update(**kwargs):
-        state["video"]["status"].update(kwargs["body"]["status"])
+        if state["schedule_error"]:
+            raise OSError("Simulated schedule transport failure")
+        if not state["reject_schedule"]:
+            state["video"]["status"].update(kwargs["body"]["status"])
         return execute(state["video"])
 
-    def insert_caption(**kwargs):
-        request = MagicMock()
-
-        def run(**kwargs_execute):
-            if state["caption_error"]:
-                raise OSError("Simulated caption transport failure")
-            caption = {"id": "caption-" + str(len(state["tracks"])), **kwargs["body"]}
-            state["tracks"].append(caption)
-            return copy.deepcopy(caption)
-        request.execute.side_effect = run
-        return request
+    def thumbnail(**kwargs):
+        if state["thumbnail_error"]:
+            raise OSError("Simulated thumbnail transport failure")
+        return execute({"items": [{}]})
 
     api.channels.return_value.list.return_value = execute({"items": [{"id": CHANNEL}]})
     api.videos.return_value.insert.side_effect = insert
     api.videos.return_value.list.side_effect = list_videos
     api.videos.return_value.update.side_effect = update
-    api.thumbnails.return_value.set.side_effect = lambda **k: execute({"items": [{}]})
-    api.captions.return_value.list.side_effect = lambda **k: execute({"items": state["tracks"]})
-    api.captions.return_value.insert.side_effect = insert_caption
+    api.thumbnails.return_value.set.side_effect = thumbnail
+    api.captions.side_effect = AssertionError("Subtitle tracks must never be uploaded")
     api.test_state = state
     return api
 
 
-def test_private_upload_sets_metadata_thumbnail_and_both_caption_tracks(folder, service):
+def test_default_upload_schedules_after_five_hours_without_subtitle_tracks(folder, service):
     store = MemoryStore()
     result = upload.upload_song(upload.load_kit(folder, "d"), service, store, CHANNEL)
     body = service.test_state["insert_args"]["body"]
@@ -116,8 +111,10 @@ def test_private_upload_sets_metadata_thumbnail_and_both_caption_tracks(folder, 
     assert service.test_state["insert_args"]["notifySubscribers"] is False
     assert service.test_state["insert_args"]["media_body"][2] is True
     assert service.thumbnails.return_value.set.call_args.kwargs["media_body"][0] == "thumbnail-d.jpg"
-    assert {c["snippet"]["name"] for c in service.test_state["tracks"]} == {"Amharic", "Amharic (Latin letters)"}
-    assert all(c["snippet"]["language"] == "am" for c in service.test_state["tracks"])
+    assert result["publish_at"] == "2026-11-01T17:00:00Z"
+    schedule = service.videos.return_value.update.call_args.kwargs["body"]["status"]
+    assert schedule["privacyStatus"] == "private" and schedule["publishAt"] == result["publish_at"]
+    service.captions.assert_not_called()
     assert result["status"] == "complete" and result["privacy"] == "private"
     assert json.loads((folder / "youtube-upload.json").read_text())["video_id"] == VIDEO
     assert store.state["channels"]["42"]["last_message_id"] == 22
@@ -125,22 +122,22 @@ def test_private_upload_sets_metadata_thumbnail_and_both_caption_tracks(folder, 
     assert result["source_marker"] in body["snippet"]["tags"]
 
 
-@pytest.mark.parametrize("visibility", ["unlisted", "public"])
-def test_visibility_changes_only_after_assets_are_uploaded(folder, service, visibility):
+@pytest.mark.parametrize("visibility", ["private", "unlisted"])
+def test_local_visibility_overrides_do_not_publish_or_upload_subtitles(folder, service, visibility):
     result = upload.upload_song(upload.load_kit(folder), service, MemoryStore(), CHANNEL, visibility)
-    assert result["privacy"] == visibility
-    assert len(service.test_state["tracks"]) == 2
+    assert result["privacy"] == visibility and "publish_at" not in result
     assert service.test_state["insert_args"]["body"]["status"]["privacyStatus"] == "private"
-    service.videos.return_value.update.assert_called_once()
+    service.captions.assert_not_called()
 
 
-def test_review_warnings_hold_public_request_private_even_if_boolean_is_stale(folder, service):
+def test_review_notes_do_not_prevent_requested_automatic_scheduling(folder, service):
     meta = json.loads((folder / "metadata.json").read_text())
     meta["review"]["reasons"].append("Check the artist")
     write_json(folder / "metadata.json", meta)
-    result = upload.upload_song(upload.load_kit(folder), service, MemoryStore(), CHANNEL, "public")
-    assert result["held_for_review"] and result["privacy"] == "private"
-    service.videos.return_value.update.assert_not_called()
+    result = upload.upload_song(upload.load_kit(folder), service, MemoryStore(), CHANNEL)
+    assert result["review_warnings"] and not result["held_for_review"]
+    assert result["publish_at"] == "2026-11-01T17:00:00Z"
+    assert result["privacy"] == "private"
 
 
 def test_completed_song_is_never_inserted_again_on_a_replay(folder, service):
@@ -149,19 +146,21 @@ def test_completed_song_is_never_inserted_again_on_a_replay(folder, service):
     second = upload.upload_song(kit, service, store, CHANNEL)
     assert second["video_id"] == first["video_id"]
     assert service.test_state["insert_count"] == 1
-    assert service.captions.return_value.insert.call_count == 2
+    service.captions.assert_not_called()
 
 
 def test_partial_failure_resumes_the_same_video_and_finishes_assets(folder, service):
     store, kit = MemoryStore(), upload.load_kit(folder)
-    service.test_state["caption_error"] = True
+    service.test_state["schedule_error"] = True
     with pytest.raises(OSError):
         upload.upload_song(kit, service, store, CHANNEL)
     pending = next(iter(store.state["youtube_uploads"].values()))
     assert pending["status"] == "uploaded" and pending["thumbnail_done"]
-    service.test_state["caption_error"] = False
+    deadline = pending["publish_at"]
+    service.test_state["schedule_error"] = False
     result = upload.upload_song(kit, service, store, CHANNEL, visibility="public")
     assert result["status"] == "complete" and result["privacy"] == "private"
+    assert result["publish_at"] == deadline
     assert service.test_state["insert_count"] == 1
     assert service.thumbnails.return_value.set.call_count == 1
 
@@ -200,7 +199,7 @@ def test_recovery_rejects_a_video_from_another_source(folder, service):
 
 def test_unfinished_upload_rejects_regenerated_video_bytes(folder, service):
     store, kit = MemoryStore(), upload.load_kit(folder)
-    service.test_state["caption_error"] = True
+    service.test_state["thumbnail_error"] = True
     with pytest.raises(OSError):
         upload.upload_song(kit, service, store, CHANNEL)
     (folder / "video.mp4").write_bytes(b"different-render")
@@ -209,16 +208,53 @@ def test_unfinished_upload_rejects_regenerated_video_bytes(folder, service):
     assert service.test_state["insert_count"] == 1
 
 
-def test_existing_caption_is_reconciled_after_an_uncertain_caption_response(folder, service):
+def test_accepted_schedule_is_reconciled_after_final_checkpoint_failure(folder, service, monkeypatch):
     store, kit = MemoryStore(), upload.load_kit(folder)
-    # The caption POST succeeds but its following GitHub checkpoint fails.
-    store.fail_write = 4
+    # Reserve, video ID, thumbnail, deadline, then fail the final completion checkpoint.
+    store.fail_write = 5
     with pytest.raises(RuntimeError):
         upload.upload_song(kit, service, store, CHANNEL)
-    assert len(service.test_state["tracks"]) == 1
+    deadline = service.test_state["video"]["status"]["publishAt"]
+    monkeypatch.setattr(upload, "utc_now", lambda: datetime(2026, 11, 1, 13, tzinfo=timezone.utc))
     result = upload.upload_song(kit, service, store, CHANNEL)
-    assert result["status"] == "complete" and len(service.test_state["tracks"]) == 2
-    assert service.captions.return_value.insert.call_count == 2
+    assert result["status"] == "complete" and result["publish_at"] == deadline
+    assert service.test_state["insert_count"] == 1
+    service.videos.return_value.update.assert_called_once()
+
+
+def test_past_failed_schedule_gets_a_fresh_five_hour_delay_not_immediate_publication(folder, service, monkeypatch):
+    store, kit = MemoryStore(), upload.load_kit(folder)
+    service.test_state["schedule_error"] = True
+    with pytest.raises(OSError):
+        upload.upload_song(kit, service, store, CHANNEL)
+    monkeypatch.setattr(upload, "utc_now", lambda: datetime(2026, 11, 2, 8, tzinfo=timezone.utc))
+    service.test_state["schedule_error"] = False
+    result = upload.upload_song(kit, service, store, CHANNEL)
+    assert result["publish_at"] == "2026-11-02T13:00:00Z" and result["privacy"] == "private"
+    assert service.test_state["insert_count"] == 1
+
+
+def test_already_published_schedule_is_not_made_private_or_uploaded_again(folder, service, monkeypatch):
+    store, kit = MemoryStore(), upload.load_kit(folder)
+    store.fail_write = 5
+    with pytest.raises(RuntimeError):
+        upload.upload_song(kit, service, store, CHANNEL)
+    monkeypatch.setattr(upload, "utc_now", lambda: datetime(2026, 11, 2, 8, tzinfo=timezone.utc))
+    service.test_state["video"]["status"]["privacyStatus"] = "public"
+    service.test_state["video"]["status"].pop("publishAt")
+    result = upload.upload_song(kit, service, store, CHANNEL)
+    assert result["privacy"] == "public" and result["status"] == "complete"
+    assert service.test_state["insert_count"] == 1
+    service.videos.return_value.update.assert_called_once()
+
+
+def test_rejected_schedule_is_not_misreported_as_success_or_published_immediately(folder, service):
+    store, kit = MemoryStore(), upload.load_kit(folder)
+    service.test_state["reject_schedule"] = True
+    with pytest.raises(upload.UploadError, match="did not accept"):
+        upload.upload_song(kit, service, store, CHANNEL)
+    assert next(iter(store.state["youtube_uploads"].values()))["status"] == "uploaded"
+    assert service.test_state["video"]["status"]["privacyStatus"] == "private"
 
 
 def test_oauth_channel_mismatch_prevents_upload(service):
@@ -233,7 +269,7 @@ def test_invalid_destination_channel_id_is_rejected(service, value):
         upload.verify_channel(service, value)
 
 
-@pytest.mark.parametrize("missing", ["youtube.json", "metadata.json", "video.mp4", "captions/am.srt", "thumbnail.jpg"])
+@pytest.mark.parametrize("missing", ["youtube.json", "metadata.json", "video.mp4", "thumbnail.jpg"])
 def test_missing_or_legacy_kits_fail_before_upload(folder, missing):
     (folder / missing).unlink()
     with pytest.raises(upload.UploadError):
@@ -250,10 +286,21 @@ def test_invalid_song_identity_or_unverified_lyrics_are_rejected(folder, change)
         upload.load_kit(folder)
 
 
-def test_metadata_limits_use_utf8_bytes_not_characters(folder):
+def test_metadata_is_limited_before_upload_instead_of_rejecting_long_text(folder, service):
+    kit = json.loads((folder / "youtube.json").read_text())
+    kit["recommended_title"] = "A" * 150
+    kit["tags"] = ["worship music " + str(i) for i in range(100)]
+    write_json(folder / "youtube.json", kit)
     (folder / "description.txt").write_text("\u12a0" * 2000, encoding="utf-8")
-    with pytest.raises(upload.UploadError, match="UTF-8"):
-        upload.load_kit(folder)
+    validated = upload.load_kit(folder)
+    assert len(validated["title"]) == 100 and len(validated["description"].encode("utf-8")) <= 5000
+    assert set(validated["metadata_adjusted"]) == {"title", "description", "tags"}
+    upload.upload_song(validated, service, MemoryStore(), CHANNEL)
+    snippet = service.test_state["insert_args"]["body"]["snippet"]
+    assert len(snippet["title"]) <= 100 and len(snippet["description"].encode("utf-8")) <= 5000
+    cost = sum(len(t) + (2 if " " in t else 0) for t in snippet["tags"]) + len(snippet["tags"]) - 1
+    assert cost <= 500
+    service.captions.assert_not_called()
 
 
 def test_marker_and_keyword_tags_always_fit_the_api_limit():
@@ -323,9 +370,12 @@ def test_publish_workflow_guards_artifacts_and_keeps_secrets_out_of_receipts():
     receipt = job["steps"][-1]
     assert receipt["with"]["path"] == "uploads/**/youtube-upload*.json"
     assert receipt["if"] == "always()"
+    step = next(s for s in job["steps"] if s.get("name", "").startswith("Upload videos and thumbnail"))
+    assert "--visibility public" in step["run"]
+    assert "YOUTUBE_PRIVACY" not in step["env"]
 
 
-def test_actual_google_sdk_accepts_upload_and_caption_request_shapes(folder):
+def test_actual_google_sdk_accepts_upload_and_native_schedule_shapes(folder):
     from googleapiclient.discovery import build
     from googleapiclient.http import MediaFileUpload
 
@@ -334,10 +384,9 @@ def test_actual_google_sdk_accepts_upload_and_caption_request_shapes(folder):
         body={"snippet": {"title": "Test", "categoryId": "10"}, "status": {"privacyStatus": "private"}},
         notifySubscribers=False, media_body=MediaFileUpload(str(folder / "video.mp4"), resumable=True))
     assert request.resumable is not None
-    caption = api.captions().insert(part="snippet",
-        body={"snippet": {"videoId": VIDEO, "language": "am", "name": "Amharic (Latin letters)", "isDraft": False}},
-        media_body=MediaFileUpload(str(folder / "captions/am-Latn.srt"), mimetype="application/octet-stream"))
-    assert "uploadType=media" in caption.uri or "uploadType=multipart" in caption.uri
+    schedule = api.videos().update(part="status", body={"id": VIDEO, "status": {
+        "privacyStatus": "private", "publishAt": "2030-01-01T12:00:00Z"}})
+    assert json.loads(schedule.body)["status"]["publishAt"] == "2030-01-01T12:00:00Z"
     api.close()
 
 
@@ -398,3 +447,33 @@ def test_oauth_refresh_uses_google_endpoint_and_suppresses_sensitive_retry_logs(
     assert constructor.call_args.kwargs["token_uri"] == "https://oauth2.googleapis.com/token"
     assert constructor.call_args.kwargs["scopes"] == upload.SCOPES
     assert logger.disabled
+
+
+
+@pytest.mark.parametrize("value", ["2030-01-01T12:00:00", "not-a-time", None])
+def test_schedule_rejects_missing_timezone_or_invalid_saved_times(value):
+    with pytest.raises(upload.UploadError, match="publication time"):
+        upload.publish_time(value)
+
+
+def test_no_subtitle_files_are_required_or_sent(folder, service):
+    assert not (folder / "captions").exists()
+    result = upload.upload_song(upload.load_kit(folder), service, MemoryStore(), CHANNEL)
+    assert result["status"] == "complete"
+    service.captions.assert_not_called()
+
+
+def test_default_schedule_is_exactly_five_hours_in_the_future(folder, service):
+    result = upload.upload_song(upload.load_kit(folder), service, MemoryStore(), CHANNEL)
+    assert upload.publish_time(result["publish_at"]) - upload.utc_now() == timedelta(hours=5)
+    assert service.test_state["video"]["status"]["privacyStatus"] == "private"
+
+
+def test_old_privacy_variable_cannot_silently_disable_workflow_scheduling(folder, service, monkeypatch):
+    monkeypatch.setenv("YOUTUBE_PRIVACY", "private")
+    monkeypatch.setenv("YOUTUBE_CHANNEL_ID", CHANNEL)
+    monkeypatch.setattr(sys, "argv", ["mezmur-upload", "--folder", str(folder)])
+    monkeypatch.setattr(upload, "youtube_client", lambda: service)
+    monkeypatch.setattr(upload, "Store", MemoryStore)
+    upload.main()
+    assert service.test_state["video"]["status"]["publishAt"] == "2026-11-01T17:00:00Z"

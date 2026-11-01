@@ -111,8 +111,10 @@ YouTube channel and the web, checking that the faces agree.
 - `message_ids`: remake specific songs (e.g. `2,3`) without moving your place in the channel.
 - `separator`: vocal-isolation model (default is the fast, accurate UVR-MDX-NET).
 - `upload_youtube`: optional automatic YouTube upload, **off by default**. Requires
-  `YOUTUBE_OAUTH_JSON` (secret) and `YOUTUBE_CHANNEL_ID` (variable). Defaults to private;
-  uploads a selected thumbnail and both caption tracks, and tracks video IDs to avoid duplicates.
+  `YOUTUBE_OAUTH_JSON` (secret) and `YOUTUBE_CHANNEL_ID` (variable). Uploads privately,
+  then schedules public publication five hours ahead after the thumbnail is ready.
+  Subtitle tracks are never uploaded. Titles, descriptions and tags are automatically
+  limited before upload; saved video IDs prevent duplicates.
   [Setup, visibility settings and retry without rendering](docs/youtube-upload.md).
 - `augment_audio`: optional audio augmentation, **off by default**.
   When enabled, lyrics are verified and aligned on the original audio first, then
@@ -133,8 +135,9 @@ unverified lyrics) is listed per song on the run's summary page. If a song fails
 artifact with its log is added instead.
 
 For upload-only retries, use **Actions > Publish Generated Videos** with the generation run ID.
-Review warnings keep uploads private even when public visibility is requested. Upload receipts
-and YouTube links appear in the run summary. Finished video artifacts remain available.
+Review warnings remain in the kit; only verified lyric videos are eligible. Upload receipts,
+YouTube links and scheduled publication times appear in the run summary. Finished video
+artifacts, including separate lyrics and optional subtitle files, remain available.
 
 ### Progress
 

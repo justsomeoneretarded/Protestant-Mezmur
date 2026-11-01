@@ -6,17 +6,18 @@ import json
 import logging
 import os
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from .common import required, write_json
 from .state import Store
+from .youtube import limit_description, limit_tags, limit_title
 
 SCOPES = ["https://www.googleapis.com/auth/youtube.force-ssl"]
 PRIVACIES = ("private", "unlisted", "public")
 THUMBNAILS = {"a": "thumbnail.jpg", "b": "thumbnail-b.jpg",
               "c": "thumbnail-c.jpg", "d": "thumbnail-d.jpg"}
-CAPTIONS = [("captions/am.srt", "Amharic"), ("captions/am-Latn.srt", "Amharic (Latin letters)")]
+PUBLISH_DELAY = timedelta(hours=5)
 
 
 class UploadError(RuntimeError):
@@ -79,18 +80,21 @@ def load_kit(folder, thumbnail="a"):
     title = kit.get("recommended_title", "")
     if not isinstance(title, str):
         raise UploadError("The recommended title must be text")
-    title = title.strip()
-    if not title or len(title) > 100 or any(c in title for c in "<>"):
-        raise UploadError("The recommended title must be 1..100 characters without < or >")
+    original_title = title
+    title = limit_title(title)
+    if not title:
+        raise UploadError("The recommended title must contain text")
     try:
         description = (folder / "description.txt").read_text(encoding="utf-8").strip()
     except OSError:
         raise UploadError("description.txt is missing") from None
-    if not description or len(description.encode("utf-8")) > 5000 or any(c in description for c in "<>"):
-        raise UploadError("Description must be nonempty, at most 5000 UTF-8 bytes, and contain no < or >")
+    original_description = description
+    description = limit_description(description)
+    if not description:
+        raise UploadError("Description must contain text")
     if not isinstance(kit.get("tags"), list) or not all(isinstance(t, str) for t in kit["tags"]):
         raise UploadError("youtube.json must contain a list of text tags")
-    for relative in ["video.mp4", THUMBNAILS[thumbnail], *[p for p, _ in CAPTIONS]]:
+    for relative in ["video.mp4", THUMBNAILS[thumbnail]]:
         path = folder / relative
         if not path.is_file() or path.stat().st_size == 0:
             raise UploadError(f"Required upload file is missing or empty: {relative}")
@@ -99,8 +103,12 @@ def load_kit(folder, thumbnail="a"):
             raise UploadError("Kit is missing its publishing review status")
     review_needed = any(r.get("needs_review") or r.get("reasons")
                         for r in (kit["review"], meta["review"]))
+    tags = limit_tags(kit["tags"])
+    adjusted = [name for name, before, after in (
+        ("title", original_title, title), ("description", original_description, description),
+        ("tags", kit["tags"], tags)) if before != after]
     return {"folder": folder, "message_id": int(mid), "telegram_channel_id": str(int(channel)),
-            "title": title, "description": description, "tags": kit["tags"],
+            "title": title, "description": description, "tags": tags, "metadata_adjusted": adjusted,
             "review_needed": bool(review_needed), "thumbnail": THUMBNAILS[thumbnail]}
 
 
@@ -113,16 +121,21 @@ def source_marker(key):
 
 
 def upload_tags(tags, marker):
-    out, cost = [marker], len(marker)
-    for value in tags:
-        tag = " ".join(re.sub(r'[<>,"\r\n]', " ", value).split())
-        if not tag or tag.casefold() in {t.casefold() for t in out}:
-            continue
-        extra = len(tag) + (2 if " " in tag else 0) + 1
-        if cost + extra <= 500:
-            out.append(tag)
-            cost += extra
-    return out
+    return limit_tags([marker, *tags])
+
+
+def utc_now():
+    return datetime.now(timezone.utc).replace(microsecond=0)
+
+
+def publish_time(value):
+    try:
+        result = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if result.tzinfo is None:
+            raise ValueError
+        return result.astimezone(timezone.utc)
+    except (AttributeError, TypeError, ValueError):
+        raise UploadError("Saved publication time is invalid; inspect the existing video's schedule") from None
 
 
 def save_record(store, key, record, previous):
@@ -146,7 +159,7 @@ def _video(service, video_id, channel, marker):
     return items[0]
 
 
-def upload_song(kit, service, store, channel, visibility="private", recover_video_id=None):
+def upload_song(kit, service, store, channel, visibility="public", recover_video_id=None):
     if visibility not in PRIVACIES:
         raise UploadError("Visibility must be private, unlisted or public")
     folder, key = kit["folder"], source_key(kit, channel)
@@ -181,8 +194,9 @@ def upload_song(kit, service, store, channel, visibility="private", recover_vide
                   "telegram_channel_id": kit["telegram_channel_id"], "youtube_channel_id": channel,
                   "video_sha256": digest, "source_marker": marker,
                   "run_id": os.environ.get("GITHUB_RUN_ID", "local"),
-                  "created_at": datetime.now(timezone.utc).isoformat(), "requested_visibility": visibility,
-                  "held_for_review": kit["review_needed"], "thumbnail_done": False, "captions": {}}
+                  "created_at": utc_now().isoformat(), "requested_visibility": visibility,
+                  "held_for_review": False, "review_warnings": kit["review_needed"],
+                  "thumbnail_done": False, "metadata_adjusted": kit.get("metadata_adjusted", [])}
         # A durable reservation precedes all upload requests. Unknown outcomes never trigger a fresh insert.
         save_record(store, key, record, None)
         previous = copy.deepcopy(record)
@@ -216,33 +230,45 @@ def upload_song(kit, service, store, channel, visibility="private", recover_vide
         record["thumbnail_file"] = kit["thumbnail"]
         save_record(store, key, record, previous)
         previous = copy.deepcopy(record)
-    existing = service.captions().list(part="snippet", videoId=video_id).execute(num_retries=3).get("items", [])
-    for relative, name in CAPTIONS:
-        if relative in record["captions"]:
-            continue
-        matches = [c for c in existing if c["snippet"].get("language") == "am" and c["snippet"].get("name") == name]
-        if matches:
-            caption_id = matches[0]["id"]
-        else:
-            result = service.captions().insert(
-                part="snippet", body={"snippet": {"videoId": video_id, "language": "am", "name": name, "isDraft": False}},
-                media_body=media(folder / relative, "application/octet-stream")).execute(num_retries=0)
-            caption_id = result["id"]
-        record["captions"][relative] = caption_id
-        save_record(store, key, record, previous)
-        previous = copy.deepcopy(record)
-    # Use the reservation's policy on retries; never accidentally publish by changing a retry input.
+    # Scheduling is private -> public; YouTube does not support publishAt on unlisted videos.
+    # Persist the deadline before requesting it so retries cannot slide an accepted schedule.
     requested = record["requested_visibility"]
-    actual = "private" if record["held_for_review"] else requested
-    if current.get("status", {}).get("privacyStatus") != actual:
+    actual = "private" if record.get("held_for_review") else requested
+    status = current.get("status", {})
+    if actual == "public":
+        now = utc_now()
+        target = publish_time(record["publish_at"]) if record.get("publish_at") else None
+        if status.get("privacyStatus") == "public":
+            if target is None or target > now:
+                raise UploadError("The existing video is already public unexpectedly; inspect Studio before retrying")
+        else:
+            # A late retry must never send a past date: YouTube would publish it immediately.
+            if target is None or target <= now:
+                target = now + PUBLISH_DELAY
+                record["publish_at"] = target.isoformat().replace("+00:00", "Z")
+                save_record(store, key, record, previous)
+                previous = copy.deepcopy(record)
+            actual = "private"
+            scheduled = publish_time(status["publishAt"]) if status.get("publishAt") else None
+            if status.get("privacyStatus") != "private" or scheduled != target:
+                result = service.videos().update(part="status", body={
+                    "id": video_id, "status": {"privacyStatus": "private",
+                                               "publishAt": record["publish_at"],
+                                               "selfDeclaredMadeForKids": False}}).execute(num_retries=3)
+                accepted = result.get("status", {})
+                if (accepted.get("privacyStatus") != "private" or not accepted.get("publishAt")
+                        or publish_time(accepted["publishAt"]) != target):
+                    raise UploadError("YouTube did not accept the five-hour publication schedule; retry the existing video, not a new upload")
+    elif status.get("privacyStatus") != actual:
         result = service.videos().update(part="status", body={
             "id": video_id, "status": {"privacyStatus": actual, "selfDeclaredMadeForKids": False}}).execute(num_retries=3)
         if result.get("status", {}).get("privacyStatus") != actual:
             raise UploadError("YouTube did not apply the requested visibility; inspect the existing video, do not re-upload")
-    record.update(status="complete", privacy=actual, completed_at=datetime.now(timezone.utc).isoformat())
+    record.update(status="complete", privacy=actual, completed_at=utc_now().isoformat())
     save_record(store, key, record, previous)
     write_json(folder / "youtube-upload.json", record)
-    print(f"Song {kit['message_id']}: {record['url']} ({actual})", flush=True)
+    when = f"; public at {record['publish_at']}" if record.get("publish_at") else ""
+    print(f"Song {kit['message_id']}: {record['url']} ({actual}{when}); no subtitle tracks uploaded", flush=True)
     return record
 
 
@@ -260,7 +286,8 @@ def main():
     where = parser.add_mutually_exclusive_group(required=True)
     where.add_argument("--folder", type=Path)
     where.add_argument("--root", type=Path, help="Downloaded artifact folders containing video.mp4")
-    parser.add_argument("--visibility", choices=PRIVACIES, default=os.environ.get("YOUTUBE_PRIVACY") or "private")
+    parser.add_argument("--visibility", choices=PRIVACIES, default="public",
+                        help="Public schedules publication five hours ahead; private/unlisted are local-only overrides")
     parser.add_argument("--thumbnail", choices=tuple(THUMBNAILS), default=os.environ.get("YOUTUBE_THUMBNAIL") or "a")
     parser.add_argument("--recover-video-id")
     parser.add_argument("--dry-run", action="store_true", help="Validate kits without OAuth, network access or state writes")
@@ -274,10 +301,10 @@ def main():
         if args.recover_video_id and len(kits) != 1:
             raise UploadError("Recover one song at a time using message_id in the publish workflow")
         if args.visibility not in PRIVACIES:
-            raise UploadError("YOUTUBE_PRIVACY must be private, unlisted or public")
+            raise UploadError("Visibility must be private, unlisted or public")
         if args.dry_run:
             for kit in kits:
-                print(f"Validated song {kit['message_id']}; review hold={kit['review_needed']}; no upload performed")
+                print(f"Validated song {kit['message_id']}; metadata adjusted={kit['metadata_adjusted']}; no upload performed")
             return
         channel = required("YOUTUBE_CHANNEL_ID")
         service = youtube_client()
@@ -291,8 +318,10 @@ def main():
         try:
             record = upload_song(kit, service, store, channel, args.visibility, args.recover_video_id)
             line = f"- Song {kit['message_id']}: [YouTube video]({record['url']}) ({record['privacy']})"
-            if record.get("held_for_review"):
-                line += " - kept private for review"
+            if record.get("publish_at"):
+                line += f" - public publication scheduled for {record['publish_at']}"
+            if record.get("review_warnings"):
+                line += " - review notes remain in the kit"
         except Exception as error:
             failed = True
             message = safe_error(error)
