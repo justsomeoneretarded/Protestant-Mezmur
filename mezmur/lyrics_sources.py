@@ -1,6 +1,7 @@
 """Collect lyric candidates for one song from every free source we know."""
 import re
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 from . import web
 from .geez import fold, has_ethiopic
@@ -217,6 +218,40 @@ def title_match(text, record):
     return best
 
 
+def identity_evidence(candidate, record):
+    """Identify a song independently of the acoustic score; never make web lyrics trusted."""
+    from .names import NAME_FILLER, same_person_name
+
+    if not record:
+        return {"matched": False, "title_score": 0.0, "artist_matched": False, "recognized_source": False}
+    if candidate.get("source") == "library" and candidate.get("identity_match"):
+        return {"matched": True, "title_score": 1.0, "artist_matched": True, "recognized_source": True}
+    parsed = urlsplit(candidate.get("url", ""))
+    domain = (parsed.hostname or "").lower().removeprefix("www.")
+    recognized = parsed.scheme == "https" and any(
+        rank >= 2 and (domain == name or domain.endswith("." + name)) for name, rank in LYRICS_DOMAINS.items())
+    # Page titles and structured lyric URLs often use a shorter artist name or a Latin spelling.
+    parts = [unquote(part).replace("-", " ").replace("_", " ") for part in parsed.path.split("/") if part]
+    label = (candidate.get("title") or "") + " " + " ".join(parts)
+    structured = len(parts) >= 3 and parts[-3] == "lyrics"
+    title_label, artist_label = (parts[-1], parts[-2]) if structured else (label, label)
+    title_score = title_match(title_label, record)
+    artist_names = []
+    shortened = []
+    for name in (record.get("artist_latin") or "", record.get("artist_am") or ""):
+        words = [w for w in name.split() if w.lower() not in NAME_FILLER]
+        if len(words) >= 2:
+            artist_names.append(name)
+        if len(words) >= 3:
+            shortened.append(" ".join((words[0], words[-1])))
+    full_match = bool(artist_names) and same_person_name(artist_label, *artist_names)
+    artist_match = full_match or (bool(shortened) and same_person_name(artist_label, *shortened))
+    return {"matched": bool(recognized and title_score >= 0.8 and artist_match),
+            "title_score": round(title_score, 3), "artist_matched": bool(artist_match),
+            "short_artist_name": bool(artist_match and not full_match), "recognized_source": bool(recognized),
+            "domain": domain}
+
+
 def _follow(page_url, html, record, source, base, artist_check=False, minimum=0.8):
     from .names import similar
     scored = []
@@ -392,7 +427,9 @@ def from_library(record, draft_text, folder, report=None):
                                               record.get("artist_latin", ""), record.get("artist_am", ""))))
             if named or (draft_text and similarity(text, draft_text)["score"] >= 0.25):
                 out.append(_candidate("library", f"lyrics library: {path.parent.name}/{path.name}", stanzas,
-                                      title=meta.get("title_am") or meta.get("title_latin", "")))
+                                      title=meta.get("title_am") or meta.get("title_latin", ""),
+                                      extra={"identity_match": bool(named and (
+                                          record.get("artist_latin") or record.get("artist_am")))}))
     if report is not None:
         report["library"] = len(out)
     return out

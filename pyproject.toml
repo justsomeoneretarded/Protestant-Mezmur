@@ -14,7 +14,6 @@ dependencies = [
 
 [project.optional-dependencies]
 upload = ["google-api-python-client==2.187.0", "google-auth-oauthlib==1.2.3"]
-augmentation = ["soundfile==0.13.1", "pedalboard==0.9.26"]
 # Everything the per-song render job needs (torch is installed from the CPU index first).
 render = [
     "torch==2.5.1", "transformers==4.57.3", "huggingface-hub==0.36.0", "tokenizers==0.22.1",
@@ -23,12 +22,11 @@ render = [
 ]
 # Vocal separation runs from its own virtualenv (see the workflow) so its pins cannot clash.
 separator = ["audio-separator[cpu]>=0.39"]
-test = ["pytest==8.4.2", "responses==0.25.8"]
+test = ["pytest==8.4.2", "responses==0.25.8", "soundfile==0.13.1"]
 
 [project.scripts]
 mezmur-fetch = "mezmur.fetch:main"
 mezmur-song = "mezmur.song:main"
-mezmur-augment = "mezmur.augmentation:main"
 mezmur-upload = "mezmur.upload:main"
 
 [tool.setuptools.packages.find]

@@ -30,18 +30,22 @@ For every song you get:
    Titles are searched in Amharic and in several Latin spellings, and a few clearly sung phrases from
    the song (usually its chorus) are searched too, so lyrics are found even when the title is wrong.
    Each song's run page lists what every source returned.
-2. **Listen to the original song.** Before any optional audio effects, the vocals are isolated
+2. **Listen to the original song.** The vocals are isolated for analysis
    (UVR-MDX-NET) and the Amharic acoustic model Ethio-ASR turns them into per-moment character
-   probabilities. Key, tempo, noise and reverb effects cannot weaken this lyric-matching step.
-3. **Check every candidate against the audio.** Found lyrics are aligned to the whole song. A
-   candidate is used only if it explains most of the singing; lyrics for a different song with
-   the same title fail this check.
+   probabilities. The original recording remains the soundtrack; no audio effects are applied.
+3. **Check every candidate against the audio.** Strong acoustic matches pass directly.
+   A low score such as 0.11 is not an automatic veto: a recognized lyrics source that identifies
+   the song and artist can proceed when vocal/line coverage, draft agreement and complete
+   phrases support it. Unrelated lyrics, weak coverage and absent acoustic evidence still fail.
+   [Acceptance and timing diagnostics](docs/lyrics-matching.md).
 4. **Align word by word.** The aligner follows the song through the lyric lines: choruses can
    repeat, lines can be skipped or start halfway, instrumentals and ad-libs are allowed, but
    singing that the lyrics do not explain costs extra, so lines stay on screen for exactly as
    long as they are sung.
-5. **No verified lyrics?** You still get a video from an automatic transcription, clearly marked
-   in `UPLOAD.md` as needing review.
+5. **Complete the accepted lyrics.** The existing forced-alignment pass uses heard word anchors,
+   vocal activity and lyric structure to fill partially heard lines. Source-supported lyrics can
+   continue with estimated timings, marked for review. If no candidate is supported, the song is
+   skipped with diagnostics instead of producing a garbled automatic transcription.
 
 ### Fixing lyrics (from your phone, no computer needed)
 
@@ -119,18 +123,12 @@ YouTube channel and the web, checking that the faces agree.
   designs remain downloadable. Subtitle tracks are never uploaded. Titles, descriptions and tags are automatically
   limited before upload; saved video IDs prevent duplicates.
   [Setup, visibility settings and retry without rendering](docs/youtube-upload.md).
-- `augment_audio`: optional audio augmentation, **off by default**.
-  When enabled, lyrics are verified and aligned on the original audio first, then
-  retimed through the augmentation's saved time map for the final video. The artifact
-  includes `augmentation.json`. It does not guarantee privacy or change reuse
-  rights. [Standalone Python API, setup and details](docs/audio-augmentation.md).
-- `augmentation_style`: **musical** shifts the whole mix's key by two semitones
-  and its tempo by about 4%, with quiet noise; **subtle** keeps the original key
-  and duration with smaller changes. This only applies when augmentation is on.
-- `noise_profile`: **hiss**, **vinyl** crackle, synthetic **ambient** room tone,
-  or **off**; overlays are quiet (50 dB SNR).
-- `space_effect`: **room** reverb, short **echo**, or **none**. Both effect
-  controls only apply when audio augmentation is enabled.
+The rendered soundtrack is the **original recording**, with no pitch, tempo,
+noise, reverb, room-space effects or loudness normalization. Compatible AAC/MP3
+streams are copied into the MP4; other formats receive AAC encoding only.
+Vocal isolation and waveform analysis are used only for recognition/visuals,
+never as the final soundtrack. Historical workflow reruns use their old code;
+start a fresh run on main to use this path.
 
 When it finishes, open the run and download each `mezmur-<message id>-run…` artifact
 (kept 3 days — download it before then). It holds only what you upload. Anything to check before publishing (for example
@@ -165,7 +163,6 @@ have permission to republish the songs; Content ID claims and strikes apply to l
 ```sh
 pip install torch==2.5.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cpu
 pip install -e '.[render,test]'
-sudo apt-get install librubberband2  # native augmentation tests
 pytest -q
 python -m mezmur.song --input inputs/song-2 --output output/song-2   # one fetched song
 ```
@@ -173,7 +170,3 @@ python -m mezmur.song --input inputs/song-2 --output output/song-2   # one fetch
 Model credits: [Ethio-ASR Amharic](https://huggingface.co/badrex/Ethio-ASR-amharic) (CC BY 4.0),
 [audio-separator / UVR](https://github.com/nomadkaraoke/python-audio-separator),
 [OpenCV model zoo](https://github.com/opencv/opencv_zoo), [rembg U²-Net](https://github.com/danielgatis/rembg).
-
-Optional audio augmentation uses [Rubber Band](https://breakfastquay.com/rubberband/)
-(GPL-licensed; commercial licensing is also available) and
-[Pedalboard](https://github.com/spotify/pedalboard) (GPL-licensed).

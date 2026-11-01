@@ -1,136 +1,117 @@
+"""Final audio is the source recording, not the transcription stem or a processed mix."""
+import hashlib
+import io
 import json
 import subprocess
-import sys
+from pathlib import Path
 
 import numpy as np
 import pytest
 import soundfile as sf
+import yaml
 
-from mezmur import audio, song
-
-
-def test_disabled_augmentation_does_not_load_the_native_dependency(monkeypatch, tmp_path):
-    monkeypatch.setitem(sys.modules, "mezmur.augmentation", None)
-    source = tmp_path / "original.m4a"
-    work = tmp_path / "unused"
-    path, metadata = audio.prepare_source(source, work)
-    assert path == source
-    assert metadata == {"enabled": False}
-    assert not work.exists()
+from mezmur import audio, visuals
+from mezmur.common import duration
+from mezmur.subtitles import write_ass
 
 
-def test_prepare_source_supports_m4a_and_does_not_overwrite_original(tmp_path):
+class TinyRenderer:
+    W, H, fps = 160, 90, 5
+
+    def __init__(self, seconds):
+        self.duration = seconds
+
+    def frame(self, *args):
+        return np.full((self.H, self.W, 3), 80, dtype=np.uint8)
+
+
+def tone(path):
     sr = 44100
-    t = np.arange(sr * 2) / sr
-    wave = tmp_path / "source.wav"
-    source = tmp_path / "audio.m4a"
-    sf.write(wave, 0.3 * np.sin(2 * np.pi * 220 * t), sr)
-    subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-i", str(wave),
-                    "-c:a", "aac", str(source)], check=True)
-    before = source.read_bytes()
-    prepared, metadata = audio.prepare_source(source, tmp_path / "work", augment=True, seed=21)
-    result, result_sr = sf.read(prepared, always_2d=True)
-    assert source.read_bytes() == before
-    assert metadata["enabled"] is True and metadata["seed"] == 21
-    assert metadata["style"] == "subtle" and metadata["noise_snr_db"] == 50
-    assert metadata["privacy_guaranteed"] is False
-    assert result_sr == 48000 and result.shape[1] == 2
-    assert len(result) == metadata["output_frames"][-1] == metadata["input_frames"][-1]
-    assert abs(len(result) / result_sr - 2) < 0.05
-    # Replays may reuse a working directory without overwriting the original or
-    # failing on a previous augmentation output. The seed still stays stable.
-    replay, _ = audio.prepare_source(source, tmp_path / "work", augment=True, seed=21)
-    assert replay != prepared
-    np.testing.assert_array_equal(sf.read(replay)[0], sf.read(prepared)[0])
+    values = (0.18 * np.sin(2 * np.pi * 220 * np.arange(sr * 2) / sr)).astype(np.float32)
+    sf.write(path, values, sr, subtype="PCM_16")
+    return sr
 
 
-def test_song_separates_original_before_augmentation(monkeypatch, tmp_path):
-    inp, out, work = [tmp_path / name for name in ("input", "output", "work")]
-    inp.mkdir()
-    original = inp / "audio.wav"
-    original.touch()
-    (inp / "info.json").write_text(json.dumps({"message_id": 21}))
-    calls = []
-
-    def prepare(*args, **kwargs):
-        pytest.fail("Effects must not run before the original lyrics pass verification")
-
-    def master(source, target):
-        assert source == original and target == work / "master.wav"
-        calls.append("master-original")
-        return {}
-
-    class StopBeforeInference(Exception):
-        pass
-
-    def separate(source, folder, **kwargs):
-        assert source == original and folder == work
-        assert calls == ["master-original"]
-        assert not (out / "augmentation.json").exists()
-        raise StopBeforeInference
-
-    monkeypatch.setattr(audio, "tags", lambda path: {})
-    monkeypatch.setattr(audio, "prepare_source", prepare)
-    monkeypatch.setattr(audio, "master", master)
-    monkeypatch.setattr(song.names, "resolve", lambda _: {})
-    monkeypatch.setattr(song, "common_duration", lambda _: 2)
-    monkeypatch.setattr(song.asr, "vocabulary", lambda: {})
-    monkeypatch.setattr(song, "separate", separate)
-    with pytest.raises(StopBeforeInference):
-        song.produce(inp, out, work, augment_audio=True)
+def packets(path):
+    result = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a:0", "-show_packets",
+        "-show_data_hash", "sha256", "-show_entries", "packet=data_hash", "-of", "json", str(path)],
+        check=True, capture_output=True, text=True)
+    return [packet["data_hash"] for packet in json.loads(result.stdout)["packets"]]
 
 
-@pytest.mark.parametrize("enabled", [False, True])
-def test_song_cli_passes_augmentation_flag(monkeypatch, enabled):
-    argv = ["mezmur-song", "--input", "in", "--output", "out"]
-    if enabled:
-        argv.append("--augment-audio")
-    monkeypatch.setattr(sys, "argv", argv)
-    calls = []
-    monkeypatch.setattr(song, "produce", lambda *a, **k: calls.append(k))
-    song.main()
-    assert calls[0]["augment_audio"] is enabled
-    assert calls[0]["augmentation_style"] == "musical"
-    assert calls[0]["noise_profile"] == "hiss" and calls[0]["space_effect"] == "room"
+@pytest.mark.parametrize("suffix,codec", [("m4a", "aac"), ("mp3", "libmp3lame")])
+def test_native_render_preserves_original_compressed_audio_packets(tmp_path, suffix, codec):
+    wave, source = tmp_path / "tone.wav", tmp_path / f"original.{suffix}"
+    tone(wave)
+    subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-i", str(wave), "-c:a", codec,
+                    "-b:a", "192k", str(source)], check=True)
+    before = hashlib.sha256(source.read_bytes()).hexdigest()
+    ass, out = tmp_path / "lyrics.ass", tmp_path / "video.mp4"
+    write_ass([], ass)
+    visuals.render_video(TinyRenderer(duration(source)), source, ass, out, preset="ultrafast")
+    original, copied = packets(source), packets(out)
+    assert copied and len(copied) >= len(original) - 2
+    assert copied == original[:len(copied)]
+    assert hashlib.sha256(source.read_bytes()).hexdigest() == before
+    assert audio.mp4_audio_options(source) == ["-c:a", "copy"]
 
 
-def test_musical_preset_applies_one_key_and_tempo_to_the_mix(tmp_path):
-    source = tmp_path / "source.wav"
-    sr = 16000
-    sf.write(source, 0.3 * np.sin(2 * np.pi * 220 * np.arange(sr * 2) / sr), sr)
-    prepared, metadata = audio.prepare_source(source, tmp_path / "work", augment=True, seed=23, style="musical")
-    assert metadata["style"] == "musical"
-    assert abs(metadata["pitch_semitones"]) == 2
-    assert metadata["tempo_factor"] in (0.96, 1.04)
-    assert metadata["noise_snr_db"] == 50
-    assert sf.info(prepared).frames != metadata["input_frames"][-1]
+def test_pcm_fallback_only_encodes_aac_without_speed_pitch_or_gain_changes(tmp_path):
+    source, out, ass = tmp_path / "original.wav", tmp_path / "video.mp4", tmp_path / "lyrics.ass"
+    sr = tone(source)
+    write_ass([], ass)
+    visuals.render_video(TinyRenderer(duration(source)), source, ass, out, preset="ultrafast")
+    original, final = audio.read_audio(source, sr), audio.read_audio(out, sr)
+    a, b = original[sr // 2:sr * 3 // 2], final[sr // 2:sr * 3 // 2]
+    assert len(a) == len(b)
+    assert 0.98 < np.sqrt(np.mean(b ** 2) / np.mean(a ** 2)) < 1.02
+    assert np.corrcoef(a, b)[0, 1] > 0.98
+    frequency = np.fft.rfftfreq(len(b), 1 / sr)[np.argmax(np.abs(np.fft.rfft(b)))]
+    assert abs(frequency - 220) <= 1
+    stream = next(s for s in audio.probe(out)["streams"] if s["codec_type"] == "audio")
+    assert stream["codec_name"] == "aac" and int(stream["sample_rate"]) == sr
+    assert abs(float(stream["duration"]) - 2) < 0.06
 
 
-def test_lyrics_lookup_uses_original_before_any_tempo_change(monkeypatch, tmp_path):
-    inp = tmp_path / "input"
-    inp.mkdir()
-    source = inp / "audio.wav"
-    source.touch()
-    (inp / "info.json").write_text(json.dumps({"message_id": 23}))
-    monkeypatch.setattr(audio, "tags", lambda _: {})
-    monkeypatch.setattr(audio, "prepare_source", lambda *a, **k: pytest.fail("Premature audio effects"))
-    monkeypatch.setattr(audio, "master", lambda *a: {})
-    monkeypatch.setattr(song, "common_duration", lambda path: 2)
-    monkeypatch.setattr(song.names, "resolve", lambda _: {})
-    monkeypatch.setattr(song.names, "learn_from_titles", lambda record, _: record)
-    monkeypatch.setattr(song.asr, "vocabulary", lambda: {})
-    monkeypatch.setattr(song, "separate", lambda path, *a, **k: path)
-    monkeypatch.setattr(song.asr, "frame_log_probs", lambda *a, **k: (np.zeros((1, 1)), 0.02))
-    monkeypatch.setattr(song.asr, "vocal_energy", lambda *a: np.ones(1))
-    monkeypatch.setattr(song.asr, "greedy_words", lambda *a: [])
+def test_render_command_has_no_audio_filters_resampling_or_channel_remix(monkeypatch, tmp_path):
+    captured = []
 
-    class StopAtLookup(Exception):
-        pass
+    class Process:
+        def __init__(self):
+            self.stdin = io.BytesIO()
 
-    def gather(record, mid, tg, corrections, duration, **kwargs):
-        assert duration == 2
-        raise StopAtLookup
+        def wait(self):
+            return 0
 
-    monkeypatch.setattr(song, "gather", gather)
-    with pytest.raises(StopAtLookup):
-        song.produce(inp, tmp_path / "output", tmp_path / "work", augment_audio=True)
+    monkeypatch.setattr(visuals.subprocess, "Popen", lambda command, **kwargs: captured.append(command) or Process())
+    monkeypatch.setattr(visuals, "mp4_audio_options", lambda _: ["-c:a", "copy"])
+    source = tmp_path / "original.mp3"
+    visuals.render_video(TinyRenderer(0.2), source, tmp_path / "lyrics.ass", tmp_path / "video.mp4")
+    command = captured[0]
+    assert str(source) in command
+    assert not any(option in command for option in ("-af", "-filter:a", "-ar", "-ac"))
+    assert command[command.index("-c:a") + 1] == "copy"
+
+
+@pytest.mark.parametrize("codec,copy", [("aac", True), ("mp3", True), ("flac", False), ("vorbis", False)])
+def test_audio_codec_policy_does_not_add_effects(monkeypatch, codec, copy):
+    monkeypatch.setattr(audio, "probe", lambda _: {"streams": [
+        {"codec_type": "video", "codec_name": "mjpeg"}, {"codec_type": "audio", "codec_name": codec}]})
+    options = audio.mp4_audio_options("source")
+    assert options == (["-c:a", "copy"] if copy else ["-c:a", "aac", "-b:a", "320k"])
+
+
+def test_missing_audio_stream_fails_explicitly(monkeypatch):
+    monkeypatch.setattr(audio, "probe", lambda _: {"streams": []})
+    with pytest.raises(ValueError, match="no audio"):
+        audio.mp4_audio_options("source")
+
+
+def test_workflows_and_public_api_cannot_enable_sound_effects():
+    doc = yaml.safe_load(Path(".github/workflows/generate.yml").read_text())
+    events = doc.get("on", doc.get(True))
+    inputs = events["workflow_dispatch"]["inputs"]
+    assert not {"augment_audio", "augmentation_style", "noise_profile", "space_effect"} & inputs.keys()
+    assert "Rubber Band" not in Path(".github/workflows/generate.yml").read_text()
+    assert not hasattr(audio, "prepare_source") and not hasattr(audio, "master")
+    assert not Path("mezmur/augmentation.py").exists()
