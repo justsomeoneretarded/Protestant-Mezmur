@@ -1,5 +1,6 @@
 import copy
 import json
+import shutil
 import sys
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
@@ -29,7 +30,8 @@ class MemoryStore:
         self.writes += 1
         if self.writes == self.fail_write:
             raise RuntimeError("Simulated unavailable GitHub checkpoint")
-        assert snapshot["head"] == self.head
+        if snapshot["head"] != self.head:
+            raise RuntimeError("Progress changed during this run")
         self.state = copy.deepcopy(state)
         self.head += 1
 
@@ -54,7 +56,7 @@ def service(monkeypatch):
     monkeypatch.setattr(upload, "media", lambda path, mime, resumable=False: (path.name, mime, resumable))
     api = MagicMock()
     monkeypatch.setattr(upload, "utc_now", lambda: datetime(2026, 11, 1, 12, tzinfo=timezone.utc))
-    state = {"video": None, "insert_count": 0, "next_error": None,
+    state = {"video": None, "videos": {}, "insertions": [], "insert_count": 0, "next_error": None,
              "thumbnail_error": False, "schedule_error": False, "reject_schedule": False}
 
     def execute(value):
@@ -65,23 +67,28 @@ def service(monkeypatch):
     def insert(**kwargs):
         state["insert_count"] += 1
         state["insert_args"] = kwargs
-        state["video"] = {"id": VIDEO, "snippet": dict(kwargs["body"]["snippet"], channelId=CHANNEL),
+        state["insertions"].append(copy.deepcopy(kwargs))
+        video_id = VIDEO if state["insert_count"] == 1 else f"video{state['insert_count']:06d}"
+        state["video"] = {"id": video_id, "snippet": dict(kwargs["body"]["snippet"], channelId=CHANNEL),
                           "status": copy.deepcopy(kwargs["body"]["status"])}
+        state["videos"][video_id] = state["video"]
         request = MagicMock()
 
         def next_chunk(**kwargs):
             if state["next_error"]:
                 raise state["next_error"]
-            return None, {"id": VIDEO}
+            return None, {"id": video_id}
         request.next_chunk.side_effect = next_chunk
         return request
 
     def list_videos(**kwargs):
-        return execute({"items": [state["video"]] if state["video"] else []})
+        item = state["videos"].get(kwargs["id"])
+        return execute({"items": [item] if item else []})
 
     def update(**kwargs):
         if state["schedule_error"]:
             raise OSError("Simulated schedule transport failure")
+        state["video"] = state["videos"][kwargs["body"]["id"]]
         if not state["reject_schedule"]:
             state["video"]["status"].update(kwargs["body"]["status"])
         return execute(state["video"])
@@ -269,7 +276,7 @@ def test_invalid_destination_channel_id_is_rejected(service, value):
         upload.verify_channel(service, value)
 
 
-@pytest.mark.parametrize("missing", ["youtube.json", "metadata.json", "video.mp4", "thumbnail.jpg"])
+@pytest.mark.parametrize("missing", ["youtube.json", "metadata.json", "video.mp4", "thumbnail-b.jpg"])
 def test_missing_or_legacy_kits_fail_before_upload(folder, missing):
     (folder / missing).unlink()
     with pytest.raises(upload.UploadError):
@@ -373,6 +380,8 @@ def test_publish_workflow_guards_artifacts_and_keeps_secrets_out_of_receipts():
     step = next(s for s in job["steps"] if s.get("name", "").startswith("Upload videos and thumbnail"))
     assert "--visibility public" in step["run"]
     assert "YOUTUBE_PRIVACY" not in step["env"]
+    assert "== 'd'" in step["env"]["YOUTUBE_THUMBNAIL"]
+    assert "|| 'b'" in step["env"]["YOUTUBE_THUMBNAIL"]
 
 
 def test_actual_google_sdk_accepts_upload_and_native_schedule_shapes(folder):
@@ -477,3 +486,199 @@ def test_old_privacy_variable_cannot_silently_disable_workflow_scheduling(folder
     monkeypatch.setattr(upload, "Store", MemoryStore)
     upload.main()
     assert service.test_state["video"]["status"]["publishAt"] == "2026-11-01T17:00:00Z"
+
+
+
+def make_batch(folder, ids=(22, 23, 24, 25)):
+    kits = []
+    for mid in ids:
+        target = folder.parent / f"song-{mid}"
+        if target != folder:
+            shutil.copytree(folder, target)
+        meta = json.loads((target / "metadata.json").read_text())
+        write_json(target / "metadata.json", meta | {"message_id": mid})
+        kits.append(upload.load_kit(target))
+    return kits
+
+
+def test_batch_randomizes_once_and_reserves_five_hour_slots_before_upload(folder, service, monkeypatch):
+    kits, store = make_batch(folder), MemoryStore()
+    monkeypatch.setattr(upload.random, "shuffle", lambda items: items.reverse())
+    planned = upload.plan_batch(kits, store, CHANNEL, "generation-123")
+    assert [kit["message_id"] for kit in planned] == [25, 24, 23, 22]
+    records = store.state["youtube_uploads"]
+    assert len(records) == 4 and store.writes == 1
+    for index, kit in enumerate(planned, 1):
+        record = records[upload.source_key(kit, CHANNEL)]
+        assert record["status"] == "queued" and record["batch_id"] == "generation-123"
+        assert upload.publish_time(record["publish_at"]) - upload.utc_now() == timedelta(hours=5 * index)
+        assert record["publish_at"] == kit["planned_publish_at"]
+    service.videos.return_value.insert.assert_not_called()
+    assert store.state["channels"]["42"]["last_message_id"] == 22
+    assert store.state["used_backgrounds"] == ["old"]
+
+
+def test_retry_and_single_song_retry_keep_original_random_order_and_times(folder, service, monkeypatch):
+    kits, store = make_batch(folder), MemoryStore()
+    monkeypatch.setattr(upload.random, "shuffle", lambda items: items.reverse())
+    first = upload.plan_batch(kits, store, CHANNEL, "original-run")
+    saved = copy.deepcopy(store.state)
+    monkeypatch.setattr(upload.random, "shuffle", lambda _: pytest.fail("Retry reshuffled saved songs"))
+    monkeypatch.setattr(upload, "utc_now", lambda: datetime(2026, 11, 1, 13, tzinfo=timezone.utc))
+    retry = upload.plan_batch(list(reversed(kits)), store, CHANNEL, "new-attempt")
+    assert [kit["message_id"] for kit in retry] == [kit["message_id"] for kit in first]
+    subset = upload.plan_batch([kits[0]], store, CHANNEL, "subset-attempt")
+    assert subset[0]["planned_publish_at"] == first[-1]["planned_publish_at"]
+    assert store.state == saved and store.writes == 1
+
+
+def test_new_batch_appends_after_existing_future_slots(folder, service, monkeypatch):
+    store = MemoryStore()
+    monkeypatch.setattr(upload.random, "shuffle", lambda items: items.reverse())
+    first = upload.plan_batch(make_batch(folder), store, CHANNEL, "first")
+    second = upload.plan_batch(make_batch(folder, (26, 27)), store, CHANNEL, "second")
+    times = [upload.publish_time(kit["planned_publish_at"]) for kit in first + second]
+    assert [(value - upload.utc_now()).total_seconds() / 3600 for value in times] == [5, 10, 15, 20, 25, 30]
+    assert all(b - a == timedelta(hours=5) for a, b in zip(times, times[1:]))
+
+
+def test_queue_is_isolated_between_youtube_channels(folder, service):
+    store = MemoryStore()
+    upload.plan_batch(make_batch(folder), store, CHANNEL, "first-channel")
+    other = "UC" + "b" * 22
+    second = upload.plan_batch(make_batch(folder, (26, 27)), store, other, "second-channel")
+    assert upload.publish_time(second[0]["planned_publish_at"]) - upload.utc_now() == timedelta(hours=5)
+
+
+def test_completed_replay_does_not_consume_an_additional_slot(folder, service, monkeypatch):
+    store = MemoryStore()
+    first = upload.load_kit(folder)
+    completed = upload.upload_song(first, service, store, CHANNEL)
+    monkeypatch.setattr(upload.random, "shuffle", lambda items: items.reverse())
+    planned = upload.plan_batch([first, *make_batch(folder, (23,))], store, CHANNEL, "new-run")
+    saved = store.state["youtube_uploads"][upload.source_key(first, CHANNEL)]
+    assert saved["publish_at"] == completed["publish_at"] and saved["status"] == "complete"
+    new = next(kit for kit in planned if kit["message_id"] == 23)
+    assert upload.publish_time(new["planned_publish_at"]) - upload.utc_now() == timedelta(hours=10)
+
+
+def test_expired_unstarted_slots_move_after_future_queue_without_reshuffling(folder, service, monkeypatch):
+    store = MemoryStore()
+    monkeypatch.setattr(upload.random, "shuffle", lambda items: items.reverse())
+    first = upload.plan_batch(make_batch(folder), store, CHANNEL, "first")
+    future = {kit["message_id"]: kit["planned_publish_at"] for kit in first[1:]}
+    base = upload.utc_now()
+    monkeypatch.setattr(upload, "utc_now", lambda: base + timedelta(hours=7))
+    monkeypatch.setattr(upload.random, "shuffle", lambda _: pytest.fail("Existing queue was reshuffled"))
+    retry = upload.plan_batch(first, store, CHANNEL, "retry")
+    moved = next(kit for kit in retry if kit["message_id"] == first[0]["message_id"])
+    assert upload.publish_time(moved["planned_publish_at"]) - base == timedelta(hours=25)
+    assert all(kit["planned_publish_at"] == future[kit["message_id"]] for kit in retry
+               if kit["message_id"] in future)
+
+
+def test_partial_upload_retry_never_collides_with_later_reserved_videos(folder, service, monkeypatch):
+    store = MemoryStore()
+    monkeypatch.setattr(upload.random, "shuffle", lambda items: items.reverse())
+    first = upload.plan_batch(make_batch(folder), store, CHANNEL, "first")
+    kit, base = first[0], upload.utc_now()
+    service.test_state["schedule_error"] = True
+    with pytest.raises(OSError):
+        upload.upload_song(kit, service, store, CHANNEL)
+    service.test_state["schedule_error"] = False
+    monkeypatch.setattr(upload, "utc_now", lambda: base + timedelta(hours=7))
+    # The uploaded video's outcome must be checked before moving its old deadline.
+    upload.plan_batch([kit], store, CHANNEL, "retry")
+    old = store.state["youtube_uploads"][upload.source_key(kit, CHANNEL)]
+    assert old["publish_at"] == kit["planned_publish_at"]
+    result = upload.upload_song(kit, service, store, CHANNEL)
+    assert upload.publish_time(result["publish_at"]) - base == timedelta(hours=25)
+    assert service.test_state["insert_count"] == 1
+    assert len({r["publish_at"] for r in store.state["youtube_uploads"].values()}) == 4
+
+
+def test_uncertain_upload_keeps_its_slot_and_blocks_another_insert(folder, service):
+    store = MemoryStore()
+    kit = upload.plan_batch([upload.load_kit(folder)], store, CHANNEL, "original")[0]
+    service.test_state["next_error"] = OSError()
+    with pytest.raises(OSError):
+        upload.upload_song(kit, service, store, CHANNEL)
+    before = copy.deepcopy(store.state)
+    upload.plan_batch([kit], store, CHANNEL, "retry")
+    assert store.state == before
+    with pytest.raises(upload.UploadError, match="uncertain"):
+        upload.upload_song(kit, service, store, CHANNEL)
+    assert service.test_state["insert_count"] == 1
+
+
+def test_slot_checkpoint_rejects_an_advanced_snapshot():
+    store = MemoryStore()
+    snapshot = store.load()
+    store.head += 1
+    with pytest.raises(RuntimeError, match="Progress changed"):
+        upload.save_record(store, "new", {"status": "queued"}, None, snapshot=snapshot)
+    assert "youtube_uploads" not in store.state
+
+
+def test_duplicate_kits_are_rejected_without_reserving_two_slots(folder, service):
+    kit, store = upload.load_kit(folder), MemoryStore()
+    with pytest.raises(upload.UploadError, match="same Telegram song"):
+        upload.plan_batch([kit, kit], store, CHANNEL, "batch")
+    assert store.writes == 0
+
+
+@pytest.mark.parametrize("record", [None, [], {}, {"status": "invalid"}])
+def test_corrupt_upload_record_cannot_silently_trigger_a_duplicate(folder, service, record):
+    store, kit = MemoryStore(), upload.load_kit(folder)
+    store.state["youtube_uploads"] = {upload.source_key(kit, CHANNEL): record}
+    with pytest.raises(upload.UploadError):
+        upload.upload_song(kit, service, store, CHANNEL)
+    service.videos.return_value.insert.assert_not_called()
+
+
+def test_all_four_uploads_use_youtube_scheduler_and_enforce_metadata_limits(folder, service, monkeypatch):
+    store, kits = MemoryStore(), make_batch(folder)
+    for kit in kits:
+        root = kit["folder"]
+        data = json.loads((root / "youtube.json").read_text())
+        write_json(root / "youtube.json", data | {
+            "recommended_title": "Worship title " * 50,
+            "tags": ["amharic worship song " + str(i) for i in range(100)]})
+        (root / "description.txt").write_text("\u12a0" * 3000, encoding="utf-8")
+    kits = [upload.load_kit(kit["folder"]) for kit in kits]
+    monkeypatch.setattr(upload.random, "shuffle", lambda items: items.reverse())
+    planned = upload.plan_batch(kits, store, CHANNEL, "batch")
+    results = [upload.upload_song(kit, service, store, CHANNEL) for kit in planned]
+    assert len({r["video_id"] for r in results}) == 4
+    assert [upload.publish_time(r["publish_at"]) - upload.utc_now() for r in results] == [
+        timedelta(hours=h) for h in (5, 10, 15, 20)]
+    for video in service.test_state["videos"].values():
+        snippet, status = video["snippet"], video["status"]
+        assert len(snippet["title"]) <= 100 and len(snippet["description"].encode("utf-8")) <= 5000
+        cost = sum(len(t) + (2 if " " in t else 0) for t in snippet["tags"]) + len(snippet["tags"]) - 1
+        assert cost <= 500
+        assert status["privacyStatus"] == "private" and status["publishAt"]
+    service.captions.assert_not_called()
+
+
+def test_cli_summary_displays_publication_time_in_east_africa_time(folder, service, monkeypatch, tmp_path):
+    summary = tmp_path / "summary.md"
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+    monkeypatch.setenv("YOUTUBE_CHANNEL_ID", CHANNEL)
+    monkeypatch.setattr(sys, "argv", ["mezmur-upload", "--folder", str(folder)])
+    monkeypatch.setattr(upload, "youtube_client", lambda: service)
+    monkeypatch.setattr(upload, "Store", MemoryStore)
+    upload.main()
+    assert "2026-11-01 20:00 EAT" in summary.read_text()
+
+
+
+def test_automatic_thumbnail_defaults_to_the_circular_portrait_layout(folder, service, monkeypatch):
+    monkeypatch.delenv("YOUTUBE_THUMBNAIL", raising=False)
+    monkeypatch.setenv("YOUTUBE_CHANNEL_ID", CHANNEL)
+    monkeypatch.setattr(sys, "argv", ["mezmur-upload", "--folder", str(folder)])
+    monkeypatch.setattr(upload, "youtube_client", lambda: service)
+    monkeypatch.setattr(upload, "Store", MemoryStore)
+    assert upload.load_kit(folder)["thumbnail"] == "thumbnail-b.jpg"
+    upload.main()
+    assert service.thumbnails.return_value.set.call_args.kwargs["media_body"][0] == "thumbnail-b.jpg"

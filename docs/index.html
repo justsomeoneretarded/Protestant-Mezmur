@@ -17,7 +17,7 @@
   <main>
     <h1>Rehoboth Mezmur</h1>
     <p>An owner-operated tool that creates Amharic Protestant mezmur lyric videos from audio selected from Telegram, then optionally uploads them to the owner's YouTube channel.</p>
-    <p>The workflow verifies and times lyrics, produces the finished video and thumbnail, and prepares upload metadata. When YouTube uploading is enabled, new videos start private and are scheduled to become public five hours after upload and thumbnail preparation.</p>
+    <p>The workflow verifies and times lyrics, produces the finished video and thumbnail, and prepares upload metadata. When YouTube uploading is enabled, new videos start private and enter a saved, randomized publication queue. Slots are five hours apart: the first is five hours ahead when the queue is empty, and new batches follow existing future slots. YouTube's built-in scheduler handles publication.</p>
     <figure>
       <img src="scenery.png" alt="Bundled scenery asset used by the lyric video renderer" loading="lazy">
       <figcaption>A scenery asset included with the video renderer.</figcaption>
