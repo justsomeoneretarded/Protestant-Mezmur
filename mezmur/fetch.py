@@ -144,7 +144,7 @@ async def run(args):
             (folder / "photos").mkdir(parents=True, exist_ok=True)
             info = song_info(message)
             info.update({"caption": message.raw_text or "", "date": str(message.date),
-                         "channel": getattr(entity, "username", "") or key,
+                         "channel": getattr(entity, "username", "") or key, "channel_id": key,
                          "link": f"https://t.me/{entity.username}/{message.id}" if getattr(entity, "username", None) else ""})
             await download(tg, message, folder / f"audio.{_ext(message)}")
             texts, photos = await neighbours(tg, entity, message, folder)

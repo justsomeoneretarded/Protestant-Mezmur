@@ -25,3 +25,15 @@ def test_chapters_follow_youtube_rules():
     assert ch[0]["start"] == 0 and len(ch) >= 3
     assert all(b["start"] - a["start"] >= 10 for a, b in zip(ch, ch[1:]))
     assert any("Chorus" in c["label"] for c in ch)
+
+
+
+def test_description_fits_api_byte_limit_and_keeps_credits_and_hashtags():
+    from mezmur.youtube import description
+
+    stanzas = [{"lines": ["\u12a0\u121d\u120b\u12ad " * 150 for _ in range(12)]}]
+    text = description(M, stanzas, [], [], ["Photo: Example credit"], "library")
+    assert len(text.encode("utf-8")) <= 4900
+    assert "\ufffd" not in text
+    assert "Photo: Example credit" in text
+    assert "#AmharicMezmur" in text and "#ProtestantMezmur" in text

@@ -13,6 +13,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+upload = ["google-api-python-client==2.187.0", "google-auth-oauthlib==1.2.3"]
 augmentation = ["soundfile==0.13.1", "pedalboard==0.9.26"]
 # Everything the per-song render job needs (torch is installed from the CPU index first).
 render = [
@@ -28,6 +29,7 @@ test = ["pytest==8.4.2", "responses==0.25.8"]
 mezmur-fetch = "mezmur.fetch:main"
 mezmur-song = "mezmur.song:main"
 mezmur-augment = "mezmur.augmentation:main"
+mezmur-upload = "mezmur.upload:main"
 
 [tool.setuptools.packages.find]
 include = ["mezmur*"]

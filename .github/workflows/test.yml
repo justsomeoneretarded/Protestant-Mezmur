@@ -23,5 +23,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y librubberband2
-      - run: pip install -e '.[test,augmentation]' opencv-python-headless==4.10.0.84
+      - run: pip install -e '.[test,augmentation,upload]' opencv-python-headless==4.10.0.84
+      - name: Validate Actions workflows
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 -shellcheck= -pyflakes= .github/workflows/*.yml
       - run: pytest -q

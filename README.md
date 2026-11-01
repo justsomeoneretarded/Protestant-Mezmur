@@ -1,8 +1,8 @@
 # Protestant Mezmur
 
 Turns songs from a Telegram channel into **YouTube-ready Amharic lyric videos**, entirely
-inside GitHub Actions, with free tools only. You download the finished folder and upload it
-yourself.
+inside GitHub Actions, with free tools only. Download the finished folder, or enable optional
+automatic YouTube uploads after [one-time channel authorization](docs/youtube-upload.md).
 
 Every generated video automatically carries a small, faded **Rehoboth Mezmur**
 text watermark in the top-right corner, including the intro and outro.
@@ -110,6 +110,10 @@ YouTube channel and the web, checking that the faces agree.
   runner at the same time, so 5 songs take about as long as 1 (≈ 25–35 minutes).
 - `message_ids`: remake specific songs (e.g. `2,3`) without moving your place in the channel.
 - `separator`: vocal-isolation model (default is the fast, accurate UVR-MDX-NET).
+- `upload_youtube`: optional automatic YouTube upload, **off by default**. Requires
+  `YOUTUBE_OAUTH_JSON` (secret) and `YOUTUBE_CHANNEL_ID` (variable). Defaults to private;
+  uploads a selected thumbnail and both caption tracks, and tracks video IDs to avoid duplicates.
+  [Setup, visibility settings and retry without rendering](docs/youtube-upload.md).
 - `augment_audio`: optional audio augmentation, **off by default**.
   When enabled, lyrics are verified and aligned on the original audio first, then
   retimed through the augmentation's saved time map for the final video. The artifact
@@ -128,12 +132,17 @@ When it finishes, open the run and download each `mezmur-<message id>-run…` ar
 unverified lyrics) is listed per song on the run's summary page. If a song fails, a `log-…`
 artifact with its log is added instead.
 
+For upload-only retries, use **Actions > Publish Generated Videos** with the generation run ID.
+Review warnings keep uploads private even when public visibility is requested. Upload receipts
+and YouTube links appear in the run summary. Finished video artifacts remain available.
+
 ### Progress
 
 Your place in the channel is stored on the `mezmur-state` branch and only moves forward after
 every song in the batch succeeded. A failed batch is retried next time, so no song is skipped.
 Replays and corrections never move it. Footage clips already used are remembered so videos
-don't repeat backgrounds.
+don't repeat backgrounds. The same branch records YouTube upload IDs by channel and Telegram
+message so a replay cannot upload a completed song twice.
 
 ## Costs and limits
 

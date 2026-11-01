@@ -30,6 +30,10 @@ on:
         description: Save lyric-alignment details for troubleshooting (use with message_ids)
         type: boolean
         default: false
+      upload_youtube:
+        description: Automatically upload finished videos to YouTube (one-time OAuth setup required)
+        type: boolean
+        default: false
       augment_audio:
         description: Audio augmentation (changes the original mix; no privacy guarantee)
         type: boolean
@@ -59,6 +63,7 @@ on:
       separator: {type: string, default: UVR-MDX-NET-Voc_FT.onnx}
       resolution: {type: string, default: '1080'}
       debug: {type: string, default: ''}
+      upload_youtube: {type: boolean, default: false}
       augment_audio: {type: boolean, default: false}
       augmentation_style: {type: string, default: musical}
       noise_profile: {type: string, default: hiss}
@@ -66,6 +71,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 concurrency:
   group: mezmur-generate
@@ -105,6 +111,15 @@ jobs:
           for key in TELEGRAM_API_ID TELEGRAM_API_HASH TELEGRAM_SESSION; do
             [ -n "${!key}" ] || { echo "::error::Missing repository secret: $key"; exit 1; }
           done
+      - name: Check YouTube configuration (only for automatic uploads)
+        if: inputs.upload_youtube == true
+        env:
+          YOUTUBE_OAUTH_JSON: ${{ secrets.YOUTUBE_OAUTH_JSON }}
+          YOUTUBE_CHANNEL_ID: ${{ vars.YOUTUBE_CHANNEL_ID }}
+        run: |
+          [ "${{ github.ref }}" = "refs/heads/main" ] || { echo "::error::Automatic uploads must run from main"; exit 1; }
+          [ -n "$YOUTUBE_OAUTH_JSON" ] || { echo "::error::Set secret YOUTUBE_OAUTH_JSON; see docs/youtube-upload.md"; exit 1; }
+          [ -n "$YOUTUBE_CHANNEL_ID" ] || { echo "::error::Set variable YOUTUBE_CHANNEL_ID; see docs/youtube-upload.md"; exit 1; }
       - name: Which songs?
         id: which
         shell: bash
@@ -266,6 +281,11 @@ jobs:
             output/song-${{ matrix.id }}/pinned_comment.txt
             output/song-${{ matrix.id }}/captions/
             output/song-${{ matrix.id }}/augmentation.json
+            output/song-${{ matrix.id }}/youtube.json
+            output/song-${{ matrix.id }}/metadata.json
+            output/song-${{ matrix.id }}/lyrics.txt
+            output/song-${{ matrix.id }}/lyrics.romanized.txt
+            output/song-${{ matrix.id }}/UPLOAD.md
           if-no-files-found: error
           retention-days: 3
           compression-level: 0
@@ -333,3 +353,14 @@ jobs:
           echo "### Download each song from this run's **Artifacts** (mezmur-<message id>-run…)" >> "$GITHUB_STEP_SUMMARY"
           echo "Inside: video.mp4, thumbnail.jpg (+ -b, -c, -d), title.txt, description.txt, tags.txt, pinned_comment.txt, captions/" >> "$GITHUB_STEP_SUMMARY"
           echo "Anything to check before publishing is listed per song above." >> "$GITHUB_STEP_SUMMARY"
+
+  publish:
+    name: Upload finished videos to YouTube
+    needs: [fetch, song, finalize]
+    if: success() && inputs.upload_youtube == true
+    uses: ./.github/workflows/publish.yml
+    with:
+      run_id: ${{ format('{0}', github.run_id) }}
+      from_generation: true
+    secrets:
+      YOUTUBE_OAUTH_JSON: ${{ secrets.YOUTUBE_OAUTH_JSON }}
