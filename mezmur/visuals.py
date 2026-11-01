@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
+from .audio import mp4_audio_options
 from .features import Features, snap
 from .textdraw import Mixed, fit, shadow_text, gradient_text
 
@@ -516,10 +517,10 @@ def render_video(renderer: Renderer, audio, ass_path, out_path, crf=18, preset="
            "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", str(fps), "-i", "pipe:0",
            "-i", str(audio),
            "-vf", f"ass='{ass}':fontsdir='{fontsdir}'",
-           "-map", "0:v", "-map", "1:a", "-t", f"{renderer.duration:.3f}",
+           "-map", "0:v", "-map", "1:a:0", "-t", f"{renderer.duration:.3f}",
            "-c:v", "libx264", "-preset", preset, "-crf", str(crf), "-pix_fmt", "yuv420p",
            "-profile:v", "high", "-g", str(int(fps * 2)), "-bf", "2",
-           "-c:a", "aac", "-b:a", "320k", "-ar", "48000", "-movflags", "+faststart", str(out_path)]
+           *mp4_audio_options(audio), "-movflags", "+faststart", str(out_path)]
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
     dt = 1.0 / fps
     try:

@@ -4,7 +4,6 @@ input folder (written by `mezmur.fetch`):  audio.*, info.json, telegram.json, ph
 output folder: video.mp4, thumbnails, captions, lyrics, YouTube upload kit, diagnostics.
 """
 import argparse
-import gc
 import json
 import re
 import os
@@ -20,20 +19,22 @@ from .align import Lyrics, align_lyrics, build_target, complete_with_lyrics, smo
 from .common import duration as common_duration, write_json
 from .features import analyze
 from .geez import fold, romanize
-from .lyrics_sources import gather
+from .lyrics_sources import gather, identity_evidence
 from .lyrics_text import all_lines, line_repeats, line_stanzas, similarity, stanzas_text
 from .separate import separate
 from .subtitles import build_cues, write_ass, write_srt
 from .visuals import Renderer, Source, render_video
 from .youtube import write_kit
 
-# Strict: a song is only made when found lyrics clearly explain the singing. Measured on real songs, the
-# right lyrics explain 81-87 % of the singing (gain 0.21-0.25, 74-97 % of lines sung); wrong lyrics <= 36 %.
+# Acoustic evidence is one signal, not a calibrated word-accuracy percentage.
+# Identified lyrics can proceed to forced completion when coverage and draft agreement support them.
 ACCEPT_SHARE = 0.70       # share of vocal frames inside aligned lyric lines
 ACCEPT_GAIN = 0.18        # per-vocal-frame log-likelihood gain over "unscripted singing"
 ACCEPT_LINES = 0.70       # share of the found lines that were actually sung
 MAX_ESTIMATED = 0.35      # share of word timings that may be estimated rather than heard
 MIN_TEXT_SIM = 0.06       # cheap pre-filter against the automatic draft
+SUPPORTED_TEXT_SIM = 0.15
+SUPPORTED_COMPLETE = 0.50
 
 def notice(mid, text, level="notice"):
     """A line on the Actions run page (readable later, unlike the step log)."""
@@ -88,7 +89,7 @@ def chorus_lines_of(stanzas, aligned_words):
     return repeated if len(repeated) < 0.8 * len(counts) else set()
 
 
-def choose_lyrics(cands, draft_text, logp, frame_s, vocab, energy, max_aligned=6):
+def choose_lyrics(cands, draft_text, logp, frame_s, vocab, energy, max_aligned=6, record=None):
     """Verify candidates against the audio itself; return (best, report list)."""
     for c in cands:
         c["similarity"] = similarity(c["text"], draft_text) if draft_text else {"score": 0.0}
@@ -107,18 +108,33 @@ def choose_lyrics(cands, draft_text, logp, frame_s, vocab, energy, max_aligned=6
         words, rep = align_lyrics(logp, frame_s, target, vocab["blank"], vocab["delimiter"], energy=energy,
                                   repeats=line_repeats(c["stanzas"]))
         lines_share = rep["lines_used"] / max(1, rep["lines_total"])
+        identity = identity_evidence(c, record)
+        finite = np.isfinite([rep["matched_share"], rep["gain_per_vocal_frame"], rep["complete_share"]]).all()
+        coverage = bool(finite and rep["matched_share"] >= ACCEPT_SHARE and lines_share >= ACCEPT_LINES)
+        acoustic = coverage and rep["gain_per_vocal_frame"] >= ACCEPT_GAIN
+        support_checks = {
+            "song_and_artist_identified": identity["matched"],
+            "positive_acoustic_evidence": rep["gain_per_vocal_frame"] > 0,
+            "draft_agreement": c["similarity"]["score"] >= SUPPORTED_TEXT_SIM,
+            "complete_phrases": rep["complete_share"] >= SUPPORTED_COMPLETE,
+            "vocal_and_line_coverage": coverage,
+        }
+        supported = all(support_checks.values())
+        method = "correction" if c["trusted"] else "acoustic" if acoustic else "source-supported" if supported else "rejected"
+        rep = {**rep, "verification": {"method": method, "identity": identity,
+                                      "support_checks": support_checks, "acoustic_threshold": ACCEPT_GAIN}}
         entry = {"source": c["source"], "url": c["url"], "similarity": c["similarity"],
                  **{k: (round(v, 3) if isinstance(v, float) else v) for k, v in rep.items() if k != "phrase_details"},
                  "lines_share": round(lines_share, 3), "seconds": round(time.time() - t0, 1)}
-        ok = c["trusted"] or (rep["matched_share"] >= ACCEPT_SHARE and rep["gain_per_vocal_frame"] >= ACCEPT_GAIN
-                              and lines_share >= ACCEPT_LINES)
+        ok = c["trusted"] or acoustic or supported
         entry["accepted"] = bool(ok)
         reports.append(entry)
         log(f"  candidate {c['source']}: sim={c['similarity']['score']} share={rep['matched_share']:.2f} "
             f"gain={rep['gain_per_vocal_frame']:.2f} lines={rep['lines_used']}/{rep['lines_total']} "
-            f"complete={rep['complete_share']:.2f} -> {'OK' if ok else 'no'}")
+            f"complete={rep['complete_share']:.2f} -> {method if ok else 'no'}")
         if ok:
-            score = rep["matched_share"] + rep["gain_per_vocal_frame"] + 0.3 * rep["complete_share"] + (10 if c["trusted"] else 0)
+            score = (rep["matched_share"] + rep["gain_per_vocal_frame"] + 0.3 * rep["complete_share"]
+                     + (10 if c["trusted"] else 2 if acoustic else 0))
             if best is None or score > best[0]:
                 best = (score, c, words, rep, lines)
             if c["trusted"]:
@@ -247,8 +263,7 @@ def _subs(text):
     return float(m.group(1)) * {"": 1, "K": 1e3, "M": 1e6}[m.group(2)]
 
 
-def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium", corrections="corrections",
-            augment_audio=False, augmentation_style="musical", noise_profile="hiss", space_effect="room"):
+def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium", corrections="corrections"):
     inp, out, work = Path(inp), Path(out), Path(work)
     out.mkdir(parents=True, exist_ok=True)
     work.mkdir(parents=True, exist_ok=True)
@@ -267,12 +282,8 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     log(f"[{mid}] {record.get('title_am') or record.get('title_latin')} — {record.get('artist_am') or record.get('artist_latin')}")
 
     # 2. Keep recognition and catalogue matching on the unmodified recording.
-    augmentation = {"enabled": False}
-    master = work / "master.wav"
-    loudness = audio.master(source_audio, master)
-    duration = common_duration(master)
-    original_duration = duration
-    timings["master"] = round(time.time() - t, 1)
+    duration = common_duration(source_audio)
+    timings["source_audio"] = round(time.time() - t, 1)
 
     # 3. Vocals + acoustic model (load the model first so a broken install fails fast).
     vocab = asr.vocabulary()
@@ -307,7 +318,7 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
         c = c.strip().lstrip("@")
         if c and c not in channels:
             channels.append(c)
-    cands, titles, overrides, search_report = gather(record, mid, tg, corrections, original_duration, log=log, videos=videos,
+    cands, titles, overrides, search_report = gather(record, mid, tg, corrections, duration, log=log, videos=videos,
                                                      draft=draft, channels=channels,
                                                      library=os.environ.get("MEZMUR_LIBRARY", "library/lyrics"))
     notice(mid, "Lyrics search — " + "; ".join(
@@ -333,10 +344,16 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
 
     # 5. Verify + align.
     t = time.time()
-    best, cand_reports = choose_lyrics(cands, draft_text, logp, frame_s, vocab, energy)
+    best, cand_reports = choose_lyrics(cands, draft_text, logp, frame_s, vocab, energy, record=record)
     review = {"needs_review": False, "reasons": []}
     if best:
         _, chosen, aligned, align_report, lines = best
+        source_supported = align_report.get("verification", {}).get("method") == "source-supported"
+        if source_supported:
+            review["reasons"].append(
+                f"Lyrics identified by song/artist and supported by vocal coverage; acoustic gain "
+                f"{align_report['gain_per_vocal_frame']:.2f} is below {ACCEPT_GAIN}. "
+                "Forced alignment used the original vocals; spot-check weakly heard word timings.")
         stanzas = chosen["stanzas"]
         flat = [word for line in lines for word in line]
         aligned, filled = complete_with_lyrics(aligned, lines, energy, frame_s, duration, logp=logp,
@@ -381,17 +398,24 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
                 fails.append(f"only {r.get('lines_used')} of their {r.get('lines_total')} lines are sung in this song "
                              f"({ACCEPT_LINES:.0%} needed — the page may hold a different version or extra lines)")
             if r.get("gain_per_vocal_frame", 1) < ACCEPT_GAIN:
-                fails.append(f"the words match the sound only weakly (score {r['gain_per_vocal_frame']:.2f}, "
-                             f"{ACCEPT_GAIN} needed)")
+                checks = r.get("verification", {}).get("support_checks", {})
+                missing = ", ".join(k.replace("_", " ") for k, passed in checks.items() if not passed)
+                fails.append(f"acoustic gain is {r['gain_per_vocal_frame']:.2f}; source-supported alignment "
+                             f"could not be used" + (f" ({missing})" if missing else ""))
             reason = (f"The best lyrics found ({r['source']} {r.get('url', '')}) did not pass: "
                       + "; ".join(fails or ["checks failed"]) + ".")
         return skip(out, mid, record, cand_reports, timings, reason)
     if not chosen["trusted"] and est > MAX_ESTIMATED:
-        return skip(out, mid, record, cand_reports, timings,
-                    f"The lyrics were found, but {est:.0%} of the word timings could only be estimated "
-                    f"(limit {MAX_ESTIMATED:.0%}), so the karaoke would not be reliable.")
-    sure = "your corrected lyrics" if chosen["trusted"] else f"{align_report['matched_share']:.0%} of the singing matched"
-    notice(mid, f"Lyrics verified ({sure}) — source: {lyrics_source}")
+        if not source_supported:
+            return skip(out, mid, record, cand_reports, timings,
+                        f"The lyrics were found, but {est:.0%} of the word timings could only be estimated "
+                        f"(limit {MAX_ESTIMATED:.0%}), so the karaoke would not be reliable.")
+        notice(mid, f"Continuing identified lyrics with {est:.0%} estimated word timings; review notes are in the kit",
+               level="warning")
+    sure = ("your corrected lyrics" if chosen["trusted"] else
+            "song/artist identity and vocal anchors" if source_supported else
+            f"{align_report['matched_share']:.0%} of the singing matched")
+    notice(mid, f"Lyrics accepted ({sure}) — source: {lyrics_source}")
     if not chosen["source"].startswith("library"):
         from .names import slug
         learned_dir = out / "learned"
@@ -413,31 +437,6 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     if lrc and lrc["median_seconds"] > 1.0:
         review["reasons"].append(f"Line timing differs from LRCLIB's synced lyrics by {lrc['median_seconds']} s (median); "
                                  "spot-check the karaoke timing.")
-
-    # Effects are render-only: verify and cross-check clean timings before changing the mix.
-    if augment_audio:
-        t = time.time()
-        # The acoustic model is no longer needed; leave RAM for the whole-song DSP buffers.
-        asr.load_model.cache_clear()
-        gc.collect()
-        processing_audio, augmentation = audio.prepare_source(
-            source_audio, work, augment=True, seed=mid, style=augmentation_style,
-            noise_profile=noise_profile, space_effect=space_effect)
-        loudness = audio.master(processing_audio, master)
-        duration = common_duration(master)
-        words = audio.retime_words(words, augmentation, original_duration, duration)
-        cues = build_cues(words, chorus_lines=chorus)
-        augmentation.update({"alignment_timeline": "original",
-                             "lyrics_timing": "mapped_from_original",
-                             "original_duration_seconds": original_duration,
-                             "render_duration_seconds": duration})
-        write_json(out / "augmentation.json", augmentation)
-        log(f"  render-only audio augmentation: style={augmentation_style}, seed={mid}, "
-            f"pitch={augmentation.get('pitch_semitones', 0):+.1f} semitones, "
-            f"tempo={augmentation.get('tempo_factor', 1):.3f}, "
-            f"noise={augmentation.get('noise_profile')}, space={augmentation.get('space_effect')}; "
-            f"{len(words)} verified word timings mapped from the original recording")
-        timings["augmentation"] = round(time.time() - t, 1)
 
     # 6. Subtitles & lyrics files.
     (out / "captions").mkdir(exist_ok=True)
@@ -505,11 +504,11 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     # 10. Video.
     t = time.time()
     width = height * 16 // 9
-    feats = analyze(master, fps=fps)
+    feats = analyze(source_audio, fps=fps)
     accent = tuple(int(theme["sung"][i:i + 2], 16) for i in (1, 3, 5))
     renderer = Renderer(width, height, fps, duration, feats, sources, cues, meta, artist_photo=badge_photo, seed=mid,
                         bright=bright, accent=accent)
-    render_video(renderer, master, work / "lyrics.ass", out / "video.mp4", preset=preset, log=log)
+    render_video(renderer, source_audio, work / "lyrics.ass", out / "video.mp4", preset=preset, log=log)
     timings["render"] = round(time.time() - t, 1)
 
     if mode == "transcription":
@@ -528,11 +527,10 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     write_json(out / "metadata.json", {
         "message_id": mid, "telegram_channel_id": info.get("channel_id"),
         "names": record, "duration_seconds": round(duration, 2),
-        "original_duration_seconds": round(original_duration, 2), "loudness_before": loudness,
-        "audio_augmentation": {"enabled": augmentation["enabled"],
-                               "settings_file": "augmentation.json" if augmentation["enabled"] else None,
-                               "lyrics_timing": "mapped_from_original" if augmentation["enabled"] else "original"},
-        "lyrics_mode": mode, "lyrics_source": lyrics_source, "artist_photo": photo_source,
+        "audio_processing": {"source": "original", "effects_applied": False, "loudness_normalization": False,
+                             "encoding": "AAC/MP3 stream copy when supported; otherwise AAC encoding only"},
+        "lyrics_mode": mode, "lyrics_source": lyrics_source,
+        "lyrics_verification": align_report.get("verification", {}), "artist_photo": photo_source,
         "backgrounds": clip_records, "tempo_bpm": round(feats.tempo, 1), "timings_seconds": timings,
         "review": review, "model": asr.MODEL})
     write_json(out / "quality.json", {"mode": mode, "alignment_timeline": "original",
@@ -552,14 +550,8 @@ def main():
     p.add_argument("--separator", default=None, help="audio-separator model, 'htdemucs' or 'none'")
     p.add_argument("--height", type=int, default=1080, choices=[720, 1080])
     p.add_argument("--preset", default="medium")
-    p.add_argument("--augment-audio", action="store_true",
-                   help="Apply the selected audio augmentation before alignment and rendering")
-    p.add_argument("--augmentation-style", choices=["subtle", "musical"], default="musical")
-    p.add_argument("--noise-profile", choices=["off", "hiss", "vinyl", "ambient"], default="hiss")
-    p.add_argument("--space-effect", choices=["none", "room", "echo"], default="room")
     a = p.parse_args()
-    produce(a.input, a.output, a.work, a.separator, a.height, preset=a.preset, augment_audio=a.augment_audio,
-            augmentation_style=a.augmentation_style, noise_profile=a.noise_profile, space_effect=a.space_effect)
+    produce(a.input, a.output, a.work, a.separator, a.height, preset=a.preset)
 
 
 if __name__ == "__main__":
