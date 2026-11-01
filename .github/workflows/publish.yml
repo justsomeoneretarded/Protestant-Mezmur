@@ -83,17 +83,16 @@ jobs:
           path: uploads
       - name: Install uploader
         run: pip install -e '.[upload]'
-      - name: Upload videos, thumbnail and timed caption tracks
+      - name: Upload videos and thumbnail; schedule public publication in five hours
         env:
           YOUTUBE_OAUTH_JSON: ${{ secrets.YOUTUBE_OAUTH_JSON }}
           YOUTUBE_CHANNEL_ID: ${{ vars.YOUTUBE_CHANNEL_ID }}
-          YOUTUBE_PRIVACY: ${{ vars.YOUTUBE_PRIVACY || 'private' }}
           YOUTUBE_THUMBNAIL: ${{ vars.YOUTUBE_THUMBNAIL || 'a' }}
         shell: bash
         run: |
           args=()
           if [ -n "$RECOVER_VIDEO_ID" ]; then args+=(--recover-video-id "$RECOVER_VIDEO_ID"); fi
-          python -m mezmur.upload --root uploads "${args[@]}"
+          python -m mezmur.upload --root uploads --visibility public "${args[@]}"
       - name: Keep upload receipts (never credentials)
         if: always()
         uses: actions/upload-artifact@v4

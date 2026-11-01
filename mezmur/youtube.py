@@ -10,6 +10,33 @@ GENERIC_TAGS = ["amharic mezmur", "protestant mezmur", "ethiopian gospel song", 
                 "የፕሮቴስታንት መዝሙር", "አዲስ መዝሙር", "የአምልኮ መዝሙር", "መዝሙር ግጥም"]
 
 
+def limit_title(value, limit=100):
+    """Normalize API-invalid characters and cap titles without exceeding the character budget."""
+    clean = re.sub(r"[\x00-\x1f\x7f<>]", " ", value)
+    return " ".join(clean.split())[:limit].rstrip()
+
+
+def limit_description(value, limit=5000):
+    """YouTube counts UTF-8 bytes; never split an Amharic character while shortening."""
+    clean = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f<>]", " ", value).strip()
+    return clean.encode("utf-8")[:limit].decode("utf-8", errors="ignore").rstrip()
+
+
+def limit_tags(values, limit=500):
+    """Include separators and the API's implicit quotes around multiword tags."""
+    result, cost, seen = [], 0, set()
+    for value in values:
+        tag = " ".join(re.sub(r'[<>,"\x00-\x1f\x7f]', " ", value).split())
+        key = tag.casefold()
+        extra = len(tag) + (2 if " " in tag else 0) + (1 if result else 0)
+        if not tag or key in seen or cost + extra > limit:
+            continue
+        result.append(tag)
+        cost += extra
+        seen.add(key)
+    return result
+
+
 def clock(seconds):
     s = int(seconds)
     return f"{s // 3600}:{s % 3600 // 60:02d}:{s % 60:02d}" if s >= 3600 else f"{s // 60}:{s % 60:02d}"
@@ -20,8 +47,8 @@ def _fit(parts, limit=100):
     parts = [p for p in parts if p]
     while parts:
         text = " ".join(" ".join(parts).split())
-        if len(text) <= limit:
-            return text
+        if len(text) <= limit or len(parts) == 1:
+            return limit_title(text, limit)
         parts = parts[:-1]
     return ""
 
@@ -117,17 +144,7 @@ def tags(m, album=""):
                 f"{a_lat} {t_lat}" if a_lat and t_lat else "", f"{a_am} {t_am}" if a_am and t_am else "",
                 f"{a_lat} mezmur" if a_lat else "", f"{a_lat} new song" if a_lat else "", f"{a_am} መዝሙር" if a_am else "",
                 album, f"{t_lat} {a_lat} lyrics" if t_lat and a_lat else ""]
-    out, total = [], 0
-    for tag in specific + GENERIC_TAGS:
-        tag = " ".join(re.sub(r"[<>,\"]", " ", tag or "").split())
-        if not tag or tag.lower() in {t.lower() for t in out}:
-            continue
-        cost = len(tag) + (2 if " " in tag else 0) + (1 if out else 0)
-        if total + cost > 480:
-            continue
-        out.append(tag)
-        total += cost
-    return out
+    return limit_tags(specific + GENERIC_TAGS, limit=480)
 
 
 def hashtag(text):
@@ -164,12 +181,12 @@ def description(m, stanzas, cues, chapters, credits, lyrics_source):
         body = lines + (rom_block if with_roman else []) + tail + [tags_line]
         text = "\n".join(body)
         if len(text.encode("utf-8")) <= 4900:
-            return text
+            return limit_description(text, 4900)
     # YouTube limits descriptions by UTF-8 bytes, not characters. Preserve credits and hashtags.
     ending = "\n".join(tail + [tags_line])
     budget = max(0, 4900 - len(ending.encode("utf-8")) - 2)
     prefix = "\n".join(lines).encode("utf-8")[:budget].decode("utf-8", errors="ignore")
-    return prefix.rstrip() + "\n\n" + ending
+    return limit_description(prefix.rstrip() + "\n\n" + ending, 4900)
 
 
 def write_kit(folder, m, stanzas, cues, duration, chorus_lines, credits, lyrics_source, outro_start, review):
