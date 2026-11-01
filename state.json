@@ -97,5 +97,18 @@
   "lyrics_channels": [
     "SongLegetaLyrics",
     "mezmurlyricsbb"
-  ]
+  ],
+  "youtube_uploads": {
+    "UCNSSLKyhXrG50l694M48zTQ:4335601101:30": {
+      "status": "queued",
+      "message_id": 30,
+      "telegram_channel_id": "4335601101",
+      "youtube_channel_id": "UCNSSLKyhXrG50l694M48zTQ",
+      "requested_visibility": "public",
+      "held_for_review": false,
+      "batch_id": "41315143379",
+      "queued_at": "2026-11-01T16:11:37+00:00",
+      "publish_at": "2026-11-01T21:11:37Z"
+    }
+  }
 }
