@@ -2,7 +2,7 @@
 
 The normal workflow can generate videos and upload them to your own YouTube
 channel. Uploading is opt-in: videos start **private** and are scheduled to become
-**public five hours after the upload/thumbnail work succeeds**. Google OAuth is required
+**public in randomized order at five-hour intervals**. Google OAuth is required
 for uploading; open-source transcription and rendering still run on GitHub Actions.
 An API key or service account cannot replace channel-owner authorization.
 
@@ -106,7 +106,7 @@ video/lyrics/thumbnail artifacts remain available if a later upload fails.
 Unchecked means no YouTube authorization or upload occurs.
 
 Only **YOUTUBE_THUMBNAIL** (a, b, c or d; default a) changes the upload layout.
-The workflow always requests the five-hour public schedule. A previously configured
+The workflow always requests the five-hour-interval public queue. A previously configured
 YOUTUBE_PRIVACY variable no longer changes workflow behavior.
 
 Every new video initially uploads as **private**, with the recommended title,
@@ -115,16 +115,31 @@ not-made-for-kids setting. It uploads one selected thumbnail and **never uploads
 subtitle/caption tracks**. Burned-in video lyrics remain unchanged; SRT files
 can remain in the download kit for your own use.
 
-After video/thumbnail work succeeds, the uploader checkpoints a UTC publishAt
-deadline five hours ahead and sets it on the existing private video. YouTube
-handles publication; no five-hour runner wait or GitHub cron is needed.
+Before the first upload, the uploader shuffles newly selected songs once and saves
+every UTC publishAt slot on mezmur-state with status queued. With an empty queue,
+four selected videos get slots at **+5, +10, +15 and +20 hours** from queue planning.
+The randomized order and timestamps are durable, including on a subset retry.
+
+A new batch appends after this channel's last recorded future slot, keeping a
+five-hour gap across batches. Other destination channels have independent queues.
+Completed replays do not consume another slot. The queue only tracks this app's
+saved records; manual changes in Studio or videos scheduled outside the app are
+not automatically synchronized.
+
+Each video and its thumbnail are uploaded and its reserved publishAt is applied
+through YouTube's built-in scheduler. YouTube handles publication; no five-hour
+runner wait or GitHub cron is needed. The Actions summary displays times in EAT
+(Africa/Nairobi); machine-readable receipts keep UTC timestamps.
 [YouTube requires private status for scheduling](https://developers.google.com/youtube/v3/docs/videos#status.publishAt),
 so an unlisted video cannot simultaneously carry this native schedule.
 
-The deadline is fixed on retries. An expired, failed schedule is moved five hours
-ahead from the retry, never submitted as a past time that could publish immediately.
-If YouTube already published an accepted schedule, recovery records that outcome
-without making the video private again. Completed uploads are not changed.
+Future deadlines remain fixed on retries: songs are not reshuffled and accepted
+schedules are not moved. An expired, unfinished slot moves behind the remaining
+future queue (or at least five hours ahead when none remains), never to a past
+time that could publish immediately. This can leave gaps when an upload fails.
+For an uploaded video, the app checks YouTube before moving a missed slot: if
+YouTube already published it, recovery records that outcome without making the
+video private again. Completed uploads are not changed.
 
 Only verified, aligned lyric videos are eligible. Review notes remain in the kit
 but no longer silently cancel automatic scheduling. Older unfinished reservations
@@ -163,12 +178,14 @@ summary. Private videos are not viewable by everyone who has their URL.
 ## Duplicate Protection
 
 A `youtube_uploads` map on **mezmur-state** records each destination YouTube
-channel + numeric Telegram channel ID + message ID. State writes preserve the
+channel + numeric Telegram channel ID + message ID, including queued slots and
+their source batch IDs. State writes preserve the
 song cursor and lyrics library. Both workflows serialize state writes; generation
 finalizes progress *before* publishing, so upload checkpoints cannot invalidate
 the generation snapshot.
 
-- A durable reservation is saved **before** any video-upload request.
+- A randomized batch plan with distinct five-hour slots is saved **before** any video-upload request.
+- A queued record is changed to an uploading reservation before a new video insert.
 - The accepted video ID is saved before thumbnail/scheduling work.
 - Completed songs are skipped on replays, even when rendered again.
   Existing videos are never automatically replaced or deleted.

@@ -5,6 +5,7 @@ import hashlib
 import json
 import logging
 import os
+import random
 import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -138,9 +139,72 @@ def publish_time(value):
         raise UploadError("Saved publication time is invalid; inspect the existing video's schedule") from None
 
 
-def save_record(store, key, record, previous):
-    """Re-read before every checkpoint, preserving cursor/library and refusing concurrent edits."""
+def next_publish_slot(uploads, channel, now):
+    """Append after all recorded future slots for this channel, including unfinished uploads."""
+    if not isinstance(uploads, dict):
+        raise UploadError("Saved YouTube upload state is corrupt")
+    tail = now
+    for record in uploads.values():
+        if not isinstance(record, dict):
+            raise UploadError("Saved YouTube upload record is corrupt")
+        if record.get("youtube_channel_id") == channel and record.get("publish_at"):
+            tail = max(tail, publish_time(record["publish_at"]))
+    return tail + PUBLISH_DELAY
+
+
+def plan_batch(kits, store, channel, batch_id):
+    """Persist one randomized order and distinct deadlines before sending any video."""
     snapshot = store.load()
+    state = copy.deepcopy(snapshot["state"])
+    uploads = state.setdefault("youtube_uploads", {})
+    if not isinstance(uploads, dict):
+        raise UploadError("Saved YouTube upload state is corrupt")
+    keys = [source_key(kit, channel) for kit in kits]
+    if len(set(keys)) != len(keys):
+        raise UploadError("Multiple input kits identify the same Telegram song")
+    now = utc_now()
+    new, expired = [], []
+    for kit, key in zip(kits, keys):
+        record = uploads.get(key)
+        if key not in uploads:
+            new.append((kit, key))
+        elif not isinstance(record, dict):
+            raise UploadError("Saved YouTube upload record is corrupt")
+        elif record.get("status") == "queued":
+            if not record.get("publish_at"):
+                raise UploadError("Queued video has no saved publication time")
+            if publish_time(record["publish_at"]) <= now:
+                expired.append((kit, key))
+    # Only new songs are shuffled. Existing reservations and subset retries retain their slots.
+    if new:
+        random.shuffle(new)
+    expired.sort(key=lambda item: publish_time(uploads[item[1]]["publish_at"]))
+    for kit, key in expired + new:
+        previous = uploads.get(key)
+        target = next_publish_slot(uploads, channel, now)
+        record = copy.deepcopy(previous) if previous else {
+            "status": "queued", "message_id": kit["message_id"],
+            "telegram_channel_id": kit["telegram_channel_id"], "youtube_channel_id": channel,
+            "requested_visibility": "public", "held_for_review": False,
+            "batch_id": str(batch_id), "queued_at": now.isoformat()}
+        record["publish_at"] = target.isoformat().replace("+00:00", "Z")
+        if previous:
+            record["rescheduled_at"] = now.isoformat()
+        uploads[key] = record
+    if expired or new:
+        # Store.save checks this exact head; another writer cannot silently steal a slot.
+        store.save(snapshot, state)
+    earliest = datetime.min.replace(tzinfo=timezone.utc)
+    ordered = sorted(kits, key=lambda kit: (
+        publish_time(uploads[source_key(kit, channel)]["publish_at"])
+        if uploads[source_key(kit, channel)].get("publish_at") else earliest,
+        source_key(kit, channel)))
+    return [{**kit, "planned_publish_at": uploads[source_key(kit, channel)].get("publish_at")} for kit in ordered]
+
+
+def save_record(store, key, record, previous, snapshot=None):
+    """Checkpoint one record without losing cursor/library data or another writer's reservations."""
+    snapshot = store.load() if snapshot is None else snapshot
     state = copy.deepcopy(snapshot["state"])
     uploads = state.setdefault("youtube_uploads", {})
     if not isinstance(uploads, dict) or uploads.get(key) != previous:
@@ -168,17 +232,19 @@ def upload_song(kit, service, store, channel, visibility="public", recover_video
     if not isinstance(uploads, dict):
         raise UploadError("Saved YouTube upload state is corrupt")
     previous = uploads.get(key)
-    record = copy.deepcopy(previous) if previous else None
+    if key in uploads and not isinstance(previous, dict):
+        raise UploadError("Saved YouTube upload record is corrupt")
+    record = copy.deepcopy(previous) if key in uploads else None
+    if record is not None and record.get("status") not in ("queued", "uploading", "uploaded", "complete"):
+        raise UploadError("Unknown upload status; inspect the state branch before retrying")
     if record and record.get("status") == "complete":
         write_json(folder / "youtube-upload.json", record)
         print(f"Song {kit['message_id']}: already uploaded, https://youtu.be/{record['video_id']}", flush=True)
         return record
     with (folder / "video.mp4").open("rb") as fh:
         digest = hashlib.file_digest(fh, "sha256").hexdigest()
-    if record and record.get("video_sha256") != digest:
+    if record and record.get("status") != "queued" and record.get("video_sha256") != digest:
         raise UploadError("An unfinished upload uses different video bytes; retry Publish Generated Videos with the original run's artifact")
-    if record and record.get("status") not in ("uploading", "uploaded"):
-        raise UploadError("Unknown upload status; inspect the state branch before retrying")
     if record and record["status"] == "uploading":
         if not recover_video_id:
             raise UploadError("An earlier upload has an uncertain outcome. Check YouTube Studio, then use recover_video_id; no duplicate will be created")
@@ -189,16 +255,17 @@ def upload_song(kit, service, store, channel, visibility="public", recover_video
         previous = copy.deepcopy(record)
     elif recover_video_id:
         raise UploadError("Recovery is only allowed for an uncertain existing upload reservation")
-    if record is None:
-        record = {"status": "uploading", "message_id": kit["message_id"],
+    if record is None or record["status"] == "queued":
+        record = {**(record or {}), "status": "uploading", "message_id": kit["message_id"],
                   "telegram_channel_id": kit["telegram_channel_id"], "youtube_channel_id": channel,
                   "video_sha256": digest, "source_marker": marker,
                   "run_id": os.environ.get("GITHUB_RUN_ID", "local"),
-                  "created_at": utc_now().isoformat(), "requested_visibility": visibility,
+                  "created_at": utc_now().isoformat(),
+                  "requested_visibility": record.get("requested_visibility", visibility) if record else visibility,
                   "held_for_review": False, "review_warnings": kit["review_needed"],
                   "thumbnail_done": False, "metadata_adjusted": kit.get("metadata_adjusted", [])}
         # A durable reservation precedes all upload requests. Unknown outcomes never trigger a fresh insert.
-        save_record(store, key, record, None)
+        save_record(store, key, record, previous)
         previous = copy.deepcopy(record)
         write_json(folder / "youtube-upload.json", record)
         body = {"snippet": {"title": kit["title"], "description": kit["description"],
@@ -244,9 +311,10 @@ def upload_song(kit, service, store, channel, visibility="public", recover_video
         else:
             # A late retry must never send a past date: YouTube would publish it immediately.
             if target is None or target <= now:
-                target = now + PUBLISH_DELAY
+                snapshot = store.load()
+                target = next_publish_slot(snapshot["state"].get("youtube_uploads", {}), channel, now)
                 record["publish_at"] = target.isoformat().replace("+00:00", "Z")
-                save_record(store, key, record, previous)
+                save_record(store, key, record, previous, snapshot=snapshot)
                 previous = copy.deepcopy(record)
             actual = "private"
             scheduled = publish_time(status["publishAt"]) if status.get("publishAt") else None
@@ -287,7 +355,7 @@ def main():
     where.add_argument("--folder", type=Path)
     where.add_argument("--root", type=Path, help="Downloaded artifact folders containing video.mp4")
     parser.add_argument("--visibility", choices=PRIVACIES, default="public",
-                        help="Public schedules publication five hours ahead; private/unlisted are local-only overrides")
+                        help="Public queues randomized uploads at five-hour intervals; private/unlisted are local-only overrides")
     parser.add_argument("--thumbnail", choices=tuple(THUMBNAILS), default=os.environ.get("YOUTUBE_THUMBNAIL") or "a")
     parser.add_argument("--recover-video-id")
     parser.add_argument("--dry-run", action="store_true", help="Validate kits without OAuth, network access or state writes")
@@ -310,6 +378,11 @@ def main():
         service = youtube_client()
         verify_channel(service, channel)
         store = Store()
+        if args.visibility == "public":
+            batch_id = os.environ.get("SOURCE_RUN_ID") or os.environ.get("GITHUB_RUN_ID", "local")
+            kits = plan_batch(kits, store, channel, batch_id)
+            for kit in kits:
+                print(f"Song {kit['message_id']}: saved publication slot {kit['planned_publish_at'] or 'existing upload'}", flush=True)
     except Exception as error:
         print("::error::" + safe_error(error), flush=True)
         raise SystemExit(1) from None
@@ -319,7 +392,8 @@ def main():
             record = upload_song(kit, service, store, channel, args.visibility, args.recover_video_id)
             line = f"- Song {kit['message_id']}: [YouTube video]({record['url']}) ({record['privacy']})"
             if record.get("publish_at"):
-                line += f" - public publication scheduled for {record['publish_at']}"
+                local = publish_time(record["publish_at"]).astimezone(timezone(timedelta(hours=3), "EAT"))
+                line += f" - public publication scheduled for {local:%Y-%m-%d %H:%M %Z}"
             if record.get("review_warnings"):
                 line += " - review notes remain in the kit"
         except Exception as error:

@@ -112,7 +112,9 @@ YouTube channel and the web, checking that the faces agree.
 - `separator`: vocal-isolation model (default is the fast, accurate UVR-MDX-NET).
 - `upload_youtube`: optional automatic YouTube upload, **off by default**. Requires
   `YOUTUBE_OAUTH_JSON` (secret) and `YOUTUBE_CHANNEL_ID` (variable). Uploads privately,
-  then schedules public publication five hours ahead after the thumbnail is ready.
+  then uses YouTube's built-in scheduler with randomized five-hour slots: four
+  new videos get +5, +10, +15 and +20 hours when the queue is empty. New batches
+  follow existing queued videos; retries keep their saved order and future slots.
   Subtitle tracks are never uploaded. Titles, descriptions and tags are automatically
   limited before upload; saved video IDs prevent duplicates.
   [Setup, visibility settings and retry without rendering](docs/youtube-upload.md).
