@@ -87,7 +87,7 @@ jobs:
         env:
           YOUTUBE_OAUTH_JSON: ${{ secrets.YOUTUBE_OAUTH_JSON }}
           YOUTUBE_CHANNEL_ID: ${{ vars.YOUTUBE_CHANNEL_ID }}
-          YOUTUBE_THUMBNAIL: ${{ vars.YOUTUBE_THUMBNAIL || 'a' }}
+          YOUTUBE_THUMBNAIL: ${{ vars.YOUTUBE_THUMBNAIL == 'd' && 'd' || 'b' }}
         shell: bash
         run: |
           args=()

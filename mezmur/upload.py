@@ -66,7 +66,7 @@ def _json(path):
         raise UploadError(f"Missing or invalid {path.name}; use a newly generated complete YouTube kit") from None
 
 
-def load_kit(folder, thumbnail="a"):
+def load_kit(folder, thumbnail="b"):
     folder = Path(folder)
     kit, meta = _json(folder / "youtube.json"), _json(folder / "metadata.json")
     if not isinstance(kit, dict) or not isinstance(meta, dict):
@@ -356,7 +356,7 @@ def main():
     where.add_argument("--root", type=Path, help="Downloaded artifact folders containing video.mp4")
     parser.add_argument("--visibility", choices=PRIVACIES, default="public",
                         help="Public queues randomized uploads at five-hour intervals; private/unlisted are local-only overrides")
-    parser.add_argument("--thumbnail", choices=tuple(THUMBNAILS), default=os.environ.get("YOUTUBE_THUMBNAIL") or "a")
+    parser.add_argument("--thumbnail", choices=tuple(THUMBNAILS), default=os.environ.get("YOUTUBE_THUMBNAIL") or "b")
     parser.add_argument("--recover-video-id")
     parser.add_argument("--dry-run", action="store_true", help="Validate kits without OAuth, network access or state writes")
     args = parser.parse_args()

@@ -276,7 +276,7 @@ def test_invalid_destination_channel_id_is_rejected(service, value):
         upload.verify_channel(service, value)
 
 
-@pytest.mark.parametrize("missing", ["youtube.json", "metadata.json", "video.mp4", "thumbnail.jpg"])
+@pytest.mark.parametrize("missing", ["youtube.json", "metadata.json", "video.mp4", "thumbnail-b.jpg"])
 def test_missing_or_legacy_kits_fail_before_upload(folder, missing):
     (folder / missing).unlink()
     with pytest.raises(upload.UploadError):
@@ -380,6 +380,8 @@ def test_publish_workflow_guards_artifacts_and_keeps_secrets_out_of_receipts():
     step = next(s for s in job["steps"] if s.get("name", "").startswith("Upload videos and thumbnail"))
     assert "--visibility public" in step["run"]
     assert "YOUTUBE_PRIVACY" not in step["env"]
+    assert "== 'd'" in step["env"]["YOUTUBE_THUMBNAIL"]
+    assert "|| 'b'" in step["env"]["YOUTUBE_THUMBNAIL"]
 
 
 def test_actual_google_sdk_accepts_upload_and_native_schedule_shapes(folder):
@@ -668,3 +670,15 @@ def test_cli_summary_displays_publication_time_in_east_africa_time(folder, servi
     monkeypatch.setattr(upload, "Store", MemoryStore)
     upload.main()
     assert "2026-11-01 20:00 EAT" in summary.read_text()
+
+
+
+def test_automatic_thumbnail_defaults_to_the_circular_portrait_layout(folder, service, monkeypatch):
+    monkeypatch.delenv("YOUTUBE_THUMBNAIL", raising=False)
+    monkeypatch.setenv("YOUTUBE_CHANNEL_ID", CHANNEL)
+    monkeypatch.setattr(sys, "argv", ["mezmur-upload", "--folder", str(folder)])
+    monkeypatch.setattr(upload, "youtube_client", lambda: service)
+    monkeypatch.setattr(upload, "Store", MemoryStore)
+    assert upload.load_kit(folder)["thumbnail"] == "thumbnail-b.jpg"
+    upload.main()
+    assert service.thumbnails.return_value.set.call_args.kwargs["media_body"][0] == "thumbnail-b.jpg"

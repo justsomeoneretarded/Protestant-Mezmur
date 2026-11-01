@@ -65,7 +65,8 @@ real credentials into chat, source files, repository variables or public artifac
     [Advanced settings](https://www.youtube.com/account_advanced) for its **UC... Channel ID**.
 14. In the repository's Actions **Variables** tab, create **YOUTUBE_CHANNEL_ID**
     containing that ID, not the channel name or @handle.
-15. Optionally set **YOUTUBE_THUMBNAIL** to a, b, c or d (default a).
+15. Automatic uploads use portrait layout **b** by default. Optionally set
+    **YOUTUBE_THUMBNAIL** to **d** for the frameless portrait layout.
     Keep your existing Telegram secrets unchanged.
 16. Run Generate Mezmur Videos on main and check Automatically upload finished
     videos to YouTube. For an initial test, use one song.
@@ -105,7 +106,12 @@ song jobs and progress finalization succeed, it calls the publisher. Existing
 video/lyrics/thumbnail artifacts remain available if a later upload fails.
 Unchecked means no YouTube authorization or upload occurs.
 
-Only **YOUTUBE_THUMBNAIL** (a, b, c or d; default a) changes the upload layout.
+Automatic uploads use **thumbnail-b.jpg**, the circular artist-portrait layout.
+Set **YOUTUBE_THUMBNAIL** to **d** to use the frameless portrait layout instead.
+Other repository-variable values fall back to b, so automatic uploads do not pick
+text-only layouts a/c. All four files remain available in the artifact. If no
+artist photo was confirmed, the renderer's existing text fallback still applies;
+no unverified portrait is invented. Local CLI overrides can still select a/c.
 The workflow always requests the five-hour-interval public queue. A previously configured
 YOUTUBE_PRIVACY variable no longer changes workflow behavior.
 
