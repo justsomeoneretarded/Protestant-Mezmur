@@ -1,7 +1,8 @@
 # Automatic YouTube Uploads
 
 The normal workflow can generate videos and upload them to your own YouTube
-channel. Uploading is opt-in: videos start **private** and are scheduled to become
+channel. Uploading is enabled by default for manual and reusable generation runs:
+videos start **private** and are scheduled to become
 **public in randomized order at five-hour intervals**. Google OAuth is required
 for uploading; open-source transcription and rendering still run on GitHub Actions.
 An API key or service account cannot replace channel-owner authorization.
@@ -68,8 +69,8 @@ real credentials into chat, source files, repository variables or public artifac
 15. Automatic uploads use portrait layout **b** by default. Optionally set
     **YOUTUBE_THUMBNAIL** to **d** for the frameless portrait layout.
     Keep your existing Telegram secrets unchanged.
-16. Run Generate Mezmur Videos on main and check Automatically upload finished
-    videos to YouTube. For an initial test, use one song.
+16. Run Generate Mezmur Videos on main and leave Automatically upload finished
+    videos to YouTube checked (the default). For an initial test, use one song.
 
 ## Local Authorization Alternative
 
@@ -98,8 +99,9 @@ and copyright enforcement still apply. Only process/publish audio you have right
 
 ## Generate and Upload
 
-In **Actions > Generate Mezmur Videos > Run workflow**, select `main` and check
-**Automatically upload finished videos to YouTube** (`upload_youtube`).
+In **Actions > Generate Mezmur Videos > Run workflow**, select `main` and leave
+**Automatically upload finished videos to YouTube** (`upload_youtube`) checked.
+It is enabled by default; uncheck it to generate downloadable artifacts without posting.
 
 The workflow checks configuration before downloading/rendering songs. Once all
 song jobs and progress finalization succeed, it calls the publisher. Existing
