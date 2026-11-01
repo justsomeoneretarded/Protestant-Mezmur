@@ -28,7 +28,7 @@ from .youtube import write_kit
 
 # Acoustic evidence is one signal, not a calibrated word-accuracy percentage.
 # Identified lyrics can proceed to forced completion when coverage and draft agreement support them.
-ACCEPT_SHARE = 0.70       # share of vocal frames inside aligned lyric lines
+ACCEPT_SHARE = 0.52       # share of vocal frames inside aligned lyric lines
 ACCEPT_GAIN = 0.18        # per-vocal-frame log-likelihood gain over "unscripted singing"
 ACCEPT_LINES = 0.70       # share of the found lines that were actually sung
 MAX_ESTIMATED = 0.35      # share of word timings that may be estimated rather than heard
