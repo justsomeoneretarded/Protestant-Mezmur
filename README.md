@@ -1,8 +1,8 @@
 # Protestant Mezmur
 
 Turns songs from a Telegram channel into **YouTube-ready Amharic lyric videos**, entirely
-inside GitHub Actions, with free tools only. Download the finished folder, or enable optional
-automatic YouTube uploads after [one-time channel authorization](docs/youtube-upload.md).
+inside GitHub Actions, with free tools only. Automatic YouTube uploads are enabled by default
+after [one-time channel authorization](docs/youtube-upload.md); uncheck uploading for artifacts only.
 
 Every generated video automatically carries a small, faded **Rehoboth Mezmur**
 text watermark in the top-right corner, including the intro and outro.
@@ -114,7 +114,7 @@ YouTube channel and the web, checking that the faces agree.
   runner at the same time, so 5 songs take about as long as 1 (≈ 25–35 minutes).
 - `message_ids`: remake specific songs (e.g. `2,3`) without moving your place in the channel.
 - `separator`: vocal-isolation model (default is the fast, accurate UVR-MDX-NET).
-- `upload_youtube`: optional automatic YouTube upload, **off by default**. Requires
+- `upload_youtube`: automatic YouTube upload, **on by default**; uncheck for artifacts only. Requires
   `YOUTUBE_OAUTH_JSON` (secret) and `YOUTUBE_CHANNEL_ID` (variable). Uploads privately,
   then uses YouTube's built-in scheduler with randomized five-hour slots: four
   new videos get +5, +10, +15 and +20 hours when the queue is empty. New batches

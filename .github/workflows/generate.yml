@@ -31,9 +31,9 @@ on:
         type: boolean
         default: false
       upload_youtube:
-        description: Automatically upload finished videos to YouTube (one-time OAuth setup required)
+        description: Automatically upload finished videos to YouTube (uncheck for artifacts only; OAuth setup required)
         type: boolean
-        default: false
+        default: true
   push:
     branches: [main]
     paths: ['corrections/**']
@@ -44,7 +44,7 @@ on:
       separator: {type: string, default: UVR-MDX-NET-Voc_FT.onnx}
       resolution: {type: string, default: '1080'}
       debug: {type: string, default: ''}
-      upload_youtube: {type: boolean, default: false}
+      upload_youtube: {type: boolean, default: true}
 
 permissions:
   contents: write

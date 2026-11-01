@@ -349,16 +349,21 @@ def test_cli_records_the_video_link_in_actions_summary(folder, service, monkeypa
     assert f"https://youtu.be/{VIDEO}" in summary.read_text()
 
 
-def test_generation_upload_is_opt_in_and_after_progress():
+def test_generation_upload_is_default_on_and_after_progress():
     from pathlib import Path
 
     doc = yaml.safe_load(Path(".github/workflows/generate.yml").read_text())
     events = doc.get("on", doc.get(True))
     inputs = events["workflow_dispatch"]["inputs"]
     assert len(inputs) <= 10
-    assert inputs["upload_youtube"]["default"] is False
+    assert inputs["upload_youtube"]["type"] == "boolean"
+    assert inputs["upload_youtube"]["default"] is True
+    assert events["workflow_call"]["inputs"]["upload_youtube"] == {"type": "boolean", "default": True}
     assert doc["jobs"]["publish"]["needs"] == ["fetch", "song", "finalize"]
-    assert "upload_youtube" in doc["jobs"]["publish"]["if"]
+    # Explicit false must still disable publishing and its OAuth preflight.
+    assert doc["jobs"]["publish"]["if"] == "success() && inputs.upload_youtube == true"
+    preflight = next(s for s in doc["jobs"]["fetch"]["steps"] if s.get("name", "").startswith("Check YouTube configuration"))
+    assert preflight["if"] == "inputs.upload_youtube == true"
     assert "YOUTUBE_OAUTH_JSON" not in str(doc["jobs"]["song"].get("env", {}))
     artifacts = next(s for s in doc["jobs"]["song"]["steps"] if s.get("name", "").startswith("Upload the YouTube kit"))
     assert "/metadata.json" in artifacts["with"]["path"] and "/youtube.json" in artifacts["with"]["path"]
