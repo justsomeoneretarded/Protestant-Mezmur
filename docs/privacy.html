@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="How Rehoboth Mezmur accesses, uses, stores and shares Google account data and generated publishing artifacts.">
+  <title>Privacy Policy | Rehoboth Mezmur</title>
+  <link rel="stylesheet" href="site.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <strong><a href="./">Rehoboth Mezmur</a></strong>
+    <a href="privacy.html">Privacy</a>
+    <a href="terms.html">Terms</a>
+    <a href="https://github.com/justsomeoneretarded/Protestant-Mezmur">Source</a>
+  </nav></header>
+  <main>
+    <h1>Privacy Policy</h1>
+    <p class="date">Effective date: November 1, 2026</p>
+    <p>This policy describes the current owner-operated Rehoboth Mezmur application maintained in the <a href="https://github.com/justsomeoneretarded/Protestant-Mezmur">Protestant-Mezmur repository</a>. It uses YouTube API Services to publish videos at the channel owner's request; it is not a public multi-user account service.</p>
+    <h2>Information accessed</h2>
+    <ul>
+      <li>OAuth client credentials, refresh tokens and temporary access tokens supplied by the operator for Google authorization. The app does not request or store a Google password.</li>
+      <li>The authorized YouTube channel ID and channel information needed to check that uploads target the intended channel.</li>
+      <li>Video IDs, titles, descriptions, tags, visibility and publication status for videos uploaded or recovered through this workflow.</li>
+      <li>Operator-selected audio, images, lyrics, generated videos, thumbnails and upload metadata. Inputs may come from Telegram, local files and the project's configured public-source searches.</li>
+    </ul>
+    <h2>Purpose and permissions</h2>
+    <p>Google authorization is used to confirm channel ownership, upload generated videos and thumbnails, set metadata, schedule publication and avoid duplicate uploads. The configured YouTube permission can manage video data; the current uploader does not automatically delete existing videos or upload separate subtitle tracks.</p>
+    <p>Uploaded videos initially remain private, then the current workflow schedules public publication five hours ahead. The owner can change or cancel publication in YouTube Studio. The app is not affiliated with Google or YouTube.</p>
+    <h2>Storage and public-repository disclosure</h2>
+    <p>In GitHub Actions, Google OAuth credentials are provided through GitHub repository secrets and used by authorized workflows in runtime memory. The optional local authorization helper writes a credential file on the operator's own computer. Credentials are not intentionally included in generated artifacts or the progress branch. Protect repository administration and workflow-edit access, because authorized workflows can use configured secrets.</p>
+    <p><strong>This repository and its workflow outputs are public.</strong> Generated audio/video inputs, lyrics, titles, descriptions, thumbnails, diagnostics and logs can be accessible through GitHub artifacts or branches. A private YouTube setting does not make the GitHub copy private. Do not use the public workflow for confidential content.</p>
+    <p>The progress branch stores source identifiers, YouTube channel/video IDs and links, file hashes, run identifiers, upload status and publication timestamps. Upload receipts contain similar information. Private-video IDs and unlisted links can therefore be public; unlisted links must not be treated as confidential.</p>
+    <h2>Sharing and service providers</h2>
+    <p>Google and YouTube receive authorized API requests and uploaded media. GitHub hosts the code, automation, secrets, artifacts and progress records. Google's OAuth Playground may process credentials during the optional browser-only authorization flow. Those services operate under their own policies, including the <a href="https://policies.google.com/privacy">Google Privacy Policy</a> and <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub Privacy Statement</a>.</p>
+    <p>The app does not sell or rent Google user data, use it for targeted advertising, or use Google-authorized account data to train general-purpose AI models. Local transcription and alignment are used to produce the owner's requested lyrics videos, not to train a new model. This static website adds no advertising, analytics scripts, forms or tracking cookies; hosting providers may process ordinary request logs.</p>
+    <p>Use and transfer of information received from Google APIs is limited to the disclosed publishing functions and is subject to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including applicable Limited Use requirements, and the <a href="https://developers.google.com/youtube/terms/developer-policies">YouTube API Services Developer Policies</a>.</p>
+    <h2>Retention</h2>
+    <p>The current workflow requests two-day retention for input artifacts, three days for generated video kits, and fourteen days for upload-receipt artifacts. GitHub's repository settings and platform policies also apply. Logs and diagnostic branches have their own GitHub or operator-controlled retention.</p>
+    <p>Progress, uploaded-video identifiers and the verified-lyrics library remain in the state branch until the operator removes them. Git history can retain previous versions. This is not an automatic account-data deletion service: the operator must review and remove stored data as required by applicable Google/YouTube policies and deletion requests. Google grants and local credential files have separate operator-controlled lifetimes.</p>
+    <h2>Revoke access and delete data</h2>
+    <p>To stop future authorized access, remove this app from <a href="https://myaccount.google.com/permissions">your Google account's third-party connections</a>, disable publishing workflows, and delete the GitHub OAuth secret and any local credential files. Revocation alone does not delete existing YouTube uploads, artifacts or saved records.</p>
+    <p>The channel owner can delete videos in YouTube Studio. To remove GitHub copies, delete the relevant artifacts, logs and saved records through GitHub; old Git history, caches or provider backups may require additional provider-specific removal steps. Removing duplicate-protection records can allow a later replay to upload again, so stop publishing before cleanup.</p>
+    <p>For privacy questions, complaints or deletion requests, contact the operator at the support email shown on the Google consent screen. For non-sensitive issues, the <a href="https://github.com/justsomeoneretarded/Protestant-Mezmur/issues">project issue tracker</a> is also available. Do not include tokens, credentials or confidential content in a public issue.</p>
+    <h2>Changes</h2>
+    <p>The operator must update this policy before changing the app's handling of Google user data and obtain any additional consent required by Google. Review the current policy and configured repository/workflow access before authorizing an installation.</p>
+  </main>
+  <footer>Rehoboth Mezmur. Independently operated; not affiliated with or endorsed by Google or YouTube.</footer>
+</body>
+</html>
