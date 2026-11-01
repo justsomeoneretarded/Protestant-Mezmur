@@ -2,8 +2,8 @@
   "version": 1,
   "channels": {
     "4335601101": {
-      "last_message_id": 26,
-      "run_id": "41224669447"
+      "last_message_id": 30,
+      "run_id": "41315143379"
     }
   },
   "used_backgrounds": [
@@ -91,9 +91,11 @@
     "commons-img:139316529",
     "commons-img:92385368",
     "commons-img:94131018",
-    "commons-img:108369754"
+    "commons-img:108369754",
+    "commons-img:94752747"
   ],
   "lyrics_channels": [
-    "SongLegetaLyrics"
+    "SongLegetaLyrics",
+    "mezmurlyricsbb"
   ]
 }
