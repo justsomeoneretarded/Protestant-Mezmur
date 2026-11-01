@@ -288,7 +288,7 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     # 3. Vocals + acoustic model (load the model first so a broken install fails fast).
     vocab = asr.vocabulary()
     t = time.time()
-    # Key, tempo, noise and reverb changes must not weaken lyric verification.
+    # Isolated vocals are for analysis; rendering keeps the original recording.
     vocals = separate(source_audio, work, model=separator, log=log)
     timings["separation"] = round(time.time() - t, 1)
     t = time.time()
