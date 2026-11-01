@@ -3,6 +3,7 @@ import argparse
 import copy
 import hashlib
 import json
+import logging
 import os
 import re
 from datetime import datetime, timezone
@@ -24,6 +25,8 @@ class UploadError(RuntimeError):
 
 def youtube_client():
     """Refresh only in memory; never write credentials into an artifact or state branch."""
+    # SDK retry warnings can include bearer-like resumable-session URLs.
+    logging.getLogger("googleapiclient.http").disabled = True
     from google.auth.transport.requests import Request
     from google.oauth2.credentials import Credentials
     from googleapiclient.discovery import build

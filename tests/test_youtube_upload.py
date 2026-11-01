@@ -375,3 +375,26 @@ def test_bad_oauth_configuration_has_a_useful_non_secret_error(monkeypatch, raw)
     monkeypatch.setenv("YOUTUBE_OAUTH_JSON", raw)
     with pytest.raises(upload.UploadError, match="YOUTUBE_OAUTH_JSON"):
         upload.youtube_client()
+
+
+
+def test_oauth_refresh_uses_google_endpoint_and_suppresses_sensitive_retry_logs(monkeypatch):
+    import logging
+    import google.oauth2.credentials
+    import googleapiclient.discovery
+
+    logger = logging.getLogger("googleapiclient.http")
+    monkeypatch.setattr(logger, "disabled", False)
+    credentials = MagicMock()
+    constructor = MagicMock(return_value=credentials)
+    monkeypatch.setattr(google.oauth2.credentials, "Credentials", constructor)
+    built = MagicMock()
+    monkeypatch.setattr(googleapiclient.discovery, "build", lambda *a, **k: built)
+    monkeypatch.setenv("YOUTUBE_OAUTH_JSON", json.dumps({
+        "refresh_token": "PRIVATE_REFRESH", "client_id": "CLIENT", "client_secret": "PRIVATE_CLIENT",
+        "token_uri": "https://not-google.invalid/token"}))
+    assert upload.youtube_client() is built
+    credentials.refresh.assert_called_once()
+    assert constructor.call_args.kwargs["token_uri"] == "https://oauth2.googleapis.com/token"
+    assert constructor.call_args.kwargs["scopes"] == upload.SCOPES
+    assert logger.disabled
