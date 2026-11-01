@@ -100,7 +100,7 @@
   ],
   "youtube_uploads": {
     "UCNSSLKyhXrG50l694M48zTQ:4335601101:30": {
-      "status": "uploaded",
+      "status": "complete",
       "message_id": 30,
       "telegram_channel_id": "4335601101",
       "youtube_channel_id": "UCNSSLKyhXrG50l694M48zTQ",
@@ -118,7 +118,9 @@
       "metadata_adjusted": [],
       "video_id": "AhhZlUbJtXY",
       "url": "https://youtu.be/AhhZlUbJtXY",
-      "thumbnail_file": "thumbnail-b.jpg"
+      "thumbnail_file": "thumbnail-b.jpg",
+      "privacy": "private",
+      "completed_at": "2026-11-01T16:11:57+00:00"
     }
   }
 }
