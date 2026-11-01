@@ -1,0 +1,104 @@
+name: Publish Generated Videos
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Generate Mezmur Videos run ID containing the finished artifacts
+        type: string
+        required: true
+      message_id:
+        description: One Telegram message ID (leave empty to upload all finished songs)
+        type: string
+        default: ''
+      recover_video_id:
+        description: Existing YouTube video ID for an uncertain upload (one message_id required)
+        type: string
+        default: ''
+  workflow_call:
+    inputs:
+      run_id: {type: string, required: true}
+      message_id: {type: string, default: ''}
+      recover_video_id: {type: string, default: ''}
+      from_generation: {type: boolean, default: false}
+    secrets:
+      YOUTUBE_OAUTH_JSON: {required: true}
+
+permissions:
+  contents: write
+  actions: read
+
+# Manual publishing shares the generation lock so the state cursor cannot be overwritten.
+# A called workflow must not wait for the lock already held by its own parent.
+concurrency:
+  group: ${{ inputs.from_generation && format('mezmur-publish-{0}', github.run_id) || 'mezmur-generate' }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SOURCE_RUN_ID: ${{ inputs.run_id }}
+      MESSAGE_ID: ${{ inputs.message_id }}
+      RECOVER_VIDEO_ID: ${{ inputs.recover_video_id }}
+      FROM_GENERATION: ${{ inputs.from_generation && 'true' || 'false' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Validate source run and requested song
+        shell: bash
+        run: |
+          [[ "$SOURCE_RUN_ID" =~ ^[1-9][0-9]*$ ]] || { echo "::error::run_id must be numeric"; exit 1; }
+          [[ -z "$MESSAGE_ID" || "$MESSAGE_ID" =~ ^[1-9][0-9]*$ ]] || { echo "::error::message_id must be numeric"; exit 1; }
+          if [ -n "$RECOVER_VIDEO_ID" ]; then
+            [[ -n "$MESSAGE_ID" && "$RECOVER_VIDEO_ID" =~ ^[A-Za-z0-9_-]{11}$ ]] || { echo "::error::Recovery needs one message_id and a valid YouTube video ID"; exit 1; }
+          fi
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" > "$RUNNER_TEMP/source-run.json"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          data = json.loads((Path(os.environ["RUNNER_TEMP"]) / "source-run.json").read_text())
+          allowed = (data.get("head_repository") or {}).get("full_name") == os.environ["GITHUB_REPOSITORY"]
+          allowed = allowed and data.get("head_branch") == "main"
+          allowed = allowed and data.get("path", "").split("@")[0] == ".github/workflows/generate.yml"
+          allowed = allowed and data.get("event") in ("workflow_dispatch", "push", "workflow_call")
+          if os.environ["FROM_GENERATION"] != "true":
+              allowed = allowed and data.get("status") == "completed"
+          if not allowed:
+              raise SystemExit("Only generated artifacts from this repository's trusted main workflow may be published")
+          PY
+      - name: Download finished song kits (no rendering)
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.run_id }}
+          pattern: ${{ inputs.message_id && format('mezmur-{0}-run{1}', inputs.message_id, inputs.run_id) || format('mezmur-*-run{0}', inputs.run_id) }}
+          path: uploads
+      - name: Install uploader
+        run: pip install -e '.[upload]'
+      - name: Upload videos, thumbnail and timed caption tracks
+        env:
+          YOUTUBE_OAUTH_JSON: ${{ secrets.YOUTUBE_OAUTH_JSON }}
+          YOUTUBE_CHANNEL_ID: ${{ vars.YOUTUBE_CHANNEL_ID }}
+          YOUTUBE_PRIVACY: ${{ vars.YOUTUBE_PRIVACY || 'private' }}
+          YOUTUBE_THUMBNAIL: ${{ vars.YOUTUBE_THUMBNAIL || 'a' }}
+        shell: bash
+        run: |
+          args=()
+          if [ -n "$RECOVER_VIDEO_ID" ]; then args+=(--recover-video-id "$RECOVER_VIDEO_ID"); fi
+          python -m mezmur.upload --root uploads "${args[@]}"
+      - name: Keep upload receipts (never credentials)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: youtube-upload-${{ github.run_id }}-${{ github.run_attempt }}
+          path: uploads/**/youtube-upload*.json
+          if-no-files-found: ignore
+          retention-days: 14

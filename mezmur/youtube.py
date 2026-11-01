@@ -163,9 +163,13 @@ def description(m, stanzas, cues, chapters, credits, lyrics_source):
     for with_roman in (True, False):
         body = lines + (rom_block if with_roman else []) + tail + [tags_line]
         text = "\n".join(body)
-        if len(text) <= 4900:
+        if len(text.encode("utf-8")) <= 4900:
             return text
-    return text[:4900]
+    # YouTube limits descriptions by UTF-8 bytes, not characters. Preserve credits and hashtags.
+    ending = "\n".join(tail + [tags_line])
+    budget = max(0, 4900 - len(ending.encode("utf-8")) - 2)
+    prefix = "\n".join(lines).encode("utf-8")[:budget].decode("utf-8", errors="ignore")
+    return prefix.rstrip() + "\n\n" + ending
 
 
 def write_kit(folder, m, stanzas, cues, duration, chorus_lines, credits, lyrics_source, outro_start, review):

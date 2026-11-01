@@ -526,7 +526,8 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     write_kit(out, {**meta, "album": record.get("album", "")}, stanzas, cues, duration, chorus, credits,
               lyrics_source, renderer.outro_start, review)
     write_json(out / "metadata.json", {
-        "message_id": mid, "names": record, "duration_seconds": round(duration, 2),
+        "message_id": mid, "telegram_channel_id": info.get("channel_id"),
+        "names": record, "duration_seconds": round(duration, 2),
         "original_duration_seconds": round(original_duration, 2), "loudness_before": loudness,
         "audio_augmentation": {"enabled": augmentation["enabled"],
                                "settings_file": "augmentation.json" if augmentation["enabled"] else None,

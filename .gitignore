@@ -10,3 +10,7 @@ bg/
 .runtime/
 .model-cache/
 dist/
+
+# Local Google OAuth credentials: never commit or upload these.
+client_secret*.json
+youtube-oauth*.json
