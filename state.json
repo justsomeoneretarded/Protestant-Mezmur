@@ -2,8 +2,8 @@
   "version": 1,
   "channels": {
     "4335601101": {
-      "last_message_id": 31,
-      "run_id": "41337594776"
+      "last_message_id": 38,
+      "run_id": "41494534784"
     }
   },
   "used_backgrounds": [
@@ -93,11 +93,16 @@
     "commons-img:94131018",
     "commons-img:108369754",
     "commons-img:94752747",
-    "commons-img:1221019"
+    "commons-img:1221019",
+    "commons-img:21175158",
+    "commons-img:96025088",
+    "commons-img:118188101"
   ],
   "lyrics_channels": [
     "SongLegetaLyrics",
-    "mezmurlyricsbb"
+    "mezmurlyricsbb",
+    "bestprotestant_songs",
+    "MezmurLyrics0"
   ],
   "youtube_uploads": {
     "UCNSSLKyhXrG50l694M48zTQ:4335601101:30": {
