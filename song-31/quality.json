@@ -1,0 +1,1126 @@
+{
+  "mode": "lyrics-aligned",
+  "alignment_timeline": "original",
+  "candidates": [
+    {
+      "source": "web:mezmuroch.com",
+      "url": "https://mezmuroch.com/lyrics/daniel-amdemichael/sinega",
+      "similarity": {
+        "trigram_recall": 0.26,
+        "trigram_precision": 0.553,
+        "word_recall": 0.55,
+        "score": 0.42
+      },
+      "phrases": 52,
+      "matched": 52,
+      "null": 36,
+      "matched_share": 0.68,
+      "mean_deficit": 0.148,
+      "complete_share": 0.885,
+      "gain_per_vocal_frame": 0.172,
+      "score": 1247.442,
+      "lines_used": 22,
+      "lines_total": 26,
+      "verification": {
+        "method": "acoustic",
+        "identity": {
+          "matched": false,
+          "title_score": 0.529,
+          "artist_matched": true,
+          "short_artist_name": false,
+          "recognized_source": true,
+          "domain": "mezmuroch.com"
+        },
+        "support_checks": {
+          "song_and_artist_identified": false,
+          "positive_acoustic_evidence": true,
+          "draft_agreement": true,
+          "complete_phrases": true,
+          "vocal_and_line_coverage": true
+        },
+        "acoustic_threshold": 0.12
+      },
+      "lines_share": 0.846,
+      "seconds": 1.3,
+      "accepted": true
+    },
+    {
+      "source": "web:mezmurdebter.vercel.app",
+      "url": "https://mezmurdebter.vercel.app/89/89-4/1810",
+      "similarity": {
+        "trigram_recall": 0.254,
+        "trigram_precision": 0.534,
+        "word_recall": 0.55,
+        "score": 0.414
+      },
+      "phrases": 51,
+      "matched": 51,
+      "null": 39,
+      "matched_share": 0.669,
+      "mean_deficit": 0.154,
+      "complete_share": 0.882,
+      "gain_per_vocal_frame": 0.167,
+      "score": 1224.261,
+      "lines_used": 22,
+      "lines_total": 26,
+      "verification": {
+        "method": "acoustic",
+        "identity": {
+          "matched": false,
+          "title_score": 0.545,
+          "artist_matched": true,
+          "short_artist_name": false,
+          "recognized_source": true,
+          "domain": "mezmurdebter.vercel.app"
+        },
+        "support_checks": {
+          "song_and_artist_identified": false,
+          "positive_acoustic_evidence": true,
+          "draft_agreement": true,
+          "complete_phrases": true,
+          "vocal_and_line_coverage": true
+        },
+        "acoustic_threshold": 0.12
+      },
+      "lines_share": 0.846,
+      "seconds": 1.3,
+      "accepted": true
+    },
+    {
+      "source": "web:musixmatch.com",
+      "url": "https://www.musixmatch.com/lyrics/Daniel-Amdemichael/Sinegam",
+      "similarity": {
+        "trigram_recall": 0.073,
+        "trigram_precision": 0.691,
+        "word_recall": 0.248,
+        "score": 0.258
+      },
+      "phrases": 16,
+      "matched": 16,
+      "null": 145,
+      "matched_share": 0.171,
+      "mean_deficit": 0.189,
+      "complete_share": 1.0,
+      "gain_per_vocal_frame": 0.054,
+      "score": 640.07,
+      "lines_used": 4,
+      "lines_total": 4,
+      "verification": {
+        "method": "rejected",
+        "identity": {
+          "matched": false,
+          "title_score": 0.59,
+          "artist_matched": true,
+          "short_artist_name": false,
+          "recognized_source": false,
+          "domain": "musixmatch.com"
+        },
+        "support_checks": {
+          "song_and_artist_identified": false,
+          "positive_acoustic_evidence": true,
+          "draft_agreement": true,
+          "complete_phrases": true,
+          "vocal_and_line_coverage": false
+        },
+        "acoustic_threshold": 0.12
+      },
+      "lines_share": 1.0,
+      "seconds": 0.3,
+      "accepted": false
+    },
+    {
+      "source": "web:ameco.et (phrase)",
+      "url": "https://ameco.et/bekur/7975/",
+      "similarity": {
+        "trigram_recall": 0.219,
+        "trigram_precision": 0.048,
+        "word_recall": 0.349,
+        "score": 0.23
+      },
+      "phrases": 1,
+      "matched": 1,
+      "null": 180,
+      "matched_share": 0.004,
+      "mean_deficit": 0.556,
+      "complete_share": 0.0,
+      "gain_per_vocal_frame": 0.004,
+      "score": 384.194,
+      "lines_used": 1,
+      "lines_total": 61,
+      "verification": {
+        "method": "rejected",
+        "identity": {
+          "matched": false,
+          "title_score": 0.529,
+          "artist_matched": false,
+          "short_artist_name": false,
+          "recognized_source": false,
+          "domain": "ameco.et"
+        },
+        "support_checks": {
+          "song_and_artist_identified": false,
+          "positive_acoustic_evidence": true,
+          "draft_agreement": true,
+          "complete_phrases": false,
+          "vocal_and_line_coverage": false
+        },
+        "acoustic_threshold": 0.12
+      },
+      "lines_share": 0.016,
+      "seconds": 5.5,
+      "accepted": false
+    },
+    {
+      "source": "telegram:joined chat usedphoneselleres",
+      "url": "https://t.me/usedphoneselleres/1028391",
+      "similarity": {
+        "trigram_recall": 0.146,
+        "trigram_precision": 0.077,
+        "word_recall": 0.349,
+        "score": 0.203
+      },
+      "phrases": 5,
+      "matched": 5,
+      "null": 175,
+      "matched_share": 0.021,
+      "mean_deficit": 0.135,
+      "complete_share": 0.2,
+      "gain_per_vocal_frame": 0.002,
+      "score": 373.223,
+      "lines_used": 3,
+      "lines_total": 62,
+      "verification": {
+        "method": "rejected",
+        "identity": {
+          "matched": false,
+          "title_score": 0.388,
+          "artist_matched": false,
+          "short_artist_name": false,
+          "recognized_source": false,
+          "domain": "t.me"
+        },
+        "support_checks": {
+          "song_and_artist_identified": false,
+          "positive_acoustic_evidence": true,
+          "draft_agreement": true,
+          "complete_phrases": false,
+          "vocal_and_line_coverage": false
+        },
+        "acoustic_threshold": 0.12
+      },
+      "lines_share": 0.048,
+      "seconds": 3.1,
+      "accepted": false
+    },
+    {
+      "source": "web:mezmuroch.com",
+      "url": "https://mezmuroch.com/lyrics/aster-abebe/eyulign",
+      "similarity": {
+        "trigram_recall": 0.092,
+        "trigram_precision": 0.121,
+        "word_recall": 0.11,
+        "score": 0.104
+      },
+      "phrases": 9,
+      "matched": 9,
+      "null": 174,
+      "matched_share": 0.04,
+      "mean_deficit": 0.163,
+      "complete_share": 0.0,
+      "gain_per_vocal_frame": 0.006,
+      "score": 395.33,
+      "lines_used": 4,
+      "lines_total": 32,
+      "verification": {
+        "method": "rejected",
+        "identity": {
+          "matched": false,
+          "title_score": 0.169,
+          "artist_matched": false,
+          "short_artist_name": false,
+          "recognized_source": true,
+          "domain": "mezmuroch.com"
+        },
+        "support_checks": {
+          "song_and_artist_identified": false,
+          "positive_acoustic_evidence": true,
+          "draft_agreement": false,
+          "complete_phrases": false,
+          "vocal_and_line_coverage": false
+        },
+        "acoustic_threshold": 0.12
+      },
+      "lines_share": 0.125,
+      "seconds": 1.7,
+      "accepted": false
+    },
+    {
+      "source": "telegram:channel @mezmur_gitem",
+      "url": "https://t.me/mezmur_gitem/143",
+      "similarity": {
+        "trigram_recall": 0.015,
+        "trigram_precision": 0.105,
+        "word_recall": 0.11,
+        "score": 0.067
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "telegram:channel @mezmur_gitem",
+      "url": "https://t.me/mezmur_gitem/143",
+      "similarity": {
+        "trigram_recall": 0.015,
+        "trigram_precision": 0.099,
+        "word_recall": 0.055,
+        "score": 0.046
+      },
+      "rejected": "text mismatch"
+    },
+    {
+      "source": "telegram:channel @mezmur_gitem",
+      "url": "https://t.me/mezmur_gitem/143",
+      "similarity": {
+        "trigram_recall": 0.019,
+        "trigram_precision": 0.132,
+        "word_recall": 0.018,
+        "score": 0.041
+      },
+      "rejected": "text mismatch"
+    },
+    {
+      "source": "telegram:channel @mezmur_gitem",
+      "url": "https://t.me/mezmur_gitem/143",
+      "similarity": {
+        "trigram_recall": 0.015,
+        "trigram_precision": 0.103,
+        "word_recall": 0.009,
+        "score": 0.031
+      },
+      "rejected": "text mismatch"
+    },
+    {
+      "source": "web:mezmuroch.com",
+      "url": "https://mezmuroch.com/lyrics/aster-abebe/eyulign",
+      "similarity": {
+        "trigram_recall": 0.017,
+        "trigram_precision": 0.101,
+        "word_recall": 0.009,
+        "score": 0.031
+      },
+      "rejected": "text mismatch"
+    },
+    {
+      "source": "web:ameco.et (phrase)",
+      "url": "https://ameco.et/bekur/7975/",
+      "similarity": {
+        "trigram_recall": 0.017,
+        "trigram_precision": 0.073,
+        "word_recall": 0.018,
+        "score": 0.029
+      },
+      "rejected": "text mismatch"
+    },
+    {
+      "source": "telegram:channel @mezmur_gitem",
+      "url": "https://t.me/mezmur_gitem/143",
+      "similarity": {
+        "trigram_recall": 0.012,
+        "trigram_precision": 0.08,
+        "word_recall": 0.018,
+        "score": 0.028
+      },
+      "rejected": "text mismatch"
+    },
+    {
+      "source": "telegram:channel @mezmur_gitem",
+      "url": "https://t.me/mezmur_gitem/143",
+      "similarity": {
+        "trigram_recall": 0.01,
+        "trigram_precision": 0.06,
+        "word_recall": 0.0,
+        "score": 0.016
+      },
+      "rejected": "text mismatch"
+    }
+  ],
+  "lrc_check": null,
+  "alignment": {
+    "phrases": 52,
+    "matched": 52,
+    "null": 36,
+    "matched_share": 0.6798833819241983,
+    "mean_deficit": 0.14790384615384616,
+    "complete_share": 0.8846153846153846,
+    "gain_per_vocal_frame": 0.17189795381346368,
+    "score": 1247.442317991495,
+    "lines_used": 22,
+    "lines_total": 26,
+    "verification": {
+      "method": "acoustic",
+      "identity": {
+        "matched": false,
+        "title_score": 0.529,
+        "artist_matched": true,
+        "short_artist_name": false,
+        "recognized_source": true,
+        "domain": "mezmuroch.com"
+      },
+      "support_checks": {
+        "song_and_artist_identified": false,
+        "positive_acoustic_evidence": true,
+        "draft_agreement": true,
+        "complete_phrases": true,
+        "vocal_and_line_coverage": true
+      },
+      "acoustic_threshold": 0.12
+    },
+    "completion": {
+      "filled_lines": 30,
+      "completed_lines": 6,
+      "estimated_words": 72,
+      "gaps": [
+        {
+          "start": 0.0,
+          "end": 40.76,
+          "after_line": null,
+          "before_line": 0,
+          "action": "examined"
+        },
+        {
+          "start": 0.0,
+          "end": 40.76,
+          "action": "nothing missing (instrumental)"
+        },
+        {
+          "start": 78.4,
+          "end": 92.08,
+          "after_line": 3,
+          "before_line": 4,
+          "action": "examined"
+        },
+        {
+          "start": 78.4,
+          "end": 92.08,
+          "lines": [
+            3
+          ],
+          "singing": 5.84,
+          "needed": 3.41,
+          "ratio": 1.71,
+          "heard": 0.0,
+          "action": "filled"
+        },
+        {
+          "start": 126.88,
+          "end": 133.76,
+          "after_line": 9,
+          "before_line": 8,
+          "action": "examined"
+        },
+        {
+          "start": 126.88,
+          "end": 133.76,
+          "action": "nothing missing (instrumental)"
+        },
+        {
+          "start": 173.85,
+          "end": 187.25,
+          "after_line": 14,
+          "before_line": 15,
+          "action": "examined"
+        },
+        {
+          "start": 173.85,
+          "end": 187.25,
+          "lines": [
+            14
+          ],
+          "singing": 9.52,
+          "needed": 3.41,
+          "ratio": 2.79,
+          "heard": 0.0,
+          "action": "filled"
+        },
+        {
+          "start": 247.89,
+          "end": 254.41,
+          "after_line": 20,
+          "before_line": 19,
+          "action": "examined"
+        },
+        {
+          "start": 247.89,
+          "end": 254.41,
+          "action": "nothing missing (instrumental)"
+        },
+        {
+          "start": 263.77,
+          "end": 270.37,
+          "after_line": 20,
+          "before_line": 19,
+          "action": "examined"
+        },
+        {
+          "start": 263.77,
+          "end": 270.37,
+          "action": "nothing missing (instrumental)"
+        },
+        {
+          "start": 279.77,
+          "end": 286.29,
+          "after_line": 20,
+          "before_line": 19,
+          "action": "examined"
+        },
+        {
+          "start": 279.77,
+          "end": 286.29,
+          "action": "nothing missing (instrumental)"
+        },
+        {
+          "start": 295.73,
+          "end": 310.73,
+          "after_line": 20,
+          "before_line": 20,
+          "action": "examined"
+        },
+        {
+          "start": 295.73,
+          "end": 310.73,
+          "action": "nothing missing (instrumental)"
+        },
+        {
+          "start": 312.97,
+          "end": 413.29,
+          "after_line": 20,
+          "before_line": null,
+          "action": "examined"
+        },
+        {
+          "start": 312.97,
+          "end": 413.29,
+          "lines": [
+            21,
+            21,
+            22,
+            23,
+            24,
+            25,
+            25,
+            21,
+            21,
+            22,
+            23,
+            24,
+            25,
+            25,
+            21,
+            21,
+            22,
+            23,
+            24,
+            25,
+            25,
+            21,
+            21,
+            22,
+            23,
+            24,
+            25,
+            25
+          ],
+          "singing": 89.88,
+          "needed": 24.47,
+          "ratio": 3.67,
+          "heard": 0.29,
+          "action": "filled"
+        }
+      ],
+      "recognised_in_gaps": 23
+    }
+  },
+  "phrases": [
+    {
+      "start": 40.76,
+      "end": 43.12,
+      "line": 0,
+      "words": [
+        0,
+        1
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.274
+    },
+    {
+      "start": 44.0,
+      "end": 46.36,
+      "line": 1,
+      "words": [
+        2,
+        3
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.267
+    },
+    {
+      "start": 47.24,
+      "end": 49.76,
+      "line": 2,
+      "words": [
+        4,
+        5
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.066
+    },
+    {
+      "start": 50.4,
+      "end": 52.84,
+      "line": 3,
+      "words": [
+        6,
+        8
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.383
+    },
+    {
+      "start": 53.72,
+      "end": 55.92,
+      "line": 0,
+      "words": [
+        0,
+        1
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.13
+    },
+    {
+      "start": 56.84,
+      "end": 59.16,
+      "line": 1,
+      "words": [
+        2,
+        3
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.126
+    },
+    {
+      "start": 60.04,
+      "end": 62.56,
+      "line": 2,
+      "words": [
+        4,
+        5
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.022
+    },
+    {
+      "start": 63.2,
+      "end": 65.6,
+      "line": 3,
+      "words": [
+        6,
+        8
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.397
+    },
+    {
+      "start": 66.56,
+      "end": 68.68,
+      "line": 0,
+      "words": [
+        0,
+        1
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.044
+    },
+    {
+      "start": 69.64,
+      "end": 71.92,
+      "line": 1,
+      "words": [
+        2,
+        3
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.14
+    },
+    {
+      "start": 72.84,
+      "end": 75.12,
+      "line": 2,
+      "words": [
+        4,
+        5
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.0
+    },
+    {
+      "start": 75.92,
+      "end": 78.4,
+      "line": 3,
+      "words": [
+        6,
+        8
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.344
+    },
+    {
+      "start": 92.08,
+      "end": 98.0,
+      "line": 4,
+      "words": [
+        9,
+        11
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.135
+    },
+    {
+      "start": 98.56,
+      "end": 103.88,
+      "line": 5,
+      "words": [
+        12,
+        13
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.114
+    },
+    {
+      "start": 104.72,
+      "end": 110.16,
+      "line": 6,
+      "words": [
+        14,
+        18
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.116
+    },
+    {
+      "start": 111.16,
+      "end": 116.8,
+      "line": 7,
+      "words": [
+        19,
+        22
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.234
+    },
+    {
+      "start": 117.8,
+      "end": 122.2,
+      "line": 8,
+      "words": [
+        23,
+        25
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.177
+    },
+    {
+      "start": 122.6,
+      "end": 126.88,
+      "line": 9,
+      "words": [
+        26,
+        28
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.074
+    },
+    {
+      "start": 127.4,
+      "end": 131.48,
+      "line": 10,
+      "words": [
+        29,
+        32
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.124
+    },
+    {
+      "start": 133.76,
+      "end": 138.16,
+      "line": 8,
+      "words": [
+        23,
+        25
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.143
+    },
+    {
+      "start": 138.56,
+      "end": 142.8,
+      "line": 9,
+      "words": [
+        26,
+        28
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.117
+    },
+    {
+      "start": 143.2,
+      "end": 148.08,
+      "line": 10,
+      "words": [
+        29,
+        33
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.149
+    },
+    {
+      "start": 149.12,
+      "end": 151.4,
+      "line": 11,
+      "words": [
+        34,
+        35
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.0
+    },
+    {
+      "start": 152.28,
+      "end": 154.64,
+      "line": 12,
+      "words": [
+        36,
+        37
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.257
+    },
+    {
+      "start": 155.48,
+      "end": 157.84,
+      "line": 13,
+      "words": [
+        38,
+        39
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.0
+    },
+    {
+      "start": 158.64,
+      "end": 161.12,
+      "line": 14,
+      "words": [
+        40,
+        42
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.161
+    },
+    {
+      "start": 161.96,
+      "end": 164.12,
+      "line": 11,
+      "words": [
+        34,
+        35
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.0
+    },
+    {
+      "start": 165.04,
+      "end": 167.36,
+      "line": 12,
+      "words": [
+        36,
+        37
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.365
+    },
+    {
+      "start": 168.24,
+      "end": 170.52,
+      "line": 13,
+      "words": [
+        38,
+        39
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.0
+    },
+    {
+      "start": 171.32,
+      "end": 173.85,
+      "line": 14,
+      "words": [
+        40,
+        42
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.368
+    },
+    {
+      "start": 187.25,
+      "end": 192.45,
+      "line": 15,
+      "words": [
+        43,
+        45
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.062
+    },
+    {
+      "start": 193.89,
+      "end": 199.09,
+      "line": 16,
+      "words": [
+        46,
+        51
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.089
+    },
+    {
+      "start": 200.21,
+      "end": 206.09,
+      "line": 17,
+      "words": [
+        52,
+        56
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.0
+    },
+    {
+      "start": 206.81,
+      "end": 212.09,
+      "line": 18,
+      "words": [
+        57,
+        62
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.075
+    },
+    {
+      "start": 212.85,
+      "end": 218.01,
+      "line": 15,
+      "words": [
+        43,
+        45
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.108
+    },
+    {
+      "start": 219.53,
+      "end": 224.81,
+      "line": 16,
+      "words": [
+        46,
+        51
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.119
+    },
+    {
+      "start": 225.69,
+      "end": 231.65,
+      "line": 17,
+      "words": [
+        52,
+        56
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.015
+    },
+    {
+      "start": 232.37,
+      "end": 237.69,
+      "line": 18,
+      "words": [
+        57,
+        62
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.072
+    },
+    {
+      "start": 238.53,
+      "end": 242.89,
+      "line": 19,
+      "words": [
+        63,
+        65
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.129
+    },
+    {
+      "start": 245.13,
+      "end": 247.89,
+      "line": 20,
+      "words": [
+        66,
+        67
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.125
+    },
+    {
+      "start": 248.29,
+      "end": 252.25,
+      "line": 21,
+      "words": [
+        68,
+        70
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.171
+    },
+    {
+      "start": 254.41,
+      "end": 258.89,
+      "line": 19,
+      "words": [
+        63,
+        65
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.205
+    },
+    {
+      "start": 261.01,
+      "end": 263.77,
+      "line": 20,
+      "words": [
+        66,
+        67
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.186
+    },
+    {
+      "start": 264.21,
+      "end": 268.17,
+      "line": 21,
+      "words": [
+        68,
+        70
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.16
+    },
+    {
+      "start": 270.37,
+      "end": 274.77,
+      "line": 19,
+      "words": [
+        63,
+        65
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.134
+    },
+    {
+      "start": 276.93,
+      "end": 279.77,
+      "line": 20,
+      "words": [
+        66,
+        67
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.234
+    },
+    {
+      "start": 280.17,
+      "end": 283.29,
+      "line": 21,
+      "words": [
+        68,
+        69
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.095
+    },
+    {
+      "start": 286.29,
+      "end": 290.85,
+      "line": 19,
+      "words": [
+        63,
+        65
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.171
+    },
+    {
+      "start": 292.97,
+      "end": 295.73,
+      "line": 20,
+      "words": [
+        66,
+        67
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.153
+    },
+    {
+      "start": 296.21,
+      "end": 299.37,
+      "line": 21,
+      "words": [
+        68,
+        69
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.128
+    },
+    {
+      "start": 302.57,
+      "end": 305.69,
+      "line": 21,
+      "words": [
+        68,
+        69
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.174
+    },
+    {
+      "start": 310.73,
+      "end": 312.97,
+      "line": 20,
+      "words": [
+        66,
+        67
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.359
+    }
+  ],
+  "draft_text": "ሲነጋ ለጊዜ ማስታውሰው ገልቤ የማይጠፋ ስላለማ የውፍ ቅር ነው ሲነጋ ም ሲመሽኝ ሁለ ጊዜ ማስታውሰው ከልቤ የማይጠፋ ስላለማ የውፍ ቅር ነው። ሲነጋ ም ሲመሽ ሁለ ጊዜ ማስታውሰው ከልቤ የማይጠፋው ስላለማ ፍ ቅር እንዴ ት ይረሳል ያደ ርክል ኝ በቀ ራ ን የክ ፍ ርቅ ፍቅር በወቴ ዛሬ ም ትኩስ ነው ው እንቃ ላ ጠ ረ ኝ እንዳ ልጠ ረቀው! ብ ብር ቃላ ቶ ች ያጥኑ ኛን በና ገር ቀላ ቶች ያጥሩ ኛል ለፍ ቅር ምን ም ላ ች ይገ ኛል። ብዘ ንብር ቀላ ቶ ች ያጥኑ ኛን በና ገር ቀላ ቶች ያጥሩ ኛል ለፍ ቅር ምንመ ላሽ ይገ ኛል ሲነጋ ም ሲመሽም ሁለጊዜ ማሳውን ሰው ከልቤ የማይጠፋው ዘላለማ ዊው ፍ ቅር ነው! ሲነጋ ም ሲመሽም! ሁለግዜ ማሳውን ሰው ከልቤ የማይጠፋው ስላ ፍቅር አይታ ክተኝ ገ ርባወራ ስላ ንተ ክብር ስላ ንተ ዝና ምነው በሆ ነ ልቤ እንደ ጅረ ት እንደ ውሃ ፈ ሳ ሽ እንደ ገ ነት አይታ ክተ ም ላገ ር ባወራ ስላ ንተ ክብ ር ስላ ንተ ዝና ምንነው በሆነ ልቤ እንደ ጀረ ት እንደ ው ፍ ሳ ሽ እንደ ነትምጭ አምል ኩ ማደ ም ዝ ሬው ማደ ህን ምላ ው ል ማደ ን ም ሃሌሉያ አ ማደ ዝማ ው ማደ ህን ም እል ልታ ማደ ሪያ ህን ምላው አምልኮ አምል ኮ ማደ ሪ ን ም ዝማ ሬ ማደ ሪ ን ምላ ልታ ማደ ሪ አም ማደ ሪ ዝማ ሬ ው ማደ ሪያ ህን ምላው እልልተ ደ ሪ ን ል ደ ማደሪያ ቀና ብየ ሳየው ሰማዩን ወደ ላይ መጨረሻም የለው ዳርቻ በነላይ ከሰማያት በላይ ምረቶ ትልቅ ነው ከኢየሱስ ጋር መኖ እንዴት መታደል እትመ እንት መደ እዴት መ ደ እን ከጌታ ጋርመ ር እንዴት መታ ደል እንት እንዴት መታ እንዴት መታደል እ ት ከእየሱስ ጋር መኖ ሬ አሌሉ ያ እንዴት መታደ እልልታ የሆንለት ሀሌሉያ ክብል የሆነለት ጭብጨባ የሆንለት ይገባዋልል ሀሌሉያ ።",
+  "draft_word_count": 292,
+  "review": {
+    "needs_review": true,
+    "reasons": [
+      "29% of the word timings were estimated (the singing there was hard to hear, e.g. choir parts). Spot-check those lines in the video.",
+      "Only 68% of the singing matched the found lyrics; watch for missing lines.",
+      "The romanized title/artist was generated automatically; check spelling in title.txt."
+    ]
+  }
+}
