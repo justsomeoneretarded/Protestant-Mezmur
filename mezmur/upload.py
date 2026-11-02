@@ -213,13 +213,22 @@ def save_record(store, key, record, previous, snapshot=None):
     store.save(snapshot, state)
 
 
-def _video(service, video_id, channel, marker):
+def _video(service, video_id, channel, marker, require_marker=True):
+    """Fetch a video and make sure it is ours.
+
+    require_marker=False is used for a video ID that YouTube itself returned to this pipeline's upload
+    (so it is certainly this song); YouTube may drop or rewrite tags, so the hidden marker tag is only
+    required when someone hands in a video ID for recovery."""
     if not re.fullmatch(r"[A-Za-z0-9_-]{11}", video_id):
         raise UploadError("Invalid YouTube video ID")
     items = service.videos().list(part="snippet,status", id=video_id).execute(num_retries=3).get("items", [])
-    if (len(items) != 1 or items[0]["snippet"].get("channelId") != channel
-            or marker not in items[0]["snippet"].get("tags", [])):
-        raise UploadError("The existing video does not belong to this channel and Telegram song")
+    if len(items) != 1:
+        raise UploadError(f"YouTube could not find video {video_id} (deleted, or not visible to this account)")
+    owner = items[0]["snippet"].get("channelId")
+    if owner != channel:
+        raise UploadError(f"Video {video_id} belongs to channel {owner}, not the connected channel {channel}")
+    if require_marker and marker not in items[0]["snippet"].get("tags", []):
+        raise UploadError(f"Video {video_id} is on this channel but is not marked as this Telegram song")
     return items[0]
 
 
@@ -289,7 +298,8 @@ def upload_song(kit, service, store, channel, visibility="public", recover_video
         previous = copy.deepcopy(record)
 
     video_id = record["video_id"]
-    current = _video(service, video_id, channel, marker)
+    # This ID came from our own upload (or an already verified recovery): check the channel only.
+    current = _video(service, video_id, channel, marker, require_marker=False)
     if not record.get("thumbnail_done"):
         service.thumbnails().set(videoId=video_id,
                                  media_body=media(folder / kit["thumbnail"], "image/jpeg")).execute(num_retries=3)

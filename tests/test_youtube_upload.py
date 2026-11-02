@@ -200,7 +200,7 @@ def test_recovery_rejects_a_video_from_another_source(folder, service):
     with pytest.raises(OSError):
         upload.upload_song(kit, service, store, CHANNEL)
     service.test_state["video"]["snippet"]["tags"] = ["wrong-song"]
-    with pytest.raises(upload.UploadError, match="does not belong"):
+    with pytest.raises(upload.UploadError, match="not marked as this Telegram song"):
         upload.upload_song(kit, service, store, CHANNEL, recover_video_id=VIDEO)
 
 
@@ -687,3 +687,17 @@ def test_automatic_thumbnail_defaults_to_the_circular_portrait_layout(folder, se
     assert upload.load_kit(folder)["thumbnail"] == "thumbnail-b.jpg"
     upload.main()
     assert service.thumbnails.return_value.set.call_args.kwargs["media_body"][0] == "thumbnail-b.jpg"
+
+
+def test_own_upload_is_accepted_even_if_youtube_drops_the_marker_tag(folder, service):
+    store, kit = MemoryStore(), upload.load_kit(folder)
+    real_list = service.videos.return_value.list.side_effect
+
+    def without_tags(**kwargs):
+        for item in service.test_state["videos"].values():
+            item["snippet"]["tags"] = []   # YouTube dropped or rewrote the tags
+        return real_list(**kwargs)
+
+    service.videos.return_value.list.side_effect = without_tags
+    record = upload.upload_song(kit, service, store, CHANNEL)
+    assert record["video_id"] == VIDEO
