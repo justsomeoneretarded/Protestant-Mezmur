@@ -187,7 +187,7 @@
       "completed_at": "2026-11-02T18:37:07+00:00"
     },
     "UCNSSLKyhXrG50l694M48zTQ:4335601101:34": {
-      "status": "queued",
+      "status": "uploading",
       "message_id": 34,
       "telegram_channel_id": "4335601101",
       "youtube_channel_id": "UCNSSLKyhXrG50l694M48zTQ",
@@ -195,7 +195,14 @@
       "held_for_review": false,
       "batch_id": "41494534784",
       "queued_at": "2026-11-02T18:36:44+00:00",
-      "publish_at": "2026-11-02T22:36:44Z"
+      "publish_at": "2026-11-02T22:36:44Z",
+      "video_sha256": "123c072e3dd35ce06fe3b3eb5fc125e9db2e71785f5d72811e046c138a229f08",
+      "source_marker": "mezmur-source-72d80019ab12b60348a22459",
+      "run_id": "41494534784",
+      "created_at": "2026-11-02T18:37:10+00:00",
+      "review_warnings": true,
+      "thumbnail_done": false,
+      "metadata_adjusted": []
     },
     "UCNSSLKyhXrG50l694M48zTQ:4335601101:38": {
       "status": "queued",
