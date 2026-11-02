@@ -43,7 +43,7 @@ def test_pages_have_brand_identity_no_credential_collection_and_resolvable_local
 def test_homepage_describes_actual_publishing_and_shows_a_local_renderer_asset():
     page = Page(DOCS / "index.html")
     text = " ".join(page.text)
-    assert "YouTube API Services" in text and "five hours" in text
+    assert "YouTube API Services" in text and "two hours" in text
     assert page.images
     for item in page.images:
         assert item.get("alt") and (DOCS / item["src"]).is_file()
