@@ -18,7 +18,7 @@ SCOPES = ["https://www.googleapis.com/auth/youtube.force-ssl"]
 PRIVACIES = ("private", "unlisted", "public")
 THUMBNAILS = {"a": "thumbnail.jpg", "b": "thumbnail-b.jpg",
               "c": "thumbnail-c.jpg", "d": "thumbnail-d.jpg"}
-PUBLISH_DELAY = timedelta(hours=5)
+PUBLISH_DELAY = timedelta(hours=2)
 PLAYLIST_NAME = "Mezmurs"
 
 
@@ -396,7 +396,7 @@ def upload_song(kit, service, store, channel, visibility="public", recover_video
                 accepted = result.get("status", {})
                 if (accepted.get("privacyStatus") != "private" or not accepted.get("publishAt")
                         or publish_time(accepted["publishAt"]) != target):
-                    raise UploadError("YouTube did not accept the five-hour publication schedule; retry the existing video, not a new upload")
+                    raise UploadError("YouTube did not accept the saved publication schedule; retry the existing video, not a new upload")
     elif status.get("privacyStatus") != actual:
         result = service.videos().update(part="status", body={
             "id": video_id, "status": {"privacyStatus": actual, "selfDeclaredMadeForKids": False}}).execute(num_retries=3)
@@ -426,7 +426,7 @@ def main():
     where.add_argument("--folder", type=Path)
     where.add_argument("--root", type=Path, help="Downloaded artifact folders containing video.mp4")
     parser.add_argument("--visibility", choices=PRIVACIES, default="public",
-                        help="Public queues randomized uploads at five-hour intervals; private/unlisted are local-only overrides")
+                        help="Public queues randomized uploads at two-hour intervals; private/unlisted are local-only overrides")
     parser.add_argument("--thumbnail", choices=tuple(THUMBNAILS), default=os.environ.get("YOUTUBE_THUMBNAIL") or "b")
     parser.add_argument("--recover-video-id")
     parser.add_argument("--dry-run", action="store_true", help="Validate kits without OAuth, network access or state writes")
