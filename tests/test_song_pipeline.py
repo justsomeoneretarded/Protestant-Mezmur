@@ -167,3 +167,20 @@ def test_song_cli_has_no_audio_effect_options(monkeypatch):
     monkeypatch.setattr(song, "produce", lambda *a, **k: calls.append(k))
     song.main()
     assert not any("augment" in key or "noise" in key or "space" in key for key in calls[0])
+
+
+def test_produce_uses_english_lyric_query_and_keeps_builtin_telegram_sources(clean_pipeline, monkeypatch):
+    calls, queries, searched_channels = clean_pipeline, [], []
+    monkeypatch.setenv("LYRICS_CHANNELS", "@CustomLyrics")
+    monkeypatch.setattr(song.web, "youtube_search", lambda query: queries.append(query) or [])
+
+    def gather(*args, **kwargs):
+        searched_channels.extend(kwargs["channels"])
+        return calls["candidates"], [], {}, {}
+
+    monkeypatch.setattr(song, "gather", gather)
+    result = song.produce(calls["input"], calls["output"], calls["work"])
+    assert result["mode"] == "lyrics-aligned"
+    assert queries == ["Test lyrics"]
+    assert {"yesemayzega12", "protestant_Song_lyrics1", "bestprotestant_songs",
+            "CustomLyrics"} <= set(searched_channels)

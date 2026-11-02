@@ -29,7 +29,8 @@ For every song you get:
    both their descriptions and their caption tracks → web search (private SearXNG + a second engine).
    Titles are searched in Amharic and in several Latin spellings, and a few clearly sung phrases from
    the song (usually its chorus) are searched too, so lyrics are found even when the title is wrong.
-   Each song's run page lists what every source returned.
+   YouTube and web lyric searches use the English keyword **lyrics**, including searches with Amharic titles
+   and sung phrases. Each song's run page lists what every source returned.
 2. **Listen to the original song.** The vocals are isolated for analysis
    (UVR-MDX-NET) and the Amharic acoustic model Ethio-ASR turns them into per-moment character
    probabilities. The original recording remains the soundtrack; no audio effects are applied.
@@ -102,8 +103,9 @@ YouTube channel and the web, checking that the faces agree.
    every site fails, the video still gets the bundled scenery plus generated light backgrounds.
 4. Optional **Variables:** `TELEGRAM_CHANNEL` (default `@amharicprotestantmezmurss`) and
    `TELEGRAM_NOTIFY_CHAT` (where the bot posts; default `@MyApplication_aman`) and
-   `LYRICS_CHANNELS` (comma-separated Telegram lyrics channels to search; a good default list is
-   built in). Joining extra lyrics channels with your Telegram account also helps, because the
+   `LYRICS_CHANNELS` (comma-separated additional Telegram lyrics channels; these extend the built-in list
+   rather than replacing it). Built-in sources include `@yesemayzega12`, `@protestant_Song_lyrics1` and
+   `@bestprotestant_songs`. Joining extra lyrics channels with your Telegram account also helps, because the
    pipeline searches every chat the account is in.
 
 ## Running it
