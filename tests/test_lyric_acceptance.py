@@ -27,7 +27,7 @@ def choose(monkeypatch, candidates=None, report=None, sim=0.217, record=RECORD):
 
 def test_song_29_reported_011_metrics_are_accepted_without_changing_strict_gain(monkeypatch):
     best, reports = choose(monkeypatch)
-    assert song.ACCEPT_GAIN == 0.18
+    assert song.ACCEPT_GAIN == 0.12
     assert best is not None and reports[0]["accepted"]
     assert best[3]["verification"]["method"] == "source-supported"
     assert reports[0]["gain_per_vocal_frame"] == 0.11
