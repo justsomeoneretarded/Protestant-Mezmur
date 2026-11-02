@@ -19,7 +19,7 @@ from .align import Lyrics, align_lyrics, build_target, complete_with_lyrics, smo
 from .common import duration as common_duration, write_json
 from .features import analyze
 from .geez import fold, romanize
-from .lyrics_sources import gather, identity_evidence
+from .lyrics_sources import gather, identity_evidence, youtube_titles
 from .lyrics_text import all_lines, line_repeats, line_stanzas, similarity, stanzas_text
 from .separate import separate
 from .subtitles import build_cues, write_ass, write_srt
@@ -302,22 +302,16 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     t = time.time()
     videos = []
     try:
-        q = " ".join(p for p in [record.get("title_am") or record.get("title_latin"),
-                                 record.get("artist_latin") or record.get("artist_am")] if p)
-        videos = web.youtube_search(q) if q else []
+        videos = youtube_titles(record)
     except Exception as error:
         log(f"  youtube search failed: {error}")
     record = names.learn_from_titles(record, [v["title"] for v in videos])
-    channels = []
     plan_file = inp.parent / "plan.json"
     learned = []
     if plan_file.is_file():
         learned = json.loads(plan_file.read_text()).get("snapshot", {}).get("state", {}).get("lyrics_channels", [])
-    from .fetch import DEFAULT_LYRICS_CHANNELS
-    for c in (os.environ.get("LYRICS_CHANNELS") or DEFAULT_LYRICS_CHANNELS).split(",") + list(learned):
-        c = c.strip().lstrip("@")
-        if c and c not in channels:
-            channels.append(c)
+    from .fetch import lyrics_channels
+    channels = lyrics_channels(learned)
     cands, titles, overrides, search_report = gather(record, mid, tg, corrections, duration, log=log, videos=videos,
                                                      draft=draft, channels=channels,
                                                      library=os.environ.get("MEZMUR_LIBRARY", "library/lyrics"))

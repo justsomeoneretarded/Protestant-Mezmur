@@ -96,13 +96,14 @@ def _queries(record):
     a_lat = a_lats[0] if a_lats else ""
     qs = []
     if t_am:
-        qs += [f"{t_am} {a_am} ግጥም", f"{t_am} {a_am or a_lat} lyrics", f"\"{t_am}\" መዝሙር ግጥም"]
+        qs += [f"{t_am} {a_am or a_lat} lyrics", f"\"{t_am}\" መዝሙር lyrics"]
     for t in t_lats[:3]:
         qs.append(f"{t} {a_lat} lyrics")
     for a in a_lats[1:2]:
         if t_lats:
             qs.append(f"{t_lats[0]} {a} lyrics")
-    qs += [f"{t_am or (t_lats[0] if t_lats else '')} wikimezmur", f"{t_am or (t_lats[0] if t_lats else '')} {a_lat} mezmuroch"]
+    qs += [f"{t_am or (t_lats[0] if t_lats else '')} wikimezmur lyrics",
+           f"{t_am or (t_lats[0] if t_lats else '')} {a_lat} mezmuroch lyrics"]
     out = []
     for q in qs:
         q = " ".join(q.split())
@@ -335,13 +336,13 @@ def from_youtube(record, videos=(), log=print, max_videos=15, phrases=(), report
     t_am, a_am = record.get("title_am", ""), record.get("artist_am", "")
     t_lats = latin_variants(record.get("title_latin", ""), t_am)
     a_lat = (latin_variants(record.get("artist_latin", ""), a_am) or [""])[0]
-    queries = [f"{t_am} {a_am} ግጥም", f"{t_am} {a_am} lyrics"] + [f"{a_lat} {t} lyrics" for t in t_lats[:2]]
+    queries = [f"{t_am} {a_am or a_lat} lyrics"] + [f"{a_lat} {t} lyrics" for t in t_lats[:2]]
     for q in queries:
         q = " ".join(q.split())
         if len(q) >= 4:
             take(web.youtube_search(q), "title")
     for p in phrases:
-        take(web.youtube_search(f"{p} ግጥም"), "phrase")
+        take(web.youtube_search(f"{p} lyrics"), "phrase")
 
     def is_lyric(v):
         t = v.get("title", "").lower()
@@ -390,7 +391,7 @@ def from_phrases(record, phrases, channels, log=print, report=None):
                 for stanzas in extract_blocks(item["text"], min_lines=3):
                     out.append(_candidate(f"telegram:@{ch} (phrase)", item["link"], stanzas))
                     n_tg += 1
-        for r in web.search(f"\"{p}\" ግጥም", max_results=8)[:5]:
+        for r in web.search(f"\"{p}\" lyrics", max_results=8)[:5]:
             if r["url"] in seen or web.domain(r["url"]) in SKIP_DOMAINS:
                 continue
             seen.add(r["url"])
@@ -437,7 +438,7 @@ def from_library(record, draft_text, folder, report=None):
 
 def youtube_titles(record):
     q = " ".join(p for p in [record.get("title_am") or record.get("title_latin"), record.get("artist_latin") or record.get("artist_am")] if p)
-    videos = web.youtube_search(q) if q else []
+    videos = web.youtube_search(f"{q} lyrics") if q else []
     return videos
 
 

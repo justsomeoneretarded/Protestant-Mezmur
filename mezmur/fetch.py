@@ -14,7 +14,20 @@ from .names import resolve
 from .telegram import client, download, is_song, resolve_channel, select, song_info
 
 DEFAULT_LYRICS_CHANNELS = ("MezmurLyrics0,mezmur1,Amharic_spiritual_song_lyrics,SongLegetaLyrics,mezmurlyricsbb,"
-                           "mezmur_lyrics,lyrics_mezmur,mezmur_lyrics2,mezmur_gitem,eyesusyiwedenal,mezmuroch1")
+                           "mezmur_lyrics,lyrics_mezmur,mezmur_lyrics2,mezmur_gitem,eyesusyiwedenal,mezmuroch1,"
+                           "yesemayzega12,protestant_Song_lyrics1,bestprotestant_songs")
+
+
+def lyrics_channels(learned=()):
+    """Keep built-in sources, adding configured and previously verified channels."""
+    channels, seen = [], set()
+    configured = os.environ.get("LYRICS_CHANNELS", "").split(",")
+    for name in DEFAULT_LYRICS_CHANNELS.split(",") + configured + list(learned):
+        name = name.strip().lstrip("@")
+        if name and name.lower() not in seen:
+            channels.append(name)
+            seen.add(name.lower())
+    return channels
 
 
 def _ext(message):
@@ -132,11 +145,7 @@ async def run(args):
         else:
             messages = await select(tg, entity, after, args.batch_size)
         print(f"Selected {len(messages)} song(s) after message {after}", flush=True)
-        channels = []
-        for c in (os.environ.get("LYRICS_CHANNELS") or DEFAULT_LYRICS_CHANNELS).split(",") + state.get("lyrics_channels", []):
-            c = c.strip().lstrip("@")
-            if c and c not in channels:
-                channels.append(c)  # channels that supplied verified lyrics before are searched too
+        channels = lyrics_channels(state.get("lyrics_channels", []))
         used = state.get("used_backgrounds", [])
         ids = []
         for message in messages:
