@@ -122,6 +122,17 @@
       "thumbnail_file": "thumbnail-b.jpg",
       "privacy": "private",
       "completed_at": "2026-11-01T16:11:57+00:00"
+    },
+    "UCNSSLKyhXrG50l694M48zTQ:4335601101:31": {
+      "status": "queued",
+      "message_id": 31,
+      "telegram_channel_id": "4335601101",
+      "youtube_channel_id": "UCNSSLKyhXrG50l694M48zTQ",
+      "requested_visibility": "public",
+      "held_for_review": false,
+      "batch_id": "41401439259",
+      "queued_at": "2026-11-02T07:01:08+00:00",
+      "publish_at": "2026-11-02T12:01:08Z"
     }
   }
 }
