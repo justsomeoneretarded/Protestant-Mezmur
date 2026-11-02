@@ -1,4 +1,4 @@
-"""Opt-in YouTube publishing with private-first uploads and durable duplicate protection."""
+"""YouTube publishing with private-first uploads, playlist placement and duplicate protection."""
 import argparse
 import copy
 import hashlib
@@ -19,6 +19,7 @@ PRIVACIES = ("private", "unlisted", "public")
 THUMBNAILS = {"a": "thumbnail.jpg", "b": "thumbnail-b.jpg",
               "c": "thumbnail-c.jpg", "d": "thumbnail-d.jpg"}
 PUBLISH_DELAY = timedelta(hours=5)
+PLAYLIST_NAME = "Mezmurs"
 
 
 class UploadError(RuntimeError):
@@ -51,6 +52,53 @@ def verify_channel(service, expected):
     items = service.channels().list(part="id", mine=True, maxResults=50).execute(num_retries=3).get("items", [])
     if [item["id"] for item in items] != [expected]:
         raise UploadError("OAuth authorized a different YouTube channel; authorize the intended channel or Brand Account")
+
+
+
+def find_playlist(service, channel):
+    """Find the uniquely named playlist owned by the authorized channel."""
+    matches, token = {}, None
+    while True:
+        params = {"part": "id,snippet", "mine": True, "maxResults": 50}
+        if token:
+            params["pageToken"] = token
+        page = service.playlists().list(**params).execute(num_retries=3)
+        for item in page.get("items", []):
+            snippet = item.get("snippet", {})
+            title = snippet.get("title", "")
+            playlist_id = item.get("id")
+            if (isinstance(title, str) and title.strip().casefold() == PLAYLIST_NAME.casefold()
+                    and snippet.get("channelId") == channel and isinstance(playlist_id, str) and playlist_id):
+                matches[playlist_id] = {"id": playlist_id, "title": title.strip(), "channel_id": channel}
+        token = page.get("nextPageToken")
+        if not token:
+            break
+    if not matches:
+        raise UploadError("The connected channel has no playlist named Mezmurs; create or rename it in Studio before retrying")
+    if len(matches) != 1:
+        raise UploadError("More than one playlist is named Mezmurs; rename the duplicate playlists before retrying")
+    return next(iter(matches.values()))
+
+
+def playlist_membership(service, playlist, video_id):
+    """Check membership before inserting; reconcile an accepted-but-uncheckpointed insert on retry."""
+    items = service.playlistItems().list(part="id", playlistId=playlist["id"], videoId=video_id,
+                                         maxResults=50).execute(num_retries=3).get("items", [])
+    if items:
+        item_id = items[0].get("id")
+    else:
+        # Inserts are not idempotent. Never automatically retry a potentially accepted POST.
+        response = service.playlistItems().insert(part="snippet", body={"snippet": {
+            "playlistId": playlist["id"], "resourceId": {"kind": "youtube#video", "videoId": video_id}
+        }}).execute(num_retries=0)
+        item_id = response.get("id")
+    if not isinstance(item_id, str) or not item_id:
+        raise UploadError("YouTube returned no playlist item ID; retry the existing video, not a new upload")
+    return {"playlist_id": playlist["id"], "playlist_title": playlist["title"], "playlist_item_id": item_id,
+            "playlist_url": f"https://www.youtube.com/playlist?list={playlist['id']}",
+            "end_screen": {"status": "manual_required",
+                           "elements": ["best_for_viewer", "most_recent_upload"],
+                           "studio_url": f"https://studio.youtube.com/video/{video_id}/editor"}}
 
 
 def media(path, mime, resumable=False):
@@ -232,7 +280,7 @@ def _video(service, video_id, channel, marker, require_marker=True):
     return items[0]
 
 
-def upload_song(kit, service, store, channel, visibility="public", recover_video_id=None):
+def upload_song(kit, service, store, channel, visibility="public", recover_video_id=None, playlist=None):
     if visibility not in PRIVACIES:
         raise UploadError("Visibility must be private, unlisted or public")
     folder, key = kit["folder"], source_key(kit, channel)
@@ -246,7 +294,14 @@ def upload_song(kit, service, store, channel, visibility="public", recover_video
     record = copy.deepcopy(previous) if key in uploads else None
     if record is not None and record.get("status") not in ("queued", "uploading", "uploaded", "complete"):
         raise UploadError("Unknown upload status; inspect the state branch before retrying")
+    playlist = find_playlist(service, channel) if playlist is None else playlist
+    if playlist.get("channel_id") != channel or not playlist.get("id"):
+        raise UploadError("The destination playlist must belong to the connected YouTube channel")
     if record and record.get("status") == "complete":
+        if record.get("playlist_id") != playlist["id"] or not record.get("playlist_item_id"):
+            _video(service, record["video_id"], channel, marker, require_marker=False)
+            record.update(playlist_membership(service, playlist, record["video_id"]))
+            save_record(store, key, record, previous)
         write_json(folder / "youtube-upload.json", record)
         print(f"Song {kit['message_id']}: already uploaded, https://youtu.be/{record['video_id']}", flush=True)
         return record
@@ -307,6 +362,11 @@ def upload_song(kit, service, store, channel, visibility="public", recover_video
         record["thumbnail_file"] = kit["thumbnail"]
         save_record(store, key, record, previous)
         previous = copy.deepcopy(record)
+    if record.get("playlist_id") != playlist["id"] or not record.get("playlist_item_id"):
+        record.update(playlist_membership(service, playlist, video_id))
+        save_record(store, key, record, previous)
+        previous = copy.deepcopy(record)
+        write_json(folder / "youtube-upload.json", record)
     # Scheduling is private -> public; YouTube does not support publishAt on unlisted videos.
     # Persist the deadline before requesting it so retries cannot slide an accepted schedule.
     requested = record["requested_visibility"]
@@ -346,7 +406,8 @@ def upload_song(kit, service, store, channel, visibility="public", recover_video
     save_record(store, key, record, previous)
     write_json(folder / "youtube-upload.json", record)
     when = f"; public at {record['publish_at']}" if record.get("publish_at") else ""
-    print(f"Song {kit['message_id']}: {record['url']} ({actual}{when}); no subtitle tracks uploaded", flush=True)
+    print(f"Song {kit['message_id']}: {record['url']} ({actual}{when}); playlist={record['playlist_title']}; "
+          "end screen requires Studio; no subtitle tracks uploaded", flush=True)
     return record
 
 
@@ -387,6 +448,7 @@ def main():
         channel = required("YOUTUBE_CHANNEL_ID")
         service = youtube_client()
         verify_channel(service, channel)
+        playlist = find_playlist(service, channel)
         store = Store()
         if args.visibility == "public":
             batch_id = os.environ.get("SOURCE_RUN_ID") or os.environ.get("GITHUB_RUN_ID", "local")
@@ -399,13 +461,18 @@ def main():
     failed = False
     for kit in kits:
         try:
-            record = upload_song(kit, service, store, channel, args.visibility, args.recover_video_id)
+            record = upload_song(kit, service, store, channel, args.visibility, args.recover_video_id, playlist=playlist)
             line = f"- Song {kit['message_id']}: [YouTube video]({record['url']}) ({record['privacy']})"
             if record.get("publish_at"):
                 local = publish_time(record["publish_at"]).astimezone(timezone(timedelta(hours=3), "EAT"))
                 line += f" - public publication scheduled for {local:%Y-%m-%d %H:%M %Z}"
             if record.get("review_warnings"):
                 line += " - review notes remain in the kit"
+            line += f" - playlist: [Mezmurs]({record['playlist_url']})"
+            line += (f"\n- Song {kit['message_id']} end screen: "
+                     f"[Open YouTube Studio]({record['end_screen']['studio_url']}). "
+                     "Manually add two Video elements: **Best for viewer** and **Most recent upload**, then Save. "
+                     "The YouTube Data API cannot apply end screens.")
         except Exception as error:
             failed = True
             message = safe_error(error)

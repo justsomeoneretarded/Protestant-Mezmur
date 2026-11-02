@@ -14,6 +14,7 @@ from mezmur.common import write_json
 
 CHANNEL = "UC" + "a" * 22
 VIDEO = "abcde123456"
+PLAYLIST = "PL" + "b" * 32
 
 
 class MemoryStore:
@@ -57,7 +58,10 @@ def service(monkeypatch):
     api = MagicMock()
     monkeypatch.setattr(upload, "utc_now", lambda: datetime(2026, 11, 1, 12, tzinfo=timezone.utc))
     state = {"video": None, "videos": {}, "insertions": [], "insert_count": 0, "next_error": None,
-             "thumbnail_error": False, "schedule_error": False, "reject_schedule": False}
+             "thumbnail_error": False, "schedule_error": False, "reject_schedule": False,
+             "playlists": [{"id": PLAYLIST, "snippet": {"title": "Mezmurs", "channelId": CHANNEL}}],
+             "playlist_items": {}, "playlist_insert_count": 0, "playlist_error": False,
+             "playlist_lost_response": False}
 
     def execute(value):
         request = MagicMock()
@@ -98,12 +102,46 @@ def service(monkeypatch):
             raise OSError("Simulated thumbnail transport failure")
         return execute({"items": [{}]})
 
+
+    def list_playlists(**kwargs):
+        assert kwargs["mine"] is True and kwargs["maxResults"] == 50
+        return execute({"items": state["playlists"]})
+
+    def list_playlist_items(**kwargs):
+        key = (kwargs["playlistId"], kwargs["videoId"])
+        item_id = state["playlist_items"].get(key)
+        return execute({"items": [{"id": item_id}] if item_id else []})
+
+    def insert_playlist_item(**kwargs):
+        request = MagicMock()
+
+        def insert_item(num_retries):
+            assert num_retries == 0
+            if state["playlist_error"]:
+                raise OSError("Simulated playlist transport failure")
+            snippet = kwargs["body"]["snippet"]
+            assert snippet["resourceId"]["kind"] == "youtube#video"
+            key = (snippet["playlistId"], snippet["resourceId"]["videoId"])
+            state["playlist_insert_count"] += 1
+            item_id = f"playlist-item-{state['playlist_insert_count']}"
+            state["playlist_items"][key] = item_id
+            if state["playlist_lost_response"]:
+                raise OSError("Playlist insert accepted but response lost")
+            return {"id": item_id}
+
+        request.execute.side_effect = insert_item
+        return request
+
     api.channels.return_value.list.return_value = execute({"items": [{"id": CHANNEL}]})
     api.videos.return_value.insert.side_effect = insert
     api.videos.return_value.list.side_effect = list_videos
     api.videos.return_value.update.side_effect = update
     api.thumbnails.return_value.set.side_effect = thumbnail
+    api.playlists.return_value.list.side_effect = list_playlists
+    api.playlistItems.return_value.list.side_effect = list_playlist_items
+    api.playlistItems.return_value.insert.side_effect = insert_playlist_item
     api.captions.side_effect = AssertionError("Subtitle tracks must never be uploaded")
+    api.endScreens.side_effect = AssertionError("End screens require YouTube Studio")
     api.test_state = state
     return api
 
@@ -217,8 +255,8 @@ def test_unfinished_upload_rejects_regenerated_video_bytes(folder, service):
 
 def test_accepted_schedule_is_reconciled_after_final_checkpoint_failure(folder, service, monkeypatch):
     store, kit = MemoryStore(), upload.load_kit(folder)
-    # Reserve, video ID, thumbnail, deadline, then fail the final completion checkpoint.
-    store.fail_write = 5
+    # Reserve, video ID, thumbnail, playlist, deadline, then fail final completion.
+    store.fail_write = 6
     with pytest.raises(RuntimeError):
         upload.upload_song(kit, service, store, CHANNEL)
     deadline = service.test_state["video"]["status"]["publishAt"]
@@ -243,7 +281,7 @@ def test_past_failed_schedule_gets_a_fresh_five_hour_delay_not_immediate_publica
 
 def test_already_published_schedule_is_not_made_private_or_uploaded_again(folder, service, monkeypatch):
     store, kit = MemoryStore(), upload.load_kit(folder)
-    store.fail_write = 5
+    store.fail_write = 6
     with pytest.raises(RuntimeError):
         upload.upload_song(kit, service, store, CHANNEL)
     monkeypatch.setattr(upload, "utc_now", lambda: datetime(2026, 11, 2, 8, tzinfo=timezone.utc))
@@ -401,6 +439,15 @@ def test_actual_google_sdk_accepts_upload_and_native_schedule_shapes(folder):
     schedule = api.videos().update(part="status", body={"id": VIDEO, "status": {
         "privacyStatus": "private", "publishAt": "2030-01-01T12:00:00Z"}})
     assert json.loads(schedule.body)["status"]["publishAt"] == "2030-01-01T12:00:00Z"
+    lookup = api.playlists().list(part="id,snippet", mine=True, maxResults=50)
+    assert "mine=true" in lookup.uri
+    membership = api.playlistItems().list(part="id", playlistId=PLAYLIST, videoId=VIDEO, maxResults=50)
+    assert f"playlistId={PLAYLIST}" in membership.uri and f"videoId={VIDEO}" in membership.uri
+    insert_item = api.playlistItems().insert(part="snippet", body={"snippet": {
+        "playlistId": PLAYLIST, "resourceId": {"kind": "youtube#video", "videoId": VIDEO}}})
+    assert json.loads(insert_item.body)["snippet"]["resourceId"]["videoId"] == VIDEO
+    with pytest.raises(AttributeError):
+        api.endScreens()
     api.close()
 
 
@@ -701,3 +748,180 @@ def test_own_upload_is_accepted_even_if_youtube_drops_the_marker_tag(folder, ser
     service.videos.return_value.list.side_effect = without_tags
     record = upload.upload_song(kit, service, store, CHANNEL)
     assert record["video_id"] == VIDEO
+
+
+def test_upload_adds_original_video_to_mezmurs_and_records_manual_end_screen(folder, service):
+    store = MemoryStore()
+    record = upload.upload_song(upload.load_kit(folder), service, store, CHANNEL)
+    request = service.playlistItems.return_value.insert.call_args.kwargs
+    assert request == {"part": "snippet", "body": {"snippet": {
+        "playlistId": PLAYLIST, "resourceId": {"kind": "youtube#video", "videoId": VIDEO}}}}
+    assert service.test_state["playlist_insert_count"] == 1
+    assert record["playlist_id"] == PLAYLIST and record["playlist_item_id"] == "playlist-item-1"
+    assert record["playlist_title"] == "Mezmurs"
+    assert record["playlist_url"] == f"https://www.youtube.com/playlist?list={PLAYLIST}"
+    assert record["end_screen"] == {
+        "status": "manual_required", "elements": ["best_for_viewer", "most_recent_upload"],
+        "studio_url": f"https://studio.youtube.com/video/{VIDEO}/editor"}
+    assert json.loads((folder / "youtube-upload.json").read_text()) == record
+    assert store.state["youtube_uploads"][upload.source_key(upload.load_kit(folder), CHANNEL)] == record
+    service.endScreens.assert_not_called()
+
+
+def test_playlist_lookup_paginates_matches_name_and_checks_owner(service):
+    def page(**kwargs):
+        request = MagicMock()
+        if kwargs.get("pageToken") == "page-2":
+            request.execute.return_value = {"items": [
+                {"id": PLAYLIST, "snippet": {"title": " mEzMuRs ", "channelId": CHANNEL}}]}
+        else:
+            request.execute.return_value = {"items": [
+                {"id": "other", "snippet": {"title": "Mezmurs", "channelId": "UC" + "c" * 22}},
+                {"id": "another", "snippet": {"title": "Other songs", "channelId": CHANNEL}}],
+                "nextPageToken": "page-2"}
+        return request
+
+    service.playlists.return_value.list.side_effect = page
+    found = upload.find_playlist(service, CHANNEL)
+    assert found == {"id": PLAYLIST, "title": "mEzMuRs", "channel_id": CHANNEL}
+    assert service.playlists.return_value.list.call_count == 2
+    assert service.playlists.return_value.list.call_args.kwargs["pageToken"] == "page-2"
+
+
+@pytest.mark.parametrize("playlists", [
+    [],
+    [{"id": "other", "snippet": {"title": "Other songs", "channelId": CHANNEL}}],
+    [{"id": PLAYLIST, "snippet": {"title": "Mezmurs", "channelId": "UC" + "c" * 22}}],
+    [{"id": PLAYLIST, "snippet": {"title": "Mezmurs", "channelId": CHANNEL}},
+     {"id": "duplicate", "snippet": {"title": "Mezmurs", "channelId": CHANNEL}}],
+])
+def test_missing_wrong_owner_or_ambiguous_playlist_prevents_new_upload(folder, service, playlists):
+    service.test_state["playlists"] = playlists
+    store = MemoryStore()
+    with pytest.raises(upload.UploadError, match="playlist"):
+        upload.upload_song(upload.load_kit(folder), service, store, CHANNEL)
+    service.videos.return_value.insert.assert_not_called()
+    assert store.writes == 0
+
+
+def test_supplied_playlist_from_another_channel_is_rejected(folder, service):
+    with pytest.raises(upload.UploadError, match="belong"):
+        upload.upload_song(upload.load_kit(folder), service, MemoryStore(), CHANNEL,
+                           playlist={"id": PLAYLIST, "title": "Mezmurs", "channel_id": "other"})
+    service.videos.return_value.insert.assert_not_called()
+
+
+def test_existing_playlist_membership_is_reused_without_another_insert(folder, service):
+    service.test_state["playlist_items"][(PLAYLIST, VIDEO)] = "existing-item"
+    record = upload.upload_song(upload.load_kit(folder), service, MemoryStore(), CHANNEL)
+    assert record["playlist_item_id"] == "existing-item"
+    service.playlistItems.return_value.insert.assert_not_called()
+
+
+def test_failed_playlist_addition_resumes_same_private_video_without_moving_slot(folder, service):
+    store, kit = MemoryStore(), upload.load_kit(folder)
+    kit = upload.plan_batch([kit], store, CHANNEL, "batch")[0]
+    service.test_state["playlist_error"] = True
+    with pytest.raises(OSError):
+        upload.upload_song(kit, service, store, CHANNEL)
+    saved = store.state["youtube_uploads"][upload.source_key(kit, CHANNEL)]
+    assert saved["status"] == "uploaded" and saved["thumbnail_done"]
+    assert service.test_state["video"]["status"]["privacyStatus"] == "private"
+    service.videos.return_value.update.assert_not_called()
+    service.test_state["playlist_error"] = False
+    result = upload.upload_song(kit, service, store, CHANNEL)
+    assert result["status"] == "complete" and result["publish_at"] == kit["planned_publish_at"]
+    assert service.test_state["insert_count"] == service.test_state["playlist_insert_count"] == 1
+    assert service.thumbnails.return_value.set.call_count == 1
+
+
+def test_lost_playlist_insert_response_is_reconciled_before_retrying(folder, service):
+    store, kit = MemoryStore(), upload.load_kit(folder)
+    service.test_state["playlist_lost_response"] = True
+    with pytest.raises(OSError):
+        upload.upload_song(kit, service, store, CHANNEL)
+    service.test_state["playlist_lost_response"] = False
+    result = upload.upload_song(kit, service, store, CHANNEL)
+    assert result["status"] == "complete" and result["playlist_item_id"] == "playlist-item-1"
+    assert service.test_state["insert_count"] == service.test_state["playlist_insert_count"] == 1
+
+
+def test_playlist_checkpoint_failure_reuses_membership_on_retry(folder, service):
+    store, kit = MemoryStore(), upload.load_kit(folder)
+    store.fail_write = 4
+    with pytest.raises(RuntimeError):
+        upload.upload_song(kit, service, store, CHANNEL)
+    saved = store.state["youtube_uploads"][upload.source_key(kit, CHANNEL)]
+    assert saved["status"] == "uploaded" and not saved.get("playlist_item_id")
+    assert service.test_state["playlist_insert_count"] == 1
+    result = upload.upload_song(kit, service, store, CHANNEL)
+    assert result["status"] == "complete" and result["playlist_item_id"] == "playlist-item-1"
+    assert service.test_state["playlist_insert_count"] == service.test_state["insert_count"] == 1
+
+
+def test_empty_playlist_insert_response_does_not_mark_upload_complete(folder, service):
+    request = MagicMock()
+    request.execute.return_value = {}
+    service.playlistItems.return_value.insert.side_effect = lambda **kwargs: request
+    store, kit = MemoryStore(), upload.load_kit(folder)
+    with pytest.raises(upload.UploadError, match="playlist item ID"):
+        upload.upload_song(kit, service, store, CHANNEL)
+    assert store.state["youtube_uploads"][upload.source_key(kit, CHANNEL)]["status"] == "uploaded"
+    assert service.test_state["video"]["status"]["privacyStatus"] == "private"
+
+
+def test_completed_uploads_without_playlist_can_be_backfilled_without_touching_schedule(folder, service):
+    store, kit = MemoryStore(), upload.load_kit(folder)
+    original = upload.upload_song(kit, service, store, CHANNEL)
+    key = upload.source_key(kit, CHANNEL)
+    store.state["youtube_uploads"][key] = {name: value for name, value in original.items()
+                                           if not name.startswith("playlist_") and name != "end_screen"}
+    service.test_state["playlist_items"].clear()
+    updates = service.videos.return_value.update.call_count
+    result = upload.upload_song(kit, service, store, CHANNEL)
+    assert result["status"] == "complete" and result["playlist_id"] == PLAYLIST
+    assert result["publish_at"] == original["publish_at"]
+    assert service.test_state["insert_count"] == 1
+    assert service.videos.return_value.update.call_count == updates
+    assert service.thumbnails.return_value.set.call_count == 1
+
+
+def test_completed_playlist_checkpoint_avoids_all_repeat_insertions(folder, service):
+    store, kit = MemoryStore(), upload.load_kit(folder)
+    first = upload.upload_song(kit, service, store, CHANNEL)
+    requests = service.playlistItems.return_value.list.call_count
+    writes = store.writes
+    replay = upload.upload_song(kit, service, store, CHANNEL)
+    assert replay == first and store.writes == writes
+    assert service.playlistItems.return_value.list.call_count == requests
+    assert service.test_state["playlist_insert_count"] == service.test_state["insert_count"] == 1
+
+
+def test_cli_resolves_playlist_once_for_batch_and_reports_manual_end_screen(folder, service, monkeypatch, tmp_path):
+    summary, store = tmp_path / "summary.md", MemoryStore()
+    make_batch(folder, (22, 23))
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+    monkeypatch.setenv("YOUTUBE_CHANNEL_ID", CHANNEL)
+    monkeypatch.setattr(sys, "argv", ["mezmur-upload", "--root", str(folder.parent)])
+    monkeypatch.setattr(upload, "youtube_client", lambda: service)
+    monkeypatch.setattr(upload, "Store", lambda: store)
+    upload.main()
+    assert service.playlists.return_value.list.call_count == 1
+    assert service.test_state["playlist_insert_count"] == service.test_state["insert_count"] == 2
+    text = summary.read_text()
+    assert f"https://www.youtube.com/playlist?list={PLAYLIST}" in text
+    assert f"https://studio.youtube.com/video/{VIDEO}/editor" in text
+    assert "Best for viewer" in text and "Most recent upload" in text
+    assert "Manually" in text and "cannot apply end screens" in text
+
+
+def test_cli_missing_playlist_fails_before_queue_planning_or_upload(folder, service, monkeypatch):
+    service.test_state["playlists"] = []
+    monkeypatch.setenv("YOUTUBE_CHANNEL_ID", CHANNEL)
+    monkeypatch.setattr(sys, "argv", ["mezmur-upload", "--folder", str(folder)])
+    monkeypatch.setattr(upload, "youtube_client", lambda: service)
+    monkeypatch.setattr(upload, "Store", lambda: pytest.fail("Missing playlist must fail before state writes"))
+    with pytest.raises(SystemExit) as stopped:
+        upload.main()
+    assert stopped.value.code == 1
+    service.videos.return_value.insert.assert_not_called()

@@ -151,8 +151,8 @@ video private again. Completed uploads are not changed.
 
 Only verified, aligned lyric videos are eligible. Review notes remain in the kit
 but no longer silently cancel automatic scheduling. Older unfinished reservations
-retain their saved visibility/review policy. Posting/pinning comments, end screens
-and thumbnail Test & Compare remain manual Studio tasks.
+retain their saved visibility/review policy. Posting/pinning comments and thumbnail
+Test & Compare remain manual Studio tasks.
 
 Title, description and tags are sanitized and shortened **before any upload**:
 
@@ -165,6 +165,41 @@ Newly generated descriptions reserve room for credits/hashtags and omit the
 optional romanized block first when necessary. Complete lyrics in both scripts
 remain separate artifact files. Upload-time corrections are listed in the receipt
 as metadata_adjusted; overlong metadata does not cause an avoidable API rejection.
+
+## Mezmurs Playlist and End Screens
+
+Every newly uploaded video is added to the existing **Mezmurs** playlist on the
+authorized channel. No playlist ID or new OAuth setup is required: the uploader
+finds the playlist by name (case-insensitive, ignoring surrounding whitespace).
+Playlist visibility is not changed. Missing or ambiguous names stop publishing
+before new video uploads or queue planning; no replacement playlist is created.
+
+The uploader checks membership before adding a video, saves the playlist/item IDs
+with the upload receipt and retries post-upload failures on the same video.
+Playlist insertion is not automatically retried as a POST: after an uncertain
+response, the next run first checks whether YouTube already added it. External
+API consistency means exactly-once membership cannot be guaranteed in every failure.
+A newly uploaded video stays private if playlist placement fails before scheduling.
+Retry Publish Generated Videos with the original artifact to finish it.
+
+A completed older upload missing playlist metadata can also be added when explicitly
+replayed through Publish Generated Videos. This does not upload the video again,
+change its existing visibility/schedule, or automatically process all older uploads.
+
+**End screens are still manual.** The public YouTube Data API has no end-screen
+editing endpoint; it cannot select Best for viewer or Most recent upload.
+Each upload receipt records these desired elements as manual_required and includes
+a Studio editor URL. The Actions summary also links directly to that video's editor.
+
+In Studio, choose **Editor > End screen**, add two **Video** elements, choose
+**Best for viewer** for one and **Most recent upload** for the other, then Save.
+They can be placed in the final 5-20 seconds; YouTube requires a video at least
+25 seconds long and end screens are unavailable on made-for-kids videos.
+The rendered outro area is not itself a clickable YouTube end screen.
+No browser-session cookies, passwords or unsupported private endpoints are used.
+
+See [YouTube's end-screen instructions](https://support.google.com/youtube/answer/6388789?hl=en)
+and the [public Data API reference](https://developers.google.com/youtube/v3/docs/).
 
 ## Retry Without Rendering
 
@@ -234,6 +269,8 @@ or uploads. Tests mock network calls and exercise the official SDK's request
 construction. Live uploads require your own channel authorization and quota.
 
 Official references: [video upload](https://developers.google.com/youtube/v3/docs/videos/insert),
+[playlist lookup](https://developers.google.com/youtube/v3/docs/playlists/list),
+[playlist membership](https://developers.google.com/youtube/v3/docs/playlistItems/insert),
 [metadata limits](https://developers.google.com/youtube/v3/docs/videos#snippet.description),
 [native scheduling](https://developers.google.com/youtube/v3/docs/videos#status.publishAt),
 [OAuth Playground](https://developers.google.com/oauthplayground/),
