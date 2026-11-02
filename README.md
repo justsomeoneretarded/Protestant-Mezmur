@@ -122,7 +122,10 @@ YouTube channel and the web, checking that the faces agree.
   new videos get +5, +10, +15 and +20 hours when the queue is empty. New batches
   follow existing queued videos; retries keep their saved order and future slots.
   Automatic uploads choose portrait thumbnail B (or D when configured); all four
-  designs remain downloadable. Subtitle tracks are never uploaded. Titles, descriptions and tags are automatically
+  designs remain downloadable. Each uploaded video is added to your existing **Mezmurs** playlist automatically.
+  The run summary links to Studio for the manual **Best for viewer** and **Most recent upload** end-screen elements;
+  the public YouTube Data API cannot create these clickable elements. Subtitle tracks are never uploaded.
+  Titles, descriptions and tags are automatically
   limited before upload; saved video IDs prevent duplicates.
   [Setup, visibility settings and retry without rendering](docs/youtube-upload.md).
 The rendered soundtrack is the **original recording**, with no pitch, tempo,
