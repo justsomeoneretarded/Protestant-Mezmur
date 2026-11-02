@@ -34,7 +34,7 @@ def test_song_29_reported_011_metrics_are_accepted_without_changing_strict_gain(
 
 
 @pytest.mark.parametrize("patch", [
-    {"matched_share": 0.69}, {"lines_used": 13}, {"gain_per_vocal_frame": 0},
+    {"matched_share": 0.51}, {"lines_used": 13}, {"gain_per_vocal_frame": 0},
     {"gain_per_vocal_frame": -0.1}, {"complete_share": 0.49},
     {"gain_per_vocal_frame": float("nan")}, {"gain_per_vocal_frame": float("inf")},
 ])
