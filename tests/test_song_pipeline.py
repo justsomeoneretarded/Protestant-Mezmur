@@ -150,7 +150,7 @@ def test_source_supported_011_is_force_aligned_even_when_completion_estimates_so
 def test_unsupported_songs_still_skip_before_rendering(clean_pipeline, failure):
     calls = clean_pipeline
     if failure == "weak-unknown-source":
-        calls["report"]["gain_per_vocal_frame"] = 0.16
+        calls["report"]["gain_per_vocal_frame"] = 0.10
     elif failure == "missing-lyrics":
         calls["candidates"].clear()
     else:
