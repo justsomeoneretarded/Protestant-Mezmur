@@ -19,7 +19,7 @@ out.mkdir(parents=True, exist_ok=True)
 work.mkdir(parents=True, exist_ok=True)
 root = Path(os.environ["MEZMUR_AI_ROOT"])
 source = out / "comparison-original.wav"
-subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", "old-kit/comparison-original.mp3",
+subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", str(next(Path("old-kit").rglob("comparison-original.mp3"))),
                 "-t", "16.713", "-ar", "44100", "-ac", "2", "-c:a", "pcm_f32le", str(source)], check=True)
 voice = separate.separate(source, work, require_vocals=True)
 reference = separate.instrumental_stem(voice, out / "reference.wav")
