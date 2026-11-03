@@ -64,3 +64,12 @@ def test_terms_link_youtube_terms_and_privacy():
     assert "https://www.youtube.com/t/terms" in page.links
     assert "privacy.html" in page.links
     assert (DOCS / ".nojekyll").is_file()
+
+
+def test_branding_discloses_automatic_timed_amharic_captions():
+    home = " ".join(Page(DOCS / "index.html").text).lower()
+    privacy = " ".join(Page(DOCS / "privacy.html").text).lower()
+    assert "automatically uploads" in home and "amharic lyric subtitle" in home
+    assert "timed amharic lyric captions" in privacy and "caption track ids" in privacy
+    assert "subtitle hashes" in privacy
+    assert "does not upload separate subtitle tracks" not in home

@@ -214,7 +214,8 @@ def write_kit(folder, m, stanzas, cues, duration, chorus_lines, credits, lyrics_
     kit = {"titles": ts, "recommended_title": ts[0] if ts else "", "description_file": "description.txt",
            "tags": tg, "category": "Music (10)", "language": "Amharic", "chapters": chapters,
            "thumbnails": ["thumbnail.jpg", "thumbnail-b.jpg", "thumbnail-c.jpg", "thumbnail-d.jpg"],
-           "captions": [{"file": "captions/am.srt", "language": "Amharic"},
+           "captions": [{"file": "subtitle.srt", "language": "Amharic", "code": "am", "automatic_upload": True},
+                        {"file": "captions/am.srt", "language": "Amharic (sung-line timing, alternative)"},
                         {"file": "captions/am-Latn.srt", "language": "Amharic (romanized, optional)"}],
            "end_screen_from": clock(outro_start) if outro_start < duration - 5 else None,
            "made_for_kids": False, "review": review}
@@ -229,7 +230,8 @@ def write_kit(folder, m, stanzas, cues, duration, chorus_lines, credits, lyrics_
                  "5. Tags — paste `tags.txt` (Show more → Tags).",
                  "6. Category: Music · Video language: Amharic · Not made for kids.",
                  "   After publishing, post and pin `pinned_comment.txt`.",
-                 "7. Subtitles → Upload file → With timing → `captions/am.srt` (Amharic).",
+                 "7. Automatic publishing uploads `subtitle.srt` as timed Amharic captions.",
+                 "   For manual publishing: Subtitles → Upload file → With timing → `subtitle.srt`.",
                  f"8. End screen: add elements from {clock(outro_start)} (the video leaves that area clean)."
                  if kit["end_screen_from"] else "8. End screen: the song ends without a long outro; use a 5–10 s end screen.",
                  ""]

@@ -16,22 +16,22 @@
   </nav></header>
   <main>
     <h1>Privacy Policy</h1>
-    <p class="date">Effective date: November 1, 2026</p>
+    <p class="date">Effective date: November 4, 2026</p>
     <p>This policy describes the current owner-operated Rehoboth Mezmur application maintained in the <a href="https://github.com/justsomeoneretarded/Protestant-Mezmur">Protestant-Mezmur repository</a>. It uses YouTube API Services to publish videos at the channel owner's request; it is not a public multi-user account service.</p>
     <h2>Information accessed</h2>
     <ul>
       <li>OAuth client credentials, refresh tokens and temporary access tokens supplied by the operator for Google authorization. The app does not request or store a Google password.</li>
       <li>The authorized YouTube channel ID and channel information needed to check that uploads target the intended channel.</li>
-      <li>Video IDs, titles, descriptions, tags, visibility and publication status for videos uploaded or recovered through this workflow.</li>
+      <li>Video IDs, titles, descriptions, tags, visibility and publication status for videos uploaded or recovered through this workflow, plus caption track IDs, language, names and processing status needed for subtitle upload and retry reconciliation.</li>
       <li>Operator-selected audio, images, lyrics, generated videos, thumbnails and upload metadata. Inputs may come from Telegram, local files and the project's configured public-source searches.</li>
     </ul>
     <h2>Purpose and permissions</h2>
-    <p>Google authorization is used to confirm channel ownership, upload generated videos and thumbnails, set metadata, schedule publication and avoid duplicate uploads. The configured YouTube permission can manage video data; the current uploader does not automatically delete existing videos or upload separate subtitle tracks.</p>
+    <p>Google authorization is used to confirm channel ownership, upload generated videos, thumbnails and timed Amharic lyric captions, set metadata, schedule publication and avoid duplicate uploads. The configured YouTube permission can manage video data and captions; the current uploader does not automatically delete existing videos or caption tracks.</p>
     <p>Uploaded videos initially remain private. The workflow saves a randomized batch order and schedules public publication at four-hour intervals, appending to the channel's existing recorded future slots. The owner can change or cancel publication in YouTube Studio. The app is not affiliated with Google or YouTube.</p>
     <h2>Storage and public-repository disclosure</h2>
     <p>In GitHub Actions, Google OAuth credentials are provided through GitHub repository secrets and used by authorized workflows in runtime memory. The optional local authorization helper writes a credential file on the operator's own computer. Credentials are not intentionally included in generated artifacts or the progress branch. Protect repository administration and workflow-edit access, because authorized workflows can use configured secrets.</p>
     <p><strong>This repository and its workflow outputs are public.</strong> Generated audio/video inputs, lyrics, titles, descriptions, thumbnails, diagnostics and logs can be accessible through GitHub artifacts or branches. A private YouTube setting does not make the GitHub copy private. Do not use the public workflow for confidential content.</p>
-    <p>The progress branch stores source identifiers, YouTube channel/video IDs and links, file hashes, run identifiers, queue order, upload status and publication timestamps. Upload receipts contain similar information. Private-video IDs and unlisted links can therefore be public; unlisted links must not be treated as confidential.</p>
+    <p>The progress branch stores source identifiers, YouTube channel/video/caption IDs and links, file hashes including subtitle hashes, run identifiers, queue order, upload and caption processing status and publication timestamps. Upload receipts contain similar information. Private-video IDs and unlisted links can therefore be public; unlisted links must not be treated as confidential.</p>
     <h2>Sharing and service providers</h2>
     <p>Google and YouTube receive authorized API requests and uploaded media. GitHub hosts the code, automation, secrets, artifacts and progress records. Google's OAuth Playground may process credentials during the optional browser-only authorization flow. Those services operate under their own policies, including the <a href="https://policies.google.com/privacy">Google Privacy Policy</a> and <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub Privacy Statement</a>.</p>
     <p>The app does not sell or rent Google user data, use it for targeted advertising, or use Google-authorized account data to train general-purpose AI models. Local transcription and alignment are used to produce the owner's requested lyrics videos, not to train a new model. This static website adds no advertising, analytics scripts, forms or tracking cookies; hosting providers may process ordinary request logs.</p>

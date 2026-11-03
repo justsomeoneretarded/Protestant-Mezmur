@@ -93,7 +93,8 @@ verification. A refresh failure requires running the authorization script again
 with a new output path and updating the secret.
 
 The scope is `youtube.force-ssl` for channel ownership checks and managing the
-uploaded video's publication status. No subtitle API calls are made.
+uploaded video's publication status and uploading its timed Amharic caption track.
+The existing scope already supports captions; no extra secret or authorization step is required.
 No Google password is stored. API quotas, channel upload limits, account restrictions
 and copyright enforcement still apply. Only process/publish audio you have rights to use.
 
@@ -119,9 +120,17 @@ YOUTUBE_PRIVACY variable no longer changes workflow behavior.
 
 Every new video initially uploads as **private**, with the recommended title,
 description, tags, Music category, Amharic metadata/audio language and the existing
-not-made-for-kids setting. It uploads one selected thumbnail and **never uploads
-subtitle/caption tracks**. Burned-in video lyrics remain unchanged; SRT files
-can remain in the download kit for your own use.
+not-made-for-kids setting. It uploads one selected thumbnail and **automatically uploads
+`subtitle.srt` as a timed Amharic caption track**, named Amharic lyrics (Rehoboth Mezmur).
+This file is generated from the same main lyric text and line-display windows as the
+burned-in lyrics, including their short display lead and the video's end boundary.
+It contains **Amharic script only**, never English or romanized Amharic lyric lines,
+and no karaoke styling, next-line preview or title/artist overlays.
+Generation and upload validation both reject non-Ethiopic lyric letters instead of
+silently stripping or translating words. SRT cue numbers, timestamps and punctuation remain.
+The burned-in appearance and word highlighting stay unchanged. Alternative sung-line
+and romanized SRTs remain in `captions/` for manual use; only one Amharic track is
+uploaded automatically. Older complete kits can use `captions/am.srt` as a fallback.
 
 Before the first upload, the uploader shuffles newly selected songs once and saves
 every UTC publishAt slot on mezmur-state with status queued. With an empty queue,
@@ -136,7 +145,7 @@ Completed replays do not consume another slot. The queue only tracks this app's
 saved records; manual changes in Studio or videos scheduled outside the app are
 not automatically synchronized.
 
-Each video and its thumbnail are uploaded and its reserved publishAt is applied
+Each video, its thumbnail and timed Amharic captions are uploaded and its reserved publishAt is applied
 through YouTube's built-in scheduler. YouTube handles publication; no four-hour
 runner wait or GitHub cron is needed. The Actions summary displays times in EAT
 (Africa/Nairobi); machine-readable receipts keep UTC timestamps.
@@ -168,6 +177,26 @@ optional romanized block first when necessary. Complete lyrics in both scripts
 remain separate artifact files. Upload-time corrections are listed in the receipt
 as metadata_adjusted; overlong metadata does not cause an avoidable API rejection.
 
+## Caption Validation and Quota
+
+SRT is checked locally before OAuth refresh, queue planning or video insertion:
+UTF-8 text, a nonempty timed track, positive cue durations, ordered start times,
+a file no larger than 100 MiB, and no cues substantially beyond the recorded video duration.
+The upload uses the SRT's own timestamps, not YouTube's deprecated automatic sync.
+The caption language is `am`, with `isDraft: false`; no extra translation track is invented.
+
+Caption ID, language, file hash and processing status appear in the upload receipt and
+Actions summary. YouTube can process an accepted track asynchronously; a known failed
+or draft track stops scheduling and requires inspection under Studio > Subtitles.
+Accepted `syncing` tracks can finish processing after this workflow ends.
+A successful API response is not a guarantee of later processing or search ranking.
+
+A new track normally adds **450 quota units**: 50 for the retry-safety caption lookup
+and 400 for insertion. Further recovery lookups cost 50 each; completed replays with
+saved track IDs make no caption calls. These costs are in addition to existing video,
+thumbnail, playlist and scheduling requests. Captions help accessibility and machine-readable
+lyric discovery, but do not guarantee better SEO placement.
+
 ## Mezmurs Playlist and End Screens
 
 Every newly uploaded video is added to the existing **Mezmurs** playlist on the
@@ -181,7 +210,7 @@ with the upload receipt and retries post-upload failures on the same video.
 Playlist insertion is not automatically retried as a POST: after an uncertain
 response, the next run first checks whether YouTube already added it. External
 API consistency means exactly-once membership cannot be guaranteed in every failure.
-A newly uploaded video stays private if playlist placement fails before scheduling.
+A newly uploaded video stays private if playlist placement or caption upload fails before scheduling.
 Retry Publish Generated Videos with the original artifact to finish it.
 
 A completed older upload missing playlist metadata can also be added when explicitly
@@ -231,11 +260,18 @@ the generation snapshot.
 
 - A randomized batch plan with distinct four-hour slots is saved **before** any video-upload request.
 - A queued record is changed to an uploading reservation before a new video insert.
-- The accepted video ID is saved before thumbnail/scheduling work.
-- Completed songs are skipped on replays, even when rendered again.
+- The accepted video ID is saved before thumbnail, playlist, caption or scheduling work.
+- Completed songs with a saved caption track are skipped on replays, even when rendered again.
   Existing videos are never automatically replaced or deleted.
-- Partial uploads with known IDs resume thumbnail/scheduling work on the same video.
-  No caption tracks are inserted, updated or deleted, including during retries.
+- Partial uploads with known IDs resume thumbnail, playlist, caption and scheduling work on the same video.
+  The subtitle SHA-256 is saved before caption insertion, and its returned track ID is checkpointed.
+  A retry first finds the managed track by its language/name if an insert response or checkpoint was lost.
+  Caption POST requests are never automatically retried; YouTube's unique language/name constraint
+  also rejects duplicates while its list results catch up. Unrelated tracks are never modified or deleted.
+- An explicitly replayed older completed upload without caption metadata can add its captions using
+  the original artifact's video bytes, without changing its visibility or publication schedule.
+  Different subtitle bytes are rejected on unfinished uploads; regenerated video bytes cannot backfill
+  an older video's captions. This does not automatically revisit all older videos.
 - Retry using the **original artifact's video bytes**, not a regenerated video
   whose timing files could mismatch the existing upload.
 - The reserved visibility and saved schedule stay in force on retries. Changing
@@ -271,6 +307,8 @@ or uploads. Tests mock network calls and exercise the official SDK's request
 construction. Live uploads require your own channel authorization and quota.
 
 Official references: [video upload](https://developers.google.com/youtube/v3/docs/videos/insert),
+[caption upload](https://developers.google.com/youtube/v3/docs/captions/insert),
+[caption lookup](https://developers.google.com/youtube/v3/docs/captions/list),
 [playlist lookup](https://developers.google.com/youtube/v3/docs/playlists/list),
 [playlist membership](https://developers.google.com/youtube/v3/docs/playlistItems/insert),
 [metadata limits](https://developers.google.com/youtube/v3/docs/videos#snippet.description),

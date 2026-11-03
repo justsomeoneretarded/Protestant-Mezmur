@@ -430,6 +430,7 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
                                  "spot-check the karaoke timing.")
 
     # 6. Subtitles & lyrics files.
+    write_srt(cues, out / "subtitle.srt", display_timing=True, duration=duration, amharic_only=True)
     (out / "captions").mkdir(exist_ok=True)
     write_srt(cues, out / "captions" / "am.srt")
     write_srt(cues, out / "captions" / "am-Latn.srt", romanized=True)
@@ -503,7 +504,7 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     still_img = cv2.imread(still.path) if still is not None and still.path else None
     bright = brightness(still_img) >= 140
     theme = choose_theme(seed=mid // 10 + mid, bright_background=bright)
-    write_ass(cues, work / "lyrics.ass", theme=theme)
+    write_ass(cues, work / "lyrics.ass", theme=theme, duration=duration)
     shutil.copy2(work / "lyrics.ass", out / "lyrics.ass")
     log(f"  look: {'bright daytime' if bright else 'darker'} picture, lyric style '{theme['name']}'")
     timings["footage"] = round(time.time() - t, 1)

@@ -4,7 +4,7 @@ from pathlib import Path
 from PIL import ImageFont
 
 from .geez import romanize
-from .lyrics import safe_ass, timestamp
+from .lyrics import is_amharic_text, safe_ass, timestamp
 
 FONTS = Path(__file__).parent / "assets" / "fonts"
 LEAD = 0.45          # line appears before its first word
@@ -159,17 +159,30 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
 
 
-def write_ass(cues, path, romanized=True, preview=True, theme=None):
+def display_window(cues, index, duration=None):
+    """Main lyric visibility shared by the burned-in ASS and upload SRT, to ASS precision."""
+    cue = cues[index]
+    nxt = cues[index + 1] if index + 1 < len(cues) else None
+    prev_end = cues[index - 1]["end"] if index else 0.0
+    start = max(cue["start"] - LEAD, prev_end + 0.05 if index else 0.0, 0.0)
+    end = cue["end"] + 0.5
+    if nxt:
+        end = min(end, max(cue["end"] + 0.05, nxt["start"] - LEAD - 0.02))
+    start, end = round(start * 100) / 100, round(end * 100) / 100
+    if duration is not None:
+        end = min(end, max(0.0, int(duration * 100) / 100))
+    return start, end
+
+
+def write_ass(cues, path, romanized=True, preview=True, theme=None, duration=None):
     theme = theme or choose_theme(0)
     font_file = theme["file"]
     events = []
     for i, cue in enumerate(cues):
         nxt = cues[i + 1] if i + 1 < len(cues) else None
-        prev_end = cues[i - 1]["end"] if i else 0.0
-        start = max(cue["start"] - LEAD, prev_end + 0.05 if i else 0.0, 0.0)
-        end = cue["end"] + 0.5
-        if nxt:
-            end = min(end, max(cue["end"] + 0.05, nxt["start"] - LEAD - 0.02))
+        start, end = display_window(cues, i, duration)
+        if end <= start:
+            continue
         size = fit_size(cue["text"], font_file=font_file)
         fade = "\\fad(180,220)"
         move = f"\\move(960,{578},960,560,0,260)"
@@ -190,9 +203,17 @@ def write_ass(cues, path, romanized=True, preview=True, theme=None):
     Path(path).write_text(header(theme) + "\n".join(events) + "\n", encoding="utf-8")
 
 
-def write_srt(cues, path, romanized=False):
+def write_srt(cues, path, romanized=False, display_timing=False, duration=None, amharic_only=False):
     blocks = []
-    for i, cue in enumerate(cues, 1):
+    for i, cue in enumerate(cues):
         text = cue["romanized"] if romanized else cue["text"]
-        blocks.append(f"{i}\n{timestamp(cue['start'])} --> {timestamp(cue['end'] + 0.3)}\n{text}")
+        start, end = (display_window(cues, i, duration) if display_timing
+                      else (cue["start"], cue["end"] + 0.3))
+        if duration is not None:
+            end = min(end, duration)
+        if end <= start:
+            continue
+        if amharic_only and not is_amharic_text(text):
+            raise ValueError("subtitle.srt requires Amharic script only, without English or romanized lyrics")
+        blocks.append(f"{len(blocks) + 1}\n{timestamp(start)} --> {timestamp(end)}\n{text}")
     Path(path).write_text("\n\n".join(blocks) + "\n", encoding="utf-8")
