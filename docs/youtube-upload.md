@@ -109,7 +109,7 @@ video/lyrics/thumbnail artifacts remain available if a later upload fails.
 Unchecked means no YouTube authorization or upload occurs.
 
 Automatic uploads use **thumbnail-b.jpg**, the circular artist-portrait layout.
-Set **YOUTUBE_THUMBNAIL** to **d** to use the frameless portrait layout instead.
+Set **YOUTUBE_THUMBNAIL** to **d** to use the frameless left-text / large right-side circular portrait layout instead.
 Other repository-variable values fall back to b, so automatic uploads do not pick
 text-only layouts a/c. All four files remain available in the artifact. If no
 artist photo was confirmed, the renderer's existing text fallback still applies;

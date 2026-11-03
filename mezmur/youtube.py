@@ -218,7 +218,7 @@ def write_kit(folder, m, stanzas, cues, duration, chorus_lines, credits, lyrics_
                  "2. Title — pick one from `title.txt` (first is recommended).",
                  "3. Description — paste `description.txt`.",
                  "4. Thumbnail — four options: `thumbnail.jpg`, `thumbnail-b.jpg`, `thumbnail-c.jpg`, `thumbnail-d.jpg`.",
-                 "   A: centered text + frame; B: circular portrait + frame; C: text without frame; D: portrait without frame.",
+                 "   A: centered text + frame; B: centered circular portrait + frame; C: text without frame; D: left text + larger right circle, no frame.",
                  "   Choose up to three for YouTube's *Test & Compare*.",
                  "5. Tags — paste `tags.txt` (Show more → Tags).",
                  "6. Category: Music · Video language: Amharic · Not made for kids.",

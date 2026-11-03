@@ -26,6 +26,10 @@ def main():
     align = quality.get("alignment") or {}
     if align:
         print(f"- Singing matched to lyrics: {align.get('matched_share', 0):.0%} of vocal time")
+    processing = meta.get("audio_processing") or {}
+    print(f"- Soundtrack: {processing.get('source', 'original')}")
+    if processing.get("source") == "rebuilt-accompaniment":
+        print("- Experimental backing rebuild: original vocal timing retained; listen to the lossless master before publishing.")
     print(f"- Singer photo: {meta.get('artist_photo') or 'none found'}")
     print(f"- Footage: {len(meta.get('backgrounds', []))} clip(s); tempo {meta.get('tempo_bpm')} BPM")
     print(f"- Timings (s): {meta.get('timings_seconds')}")

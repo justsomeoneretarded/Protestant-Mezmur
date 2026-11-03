@@ -20,6 +20,8 @@ render = [
     "opencv-python-headless==4.10.0.84", "onnxruntime>=1.18", "ddgs>=9.5",
     "soundfile==0.13.1",
 ]
+# Optional CPU-only backing analysis, MIDI writing and lossless mixing; synthesis uses system FluidSynth.
+arrange = ["librosa==0.11.0", "pretty_midi==0.2.11", "soundfile==0.13.1"]
 # Vocal separation runs from its own virtualenv (see the workflow) so its pins cannot clash.
 separator = ["audio-separator[cpu]>=0.39"]
 test = ["pytest==8.4.2", "responses==0.25.8", "soundfile==0.13.1"]

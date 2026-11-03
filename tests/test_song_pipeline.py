@@ -36,6 +36,7 @@ def clean_pipeline(monkeypatch, tmp_path):
     def separate(path, folder, **kwargs):
         assert path == source and folder == work
         calls["events"].append("separate-original")
+        calls["vocals"], calls["require_vocals"] = vocals, kwargs.get("require_vocals", False)
         return vocals
 
     def infer(path, **kwargs):
@@ -61,7 +62,7 @@ def clean_pipeline(monkeypatch, tmp_path):
         return SimpleNamespace(outro_start=seconds - 1)
 
     def render_video(renderer, track, *args, **kwargs):
-        assert track == source
+        assert track == calls.get("render_source", source)
         calls["events"].append("render")
 
     def kit(out, meta, stanzas, cues, seconds, *args):
@@ -97,7 +98,12 @@ def clean_pipeline(monkeypatch, tmp_path):
     monkeypatch.setattr(song, "write_ass", write_ass)
     monkeypatch.setattr(song.thumbnail, "compose", lambda *a, **k: np.zeros((10, 10, 3), dtype=np.uint8))
     monkeypatch.setattr(song.thumbnail, "save", lambda *a: None)
-    monkeypatch.setattr(song, "analyze", lambda *a, **k: SimpleNamespace(tempo=100))
+    def features(path, **kwargs):
+        calls["features_source"] = path
+        return SimpleNamespace(tempo=100)
+
+    monkeypatch.setattr(song, "analyze", features)
+    monkeypatch.setattr(song, "rebuild_backing", lambda *a, **k: pytest.fail("Unchecked mode invoked backing synthesis"))
     monkeypatch.setattr(song, "Renderer", renderer)
     monkeypatch.setattr(song, "render_video", render_video)
     monkeypatch.setattr(song, "write_kit", kit)
@@ -184,3 +190,51 @@ def test_produce_uses_english_lyric_query_and_keeps_builtin_telegram_sources(cle
     assert queries == ["Test lyrics"]
     assert {"yesemayzega12", "protestant_Song_lyrics1", "bestprotestant_songs",
             "CustomLyrics"} <= set(searched_channels)
+
+
+def test_music_rebuild_runs_only_after_original_lyric_alignment_and_keeps_caption_times(clean_pipeline, monkeypatch):
+    calls = clean_pipeline
+
+    def rebuild(original, vocals, target, work, **kwargs):
+        assert original == calls["source"] and vocals == calls["vocals"]
+        assert calls["require_vocals"] and "force-complete" in calls["events"]
+        assert (calls["output"] / "captions" / "am.srt").is_file()
+        calls["events"].append("rebuild")
+        calls["render_source"] = target
+        target.write_bytes(b"lossless-test-master")
+        return {"mode": "rebuilt-accompaniment", "soundfont": "Test.sf2", "vocal_offset_samples": 0,
+                "vocal_pitch_shift_semitones": 0, "vocal_tempo_factor": 1.0, "true_peak_dbfs": -1.0}
+
+    monkeypatch.setattr(song, "rebuild_backing", rebuild)
+    result = song.produce(calls["input"], calls["output"], calls["work"], rebuild_music=True)
+    assert result["mode"] == "lyrics-aligned"
+    assert calls["features_source"] == calls["render_source"] == calls["output"] / "rebuilt-audio.wav"
+    assert calls["events"].index("rebuild") > calls["events"].index("force-complete")
+    assert calls["events"].index("render") > calls["events"].index("rebuild")
+    assert calls["video_cues"][0]["start"] == calls["ass_cues"][0]["start"] == 0.5
+    meta = json.loads((calls["output"] / "metadata.json").read_text())
+    assert meta["audio_processing"]["source"] == "rebuilt-accompaniment"
+    assert meta["audio_processing"]["arrangement"]["vocal_offset_samples"] == 0
+    assert meta["review"]["needs_review"]
+    assert (calls["output"] / "arrangement.json").is_file()
+    assert "00:00:00,500" in (calls["output"] / "captions" / "am.srt").read_text()
+
+
+def test_rejected_lyrics_never_reach_backing_rebuild(clean_pipeline):
+    calls = clean_pipeline
+    calls["candidates"].clear()
+    result = song.produce(calls["input"], calls["output"], calls["work"], rebuild_music=True)
+    assert result["mode"] == "skipped"
+    assert not (calls["output"] / "rebuilt-audio.wav").exists()
+
+
+@pytest.mark.parametrize("checked", [False, True])
+def test_cli_backing_rebuild_is_explicit_opt_in(monkeypatch, checked):
+    argv = ["mezmur-song", "--input", "in", "--output", "out"]
+    if checked:
+        argv.append("--rebuild-music")
+    monkeypatch.setattr(__import__("sys"), "argv", argv)
+    calls = []
+    monkeypatch.setattr(song, "produce", lambda *a, **kwargs: calls.append(kwargs))
+    song.main()
+    assert calls[0]["rebuild_music"] is checked

@@ -398,9 +398,12 @@ def _wrap(text, mixed, width):
     return lines
 
 
-def _text_block(canvas, meta, accent, accent_dark, top=54, bottom=666, compact=False):
-    """Fit the complete centered bilingual block into its assigned vertical band."""
-    width = W - 160
+def _text_block(canvas, meta, accent, accent_dark, top=54, bottom=666, compact=False, left=80, right=W - 80):
+    """Fit the complete bilingual block inside its assigned rectangle."""
+    if not (0 <= left < right <= W and 0 <= top < bottom <= H):
+        raise ValueError("Invalid thumbnail text bounds")
+    width = right - left
+    center = (left + right) // 2
     title = meta.get("title_am") or meta.get("title_latin", "")
     roman = (meta.get("title_latin") or "").upper() if meta.get("title_am") else ""
     artist_am = meta.get("artist_am") or ""
@@ -425,11 +428,11 @@ def _text_block(canvas, meta, accent, accent_dark, top=54, bottom=666, compact=F
     y = top + max(0, (bottom - top - block_h) // 2)
     for (text, font, kind), line_h in zip(rows, heights):
         if kind == "title":
-            gradient_text(canvas, (W // 2, y), text, font, (255, 244, 200), accent_dark,
+            gradient_text(canvas, (center, y), text, font, (255, 244, 200), accent_dark,
                           anchor="ma", stroke=max(1, font.size // 32), offset=3, blur=6)
         else:
             fill = accent if kind == "accent" else (255, 255, 255)
-            shadow_text(canvas, (W // 2, y), text, font, fill + (255,), anchor="ma", blur=3,
+            shadow_text(canvas, (center, y), text, font, fill + (255,), anchor="ma", blur=3,
                         offset=2, stroke=1, stroke_fill=(10, 6, 2, 255))
         y += line_h + gap
 
@@ -445,8 +448,9 @@ def compose(meta, background=None, person=None, photo=None, variant="a", seed=0)
     """Build one 1280x720 thumbnail.
 
     a/c: centered text only, with/without the outer frame.
-    b/d: the video's circular portrait above smaller centered text, with/without
-    the outer frame. Missing portraits fall back to text, never a guessed face.
+    b: the video's circular portrait above smaller centered text, with a frame.
+    d: vertically centered text at left and a larger circular portrait at right, no frame.
+    Missing portraits fall back to text, never a guessed face.
     The legacy person argument is accepted but cutouts are no longer drawn.
     """
     if variant not in ("a", "b", "c", "d"):
@@ -456,9 +460,14 @@ def compose(meta, background=None, person=None, photo=None, variant="a", seed=0)
     canvas.alpha_composite(Image.new("RGBA", (W, H), (5, 5, 8, 110)))
     if variant in ("b", "d") and photo is not None:
         from .visuals import circle_photo
-        portrait = circle_photo(photo, 316, ring=accent, ring_w=4)
-        canvas.alpha_composite(portrait, ((W - portrait.width) // 2, 80))
-        _text_block(canvas, meta, accent, accent_dark, top=428, compact=True)
+        diameter = 316 if variant == "b" else 540
+        portrait = circle_photo(photo, diameter, ring=accent, ring_w=4)
+        if variant == "b":
+            canvas.alpha_composite(portrait, ((W - portrait.width) // 2, 80))
+            _text_block(canvas, meta, accent, accent_dark, top=428, compact=True)
+        else:
+            canvas.alpha_composite(portrait, (W - 60 - diameter, (H - diameter) // 2))
+            _text_block(canvas, meta, accent, accent_dark, top=80, bottom=640, left=60, right=630)
     else:
         _text_block(canvas, meta, accent, accent_dark)
     if variant in ("a", "b"):

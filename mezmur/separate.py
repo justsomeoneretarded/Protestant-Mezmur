@@ -1,4 +1,4 @@
-"""Vocal isolation for the acoustic model. The final video always uses the original mix."""
+"""Vocal isolation for recognition and the explicitly enabled backing-arrangement mode."""
 import os
 import subprocess
 from pathlib import Path
@@ -7,11 +7,13 @@ DEFAULT_MODEL = "UVR-MDX-NET-Voc_FT.onnx"
 FALLBACKS = ["UVR_MDXNET_KARA_2.onnx", "htdemucs_ft.yaml"]
 
 
-def _run(wav, out, model, log):
+def _run(wav, out, model, log, high_precision=False):
     cmd = [os.environ.get("AUDIO_SEPARATOR_BIN", "audio-separator"), str(wav), "-m", model, "--output_dir", str(out), "--single_stem", "Vocals",
            "--model_file_dir", os.environ.get("MEZMUR_MODEL_CACHE", ".model-cache") + "/separator",
            "--output_format", "WAV"]
-    if "roformer" in model.lower():
+    if high_precision:
+        cmd += ["--use_soundfile", "--normalization", "1.0", "--amplification", "0.0"]
+    if "roformer" in model.lower() and not high_precision:
         cmd += ["--mdxc_overlap", "2"]  # default 8 is ~4x slower on CPU for a tiny quality gain
     code = subprocess.run(cmd).returncode
     vocals = sorted(out.glob("*[Vv]ocals*.wav"))
@@ -22,20 +24,26 @@ def _run(wav, out, model, log):
     return None
 
 
-def separate(audio, folder, model=None, log=print):
-    """Return a vocal stem path; falls back to faster models, then to the full mix."""
+def separate(audio, folder, model=None, log=print, require_vocals=False):
+    """Return vocals, allowing full-mix fallback only when a separated stem is not required."""
     model = model or os.environ.get("MEZMUR_SEPARATOR") or DEFAULT_MODEL
+    if require_vocals and model == "none":
+        raise ValueError("Music rebuilding requires vocal isolation; choose a separator other than none")
     folder = Path(folder)
     wav = folder / "sep_input.wav"
-    subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", str(audio), "-ar", "44100", "-ac", "2", str(wav)],
-                   check=True)
+    codec = ["-c:a", "pcm_f32le"] if require_vocals else []
+    subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", str(audio), "-ar", "44100", "-ac", "2",
+                    *codec, str(wav)], check=True)
     if model == "none":
         return wav
-    for i, name in enumerate([model] + [m for m in FALLBACKS if m != model]):
+    models = [model] if require_vocals else [model] + [m for m in FALLBACKS if m != model]
+    for i, name in enumerate(models):
         out = folder / f"stems{i}"
         out.mkdir(parents=True, exist_ok=True)
-        vocals = _run(wav, out, name, log)
+        vocals = _run(wav, out, name, log, high_precision=require_vocals)
         if vocals:
             return vocals
+    if require_vocals:
+        raise RuntimeError("Vocal isolation failed; refusing to rebuild music over the original full mix")
     log("  WARNING: vocal separation unavailable; using the full mix", flush=True)
     return wav
