@@ -25,7 +25,7 @@ def clean_pipeline(monkeypatch, tmp_path):
     filled = {"estimated_words": 0}
     aligned = [{"word_index": 0, "line": 0, "phrase": 0, "start": 0.5, "end": 0.75},
                {"word_index": 1, "line": 1, "phrase": 1, "start": 2.5, "end": 3.0}]
-    candidate = {"text": "ሃሌሉያ\nአሜን", "stanzas": [{"lines": ["ሃሌሉያ", "አሜን"], "chorus": True}],
+    candidate = {"text": "\u1203\u120c\u1209\u12eb\n\u12a0\u121c\u1295", "stanzas": [{"lines": ["\u1203\u120c\u1209\u12eb", "\u12a0\u121c\u1295"], "chorus": True}],
                  "trusted": False, "source": "library:test", "url": ""}
     calls.update(report=report, filled=filled, candidates=[candidate])
 
@@ -129,7 +129,7 @@ def test_original_source_drives_every_output_without_effects(clean_pipeline):
     for cues in (calls["ass_cues"], calls["video_cues"], calls["kit_cues"]):
         assert cues[0]["start"] == 0.5 and all(c["chorus"] for c in cues)
     subtitle = (out / "subtitle.srt").read_text()
-    assert "00:00:00,050" in subtitle and "ሃሌሉያ" in subtitle and "አሜን" in subtitle
+    assert "00:00:00,050" in subtitle and "\u1203\u120c\u1209\u12eb" in subtitle and "\u12a0\u121c\u1295" in subtitle
     assert "haleluya" not in subtitle and "amen" not in subtitle
     for name in ("am.srt", "am-Latn.srt"):
         assert "00:00:00,500" in (out / "captions" / name).read_text()

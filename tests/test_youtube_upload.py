@@ -47,7 +47,7 @@ def folder(tmp_path):
                "tags": ["amharic mezmur", "worship"], "review": {"needs_review": False, "reasons": []}})
     (root / "description.txt").write_text("Worship lyrics\n#AmharicMezmur", encoding="utf-8")
     (root / "video.mp4").write_bytes(b"video-payload")
-    (root / "subtitle.srt").write_text("1\n00:00:01,000 --> 00:00:03,000\nሃሌሉያ ክብር ለስሙ\n", encoding="utf-8")
+    (root / "subtitle.srt").write_text("1\n00:00:01,000 --> 00:00:03,000\n\u1203\u120c\u1209\u12eb \u12ad\u1265\u122d \u1208\u1235\u1219\n", encoding="utf-8")
     for name in upload.THUMBNAILS.values():
         (root / name).write_bytes(b"jpeg-data")
     return root
@@ -1031,7 +1031,7 @@ def test_missing_subtitle_is_rejected_and_legacy_aligned_srt_is_supported(folder
         upload.load_kit(folder)
     (folder / "captions").mkdir()
     (folder / "captions" / "am.srt").write_text(
-        "1\n00:00:01,000 --> 00:00:03,000\nሃሌሉያ ክብር ለስሙ\n", encoding="utf-8")
+        "1\n00:00:01,000 --> 00:00:03,000\n\u1203\u120c\u1209\u12eb \u12ad\u1265\u122d \u1208\u1235\u1219\n", encoding="utf-8")
     assert upload.load_kit(folder)["subtitle"] == "captions/am.srt"
 
 
@@ -1088,7 +1088,7 @@ def test_different_subtitle_bytes_cannot_replace_an_unfinished_uploads_timing(fo
     with pytest.raises(OSError):
         upload.upload_song(kit, service, store, CHANNEL)
     path = folder / "subtitle.srt"
-    path.write_text(path.read_text().replace("ሃሌሉያ", "አሜን"), encoding="utf-8")
+    path.write_text(path.read_text().replace("\u1203\u120c\u1209\u12eb", "\u12a0\u121c\u1295"), encoding="utf-8")
     with pytest.raises(upload.UploadError, match="different subtitle bytes"):
         upload.upload_song(upload.load_kit(folder), service, store, CHANNEL)
     assert service.test_state["insert_count"] == 1
@@ -1169,7 +1169,7 @@ def test_missing_caption_id_cannot_mark_video_complete(folder, service):
 
 
 def test_utf8_bom_amharic_subtitle_is_preserved_without_translating_or_retiming(folder, service):
-    data = "\ufeff1\n00:00:01,000 --> 00:00:03,000\nሃሌሉያ ክብር ለስሙ\n".encode("utf-8")
+    data = "\ufeff1\n00:00:01,000 --> 00:00:03,000\n\u1203\u120c\u1209\u12eb \u12ad\u1265\u122d \u1208\u1235\u1219\n".encode("utf-8")
     (folder / "subtitle.srt").write_bytes(data)
     kit = upload.load_kit(folder)
     assert kit["subtitle_cues"] == 1
@@ -1184,7 +1184,7 @@ def test_caption_size_limit_is_checked_locally_before_network(folder, monkeypatc
         upload.load_kit(folder)
 
 
-@pytest.mark.parametrize("text", ["haleluya kibir lesimu", "Amharic lyrics", "ሃሌሉያ\nhaleluya", "ሃሌሉያ worship", "ሃሌሉያ amén"])
+@pytest.mark.parametrize("text", ["haleluya kibir lesimu", "Amharic lyrics", "\u1203\u120c\u1209\u12eb\nhaleluya", "\u1203\u120c\u1209\u12eb worship", "\u1203\u120c\u1209\u12eb am\u00e9n"])
 def test_uploaded_srt_rejects_romanized_english_and_mixed_script_lyric_lines(folder, service, text):
     (folder / "subtitle.srt").write_text(
         f"1\n00:00:01,000 --> 00:00:03,000\n{text}\n", encoding="utf-8")
