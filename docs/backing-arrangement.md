@@ -15,14 +15,17 @@ by estimated harmony, not a newly recorded singer or a guaranteed new compositio
 
 The CPU implementation uses librosa for onset/beat/chroma analysis and Viterbi
 harmonic decoding, pretty_midi to write notes in absolute seconds, and FluidSynth
-with the MIT-licensed FluidR3 GM SoundFont for rendering. There is no paid API,
-GPU requirement, large generative model, or noncommercial-only model weight.
+with the MIT-licensed FluidR3 GM SoundFont for rendering. The new accompaniment
+stage needs no paid API, GPU or generative-model weights. Check the rights for
+any separator/model you choose separately.
 Original timing drives the new notes; vocals are not time-stretched or pitch-shifted.
 
 ## Quality Safeguards
 
 - A failed separator or separator=none cannot silently use the full original mix
-  as a supposed isolated vocal. Such a rebuild fails explicitly.
+  as a supposed isolated vocal. Such a rebuild fails explicitly. Checked mode
+  honors the selected separator without switching to a fallback model; RoFormer
+  retains its default overlap rather than the faster ASR-only overlap setting.
 - The stem must match the original duration to within 150 ms. Small end padding
   is permitted; the start, sung words and internal vocal timeline are not moved.
 - Silent, non-finite, unsupported or unreasonably short inputs are rejected.

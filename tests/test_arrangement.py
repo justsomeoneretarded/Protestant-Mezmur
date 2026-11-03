@@ -209,3 +209,27 @@ def test_low_precision_stem_is_not_silently_presented_as_a_lossless_rebuild(monk
     monkeypatch.setattr(arrangement, "soundfont_path", lambda: tmp_path / "font.sf2")
     with pytest.raises(arrangement.ArrangementError, match="high-precision"):
         arrangement.rebuild(source, stem, tmp_path / "mix.wav", tmp_path / "work")
+
+
+def test_required_stem_honors_selected_model_without_quality_fallback(monkeypatch, tmp_path):
+    models = []
+    monkeypatch.setattr(separator.subprocess, "run", lambda *a, **k: SimpleNamespace(returncode=0))
+
+    def failed(wav, out, model, log, **kwargs):
+        models.append(model)
+        return None
+
+    monkeypatch.setattr(separator, "_run", failed)
+    with pytest.raises(RuntimeError):
+        separator.separate(tmp_path / "source.wav", tmp_path, model="selected.ckpt", require_vocals=True)
+    assert models == ["selected.ckpt"]
+
+
+def test_roformer_keeps_quality_overlap_in_rebuild_mode(monkeypatch, tmp_path):
+    commands = []
+    (tmp_path / "Vocals.wav").touch()
+    monkeypatch.setattr(separator.subprocess, "run",
+                        lambda command, **kwargs: commands.append(command) or SimpleNamespace(returncode=0))
+    separator._run(tmp_path / "source.wav", tmp_path, "vocals_mel_band_roformer.ckpt",
+                   lambda *a, **k: None, high_precision=True)
+    assert "--mdxc_overlap" not in commands[0]

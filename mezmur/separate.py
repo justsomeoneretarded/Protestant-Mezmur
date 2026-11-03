@@ -13,7 +13,7 @@ def _run(wav, out, model, log, high_precision=False):
            "--output_format", "WAV"]
     if high_precision:
         cmd += ["--use_soundfile", "--normalization", "1.0", "--amplification", "0.0"]
-    if "roformer" in model.lower():
+    if "roformer" in model.lower() and not high_precision:
         cmd += ["--mdxc_overlap", "2"]  # default 8 is ~4x slower on CPU for a tiny quality gain
     code = subprocess.run(cmd).returncode
     vocals = sorted(out.glob("*[Vv]ocals*.wav"))
@@ -36,7 +36,8 @@ def separate(audio, folder, model=None, log=print, require_vocals=False):
                     *codec, str(wav)], check=True)
     if model == "none":
         return wav
-    for i, name in enumerate([model] + [m for m in FALLBACKS if m != model]):
+    models = [model] if require_vocals else [model] + [m for m in FALLBACKS if m != model]
+    for i, name in enumerate(models):
         out = folder / f"stems{i}"
         out.mkdir(parents=True, exist_ok=True)
         vocals = _run(wav, out, name, log, high_precision=require_vocals)
