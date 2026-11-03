@@ -84,3 +84,19 @@ def test_placeholders_do_not_prevent_learning_geez_from_search_results():
     r = learn_from_titles({"title_am": "<unknown>", "title_latin": "Siwed Geta"},
                           ["ሲወድ ጌታ // Siwed Geta"])
     assert r["title_am"] == "ሲወድ ጌታ"
+
+
+@pytest.mark.parametrize("info,artist,title", [
+    ({"title": "ራስህን አኗሪ - Addisalem Assefa", "performer": "ተወዳጁ የደስታዬ እልልታ",
+      "filename": "Addisalem_assefa_አዲስአለም_አሠፋ_Rashn_anuri_ራስህን_አኗሪ_New_album_2025M.mp3",
+      "caption": "ራስህን አኗሪ\nአዲስዓለም አሰፋ - New Album\n▷ ▸ Albastros.com ◂ ◁"},
+     "Addisalem Assefa", "Rashn Anuri"),
+    ({"title": "ስምህን ጠራሁ - Aster Abebe", "performer": "ተወዳጁ የደስታዬ እልልታ",
+      "filename": "_SIMIHIN_TERAHU_ስምህን_ጠራሁ_By_Aster_Abebe_Official_Gospel_Song_202.mp3",
+      "caption": "ስምህን ጠራሁ\nአስቴር አበበ - New Clip\n▷ ▸ Albastros.com ◂ ◁"},
+     "Aster Abebe", "SIMIHIN TERAHU"),
+])
+def test_actual_songs_39_and_40_keep_full_filename_titles_and_real_singers(info, artist, title):
+    r = resolve(info)
+    assert r["artist_latin"] == artist and r["title_latin"] == title
+    assert not any("Albastros" in part for part in r["evidence"])

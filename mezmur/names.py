@@ -141,6 +141,7 @@ def search_record(record):
 
 def strip_junk(text):
     text = re.sub(r"https?://\S+|t\.me/\S+|@\w+|#\w+", " ", clean_name(text))
+    text = re.sub(r"(?i)\b(?:www\.)?[a-z0-9-]+\.(?:com|org|net|info|tv)\b(?:/\S*)?", " ", text)
     text = re.sub(r"(?i)\b(join|subscribe|follow)\b.*$", " ", text)  # 'Join us ...' tails in captions
     text = re.sub(r"(ቻናላችንን|ቴሌግራም|ይቀላቀሉ|ተቀላቀሉ|ሰብስክራይብ).*$", " ", text)
     text = re.sub(r"[\U0001F000-\U0001FAFF☀-➿️]", " ", text)
@@ -158,11 +159,15 @@ def pieces(*texts):
     for text in texts:
         if not text:
             continue
-        for part in SEPARATORS.split(clean_name(text)):
+        # Underscores usually separate filename words, not whole artist/title fields.
+        for part in SEPARATORS.split(clean_name(str(text).replace("_", " "))):
             part = strip_junk(part)
-            if (len(re.findall(r"[^\W\d_]", part)) >= 2
-                    and part.lower() not in {p.lower() for p in out}):
-                out.append(part)
+            runs = re.split(r"(?<=[A-Za-z])\s*(?=[ሀ-፿])|(?<=[ሀ-፿])\s*(?=[A-Za-z])", part)
+            for run in runs:
+                run = strip_junk(run)
+                if (len(re.findall(r"[^\W\d_]", run)) >= 2
+                        and run.lower() not in {p.lower() for p in out}):
+                    out.append(run)
     return out
 
 
