@@ -103,6 +103,13 @@ def clean_pipeline(monkeypatch, tmp_path):
         return SimpleNamespace(tempo=100)
 
     monkeypatch.setattr(song, "analyze", features)
+    def instrumental(vocals_path, target):
+        assert vocals_path == vocals and "force-complete" in calls["events"]
+        calls["instrumental_reference"] = target
+        calls["events"].append("instrumental-reference")
+        return target
+
+    monkeypatch.setattr(song, "instrumental_stem", instrumental)
     monkeypatch.setattr(song, "rebuild_backing", lambda *a, **k: pytest.fail("Unchecked mode invoked backing synthesis"))
     monkeypatch.setattr(song, "Renderer", renderer)
     monkeypatch.setattr(song, "render_video", render_video)
@@ -195,6 +202,7 @@ def test_music_rebuild_runs_only_after_original_lyric_alignment_and_keeps_captio
 
     def rebuild(original, vocals, target, work, **kwargs):
         assert original == calls["source"] and vocals == calls["vocals"]
+        assert kwargs["instrumental"] == calls["instrumental_reference"]
         assert calls["require_vocals"] and "force-complete" in calls["events"]
         assert (calls["output"] / "captions" / "am.srt").is_file()
         calls["events"].append("rebuild")

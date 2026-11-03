@@ -1,86 +1,86 @@
-# Optional Backing Arrangement
+# Optional Hybrid Backing Arrangement
 
-In Generate Mezmur Videos, check **Rebuild backing music** to enable this mode.
-It is off by default for manual and reusable workflows. Unchecked runs retain
-the original soundtrack and do not install or invoke the backing arranger.
+Check **Rebuild backing music** in Generate Mezmur Videos to enable this mode.
+It remains off by default. Unchecked runs use the original soundtrack and do
+not invoke separation of a paired instrumental or the backing arranger.
 
-## What It Builds
+## Processing Order
 
-The existing lyric search, acoustic verification and forced alignment finish on
-the original recording first. A genuinely separated vocal stem is then combined
-with newly synthesized piano, acoustic bass and warm-pad notes. The original
-instrumental waveform is not mixed back in, except for unavoidable bleed that
-may remain in the vocal extraction. This is an automatic new arrangement guided
-by estimated harmony, not a newly recorded singer or a guaranteed new composition.
+1. Isolate vocals and retain the actual paired instrumental. Multi-stem Demucs
+   outputs are combined without vocals when no paired instrumental is provided.
+2. Search, verify and complete lyrics against the original vocal timeline.
+   Existing word/line gap-filling and subtitle timestamps are unchanged.
+3. Analyze the separated instrumental for beats, tuned chroma and bass evidence.
+4. Extract confident, stable vocal pitches with pYIN. Use these as conservative
+   constraints on accompaniment, not as a replacement for the instrumental map.
+5. Generate new piano, acoustic bass, pad and light beat-following percussion.
+   Tune the new instruments to the estimated recording tuning; never retune or
+   time-stretch the singer.
+6. Mix the new instrumental with the full-resolution vocal stem and render video.
 
-The CPU implementation uses librosa for onset/beat/chroma analysis and Viterbi
-harmonic decoding, pretty_midi to write notes in absolute seconds, and FluidSynth
-with the MIT-licensed FluidR3 GM SoundFont for rendering. The new accompaniment
-stage needs no paid API, GPU or generative-model weights. Check the rights for
-any separator/model you choose separately.
-Original timing drives the new notes; vocals are not time-stretched or pitch-shifted.
+The original instrumental is used for analysis only, never mixed into the final
+soundtrack. Separation can still leave instrumental bleed in the vocal stem.
+No paid API, GPU or new model weights are needed.
 
-## Quality Safeguards
+## Harmony and Uncertainty
 
-- A failed separator or separator=none cannot silently use the full original mix
-  as a supposed isolated vocal. Such a rebuild fails explicitly. Checked mode
-  honors the selected separator without switching to a fallback model; RoFormer
-  retains its default overlap rather than the faster ASR-only overlap setting.
-- The stem must match the original duration to within 150 ms. Small end padding
-  is permitted; the start, sung words and internal vocal timeline are not moved.
-- Silent, non-finite, unsupported or unreasonably short inputs are rejected.
-- Beat/harmony evidence must be sufficient. Weak harmonic segments are omitted;
-  the harmony score is an uncalibrated heuristic, not a word or musical accuracy percentage.
-- Mixing retains the separated vocal waveform, with only one constant headroom
-  gain when necessary. There is no voice EQ, added hiss, echo, room effect, pitch
-  change, tempo change or dynamic vocal compression.
-- The new backing is balanced below the vocals and faded at the track edges.
-  Four-times oversampled peak estimates target at least 1 dB of PCM headroom;
-  these are technical checks, not a certified loudness meter or a subjective quality score.
-- The separator input/output uses floating-point WAV and SoundFile, avoiding its
-  default 16-bit pydub export. Lower-precision stems are rejected in rebuilt mode.
-- A 32-bit float WAV master is kept without lossy intermediate encodes. MP4 uses
-  the existing 320 kbps AAC encoding once. Platform re-encoding is outside this tool.
-- Failed technical checks stop the job rather than falsely label the old mix as rebuilt.
+Instrumental CQT chroma and bass evidence propose major, minor, seventh,
+suspended and open-fifth harmonies. Library Viterbi decoding smooths the
+progression. Confident sustained vocal notes discourage semitone/tritone
+conflicts; low-confidence frames and passing pitches do not automatically
+override the instrumental.
 
-These checks cannot guarantee artifact-free separation, correct chord inference,
-natural instrument performance, pleasant arranging, or studio-master quality.
-Pentatonic, microtonal, live/rubato and unusual-meter songs are especially likely
-to need review. High-confidence sections use inferred triads; less certain ones
-use simpler root/fifth voicings. Automated review notes do not disable the existing
-YouTube upload checkbox. For a first trial, select one song and uncheck uploading.
+Full chords are used only where supported and compatible with the observed
+melody. Weak regions use supported open fifths or single-note accompaniment;
+regions without usable evidence stay unpitched. There is no longer a global
+55% major/minor-template cutoff that rejects an otherwise usable arrangement.
+This is a different uncertainty policy, not a claim of improved calibrated
+accuracy or guaranteed pleasant music.
+
+The system does not infer every musical intention, chord inversion or meter.
+pYIN can struggle with choirs, bleed and ornamented/microtonal singing. Pitch
+checks are conservative heuristics; intentional dissonance may be simplified.
+The report records stable vocal-frame counts and whether vocal constraints had
+usable evidence. Listen before publishing.
+
+## Technical Safeguards
+
+- Checked mode retains both stems and refuses a missing instrumental; the full
+  original mix cannot silently masquerade as an isolated instrumental.
+- The selected separator is honored without automatic model-quality fallbacks.
+  RoFormer retains its default overlap in rebuild mode.
+- Floating-point stem export is used. Unsupported/low-precision stems,
+  invalid/silent audio and mismatched stem timelines fail explicitly.
+- Original vocal pitch and timing are retained. Mixing uses constant headroom
+  gain only; no vocal EQ, added hiss, reverb, echo or dynamic compression.
+- The new backing stays below the singer and fades at track edges.
+- Four-times oversampled peak checks target at least 1 dB of PCM headroom.
+- The master is float WAV with no lossy intermediate encodes. MP4 encodes AAC
+  once; YouTube may re-encode afterward.
+- Original recording integrity is checked. Captions remain on the original
+  timeline even when the new backing has different instrumental patterns.
+
+Lossless export cannot fix separation artifacts, wrong musical inference or
+unnatural instrument performance. These are technical safeguards, not a
+guarantee of studio quality. Review warnings do not disable automatic YouTube
+uploads. For the first trial, select one song and uncheck uploading.
 
 ## Outputs
 
-- video.mp4: the lyric video with the selected new soundtrack.
-- rebuilt-audio.wav: lossless floating-point mix for listening and archiving.
-- arrangement.mid: the new piano/bass/pad notes.
-- arrangement.json: detected beat/harmony evidence, mixing gains, sample count,
-  zero vocal offset/pitch change and peak measurements.
-- arrangement-license.txt: installed FluidR3 copyright notice when available.
+- `video.mp4`: lyric video with the selected new soundtrack.
+- `rebuilt-audio.wav`: float WAV master for listening.
+- `arrangement.mid`: generated instrumental notes and tuning.
+- `arrangement.json`: rhythm/harmony/melody evidence, mix gains, zero vocal
+  offset/pitch shift, sample count and peak checks.
+- `arrangement-plan.json`: per-section voicings, confidence mode, observed vocal
+  pitch classes and original beat timestamps.
+- `arrangement-license.txt`: installed FluidR3 copyright notice.
 
-Use only songs and vocal recordings you have permission to rearrange and publish.
-Changing the backing does not remove rights in a vocal recording, melody or lyrics,
-and there is no guarantee of avoiding audio fingerprinting or Content ID matches.
+The implementation uses librosa 0.11 (HPSS, CQT, pYIN and Viterbi), pretty_midi,
+FluidSynth and the MIT-licensed FluidR3 GM SoundFont. The SF2 can be changed
+locally using `MEZMUR_SOUNDFONT`; respect its license.
 
-The existing upload ledger still prevents posting the same Telegram song twice.
-Selecting this checkbox does not replace or delete a previously uploaded video.
-
-## Local Run
-
-Install system packages fluidsynth and fluid-soundfont-gm, then:
-
-```sh
-pip install -e '.[render,arrange]'
-python -m mezmur.song --input inputs/song-29 --output output/song-29 --rebuild-music
-```
-
-MEZMUR_SOUNDFONT can point to a different licensed SF2 file for local use. You
-must supply the appropriate rights/credits for that file. The workflow uses
-/usr/share/sounds/sf2/FluidR3_GM.sf2 without any extra secret or setup.
-
-References:
-- https://librosa.org/doc/0.11.0/generated/librosa.beat.beat_track.html
-- https://librosa.org/doc/0.11.0/generated/librosa.sequence.viterbi.html
-- https://www.fluidsynth.org/wiki/ExampleCommandLines/
-- https://sources.debian.org/src/fluid-soundfont/3.1-6/debian/copyright/
+Use only recordings and songs you have permission to rearrange and publish.
+Changing the backing does not remove rights in the vocal recording, melody or
+lyrics, or guarantee avoiding acoustic fingerprinting / Content ID.
+The upload ledger still prevents duplicate posting of the same Telegram song.

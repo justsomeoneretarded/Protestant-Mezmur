@@ -118,8 +118,9 @@ YouTube channel and the web, checking that the faces agree.
 - `message_ids`: remake specific songs (e.g. `2,3`) without moving your place in the channel.
 - `separator`: vocal-isolation model (default is the fast, accurate UVR-MDX-NET).
 - `rebuild_music`: **off by default**. When checked, after lyrics have been matched, replace the
-  instrumental with an experimental synthesized piano/bass/pad arrangement while keeping the
-  separated vocals on their original timeline. Requires vocal isolation (not `none`).
+  instrumental with an experimental synthesized piano/bass/pad/percussion arrangement while keeping the
+  separated vocals on their original timeline. The separated instrumental guides rhythm/harmony,
+  while confident vocal notes constrain the new voicings. Requires vocal isolation (not `none`).
   [Quality safeguards and limitations](docs/backing-arrangement.md).
 - `upload_youtube`: automatic YouTube upload, **on by default**; uncheck for artifacts only. Requires
   `YOUTUBE_OAUTH_JSON` (secret) and `YOUTUBE_CHANNEL_ID` (variable). Uploads privately,
@@ -138,7 +139,7 @@ noise, reverb, room-space effects or loudness normalization. Compatible AAC/MP3
 streams are copied into the MP4; other formats receive AAC encoding only.
 In this default mode vocal isolation is used only for recognition, never as the final soundtrack.
 When rebuilding is enabled, the kit also contains a lossless `rebuilt-audio.wav`,
-`arrangement.mid` and `arrangement.json`. The master is encoded to AAC once for MP4;
+`arrangement.mid`, `arrangement.json` and `arrangement-plan.json`. The master is encoded to AAC once for MP4;
 YouTube can re-encode again. Automatic arrangements and separated vocals need listening review. Historical workflow reruns use their old code;
 start a fresh run on main to use this path.
 

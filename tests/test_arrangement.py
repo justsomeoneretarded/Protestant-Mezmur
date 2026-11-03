@@ -1,5 +1,6 @@
 """Native audio tests for the explicitly requested, CPU-only backing rebuild."""
 import hashlib
+import json
 import subprocess
 from pathlib import Path
 from types import SimpleNamespace
@@ -162,13 +163,23 @@ def test_native_soundfont_rebuild_writes_lossless_master_without_modifying_sourc
     sf.write(stem, voice, SR, subtype="FLOAT")
     before = hashlib.sha256(original.read_bytes()).hexdigest()
     target = tmp_path / "out" / "rebuilt-audio.wav"
-    report = arrangement.rebuild(original, stem, target, tmp_path / "work", seed=29)
+    reference = tmp_path / "instrumental-reference.wav"
+    sf.write(reference, np.column_stack([source, source]), SR, subtype="FLOAT")
+    report = arrangement.rebuild(original, stem, target, tmp_path / "work", seed=29, instrumental=reference)
     mixed, sr = sf.read(target, always_2d=True)
     assert sf.info(target).subtype == "FLOAT" and sr == SR
     assert mixed.shape == voice.shape and np.isfinite(mixed).all()
     assert hashlib.sha256(original.read_bytes()).hexdigest() == before
     assert report["original_recording_unchanged"] and not report["original_instrumental_reused"]
-    assert report["beat_count"] >= 4 and report["reliable_harmony_share"] >= 0.55
+    assert report["beat_count"] >= 4 and report["supported_accompaniment_share"] > 0.5
+    assert report["method"] == "instrumental-led-vocal-constrained"
+    assert report["vocal_melody_stable_frames"] > 0 and report["vocal_conflicts_checked"]
+    assert report["analysis_instrumental"] == "instrumental-reference.wav"
+    assert (target.parent / "arrangement-plan.json").is_file()
+    sections = json.loads((target.parent / "arrangement-plan.json").read_text())["segments"]
+    for second, expected_root in ((2, 0), (6, 5), (10, 7), (14, 0)):
+        section = next(part for part in sections if part["start"] <= second < part["end"])
+        assert section["root"] == expected_root, section
     assert report["duration_seconds"] == seconds and report["vocal_offset_samples"] == 0
     assert report["vocal_stem_format"] == "FLOAT"
     assert report["true_peak_dbfs"] <= -0.9999
@@ -233,3 +244,107 @@ def test_roformer_keeps_quality_overlap_in_rebuild_mode(monkeypatch, tmp_path):
     separator._run(tmp_path / "source.wav", tmp_path, "vocals_mel_band_roformer.ckpt",
                    lambda *a, **k: None, high_precision=True)
     assert "--mdxc_overlap" not in commands[0]
+
+
+def test_checked_separator_keeps_both_stems_but_unchecked_stays_vocals_only(monkeypatch, tmp_path):
+    commands = []
+    (tmp_path / "track_(Vocals)_model.wav").touch()
+    (tmp_path / "track_(Instrumental)_model.wav").touch()
+    monkeypatch.setattr(separator.subprocess, "run",
+                        lambda command, **kwargs: commands.append(command) or SimpleNamespace(returncode=0))
+    for checked in (False, True):
+        path = separator._run(tmp_path / "source.wav", tmp_path, "model.onnx", lambda *a, **k: None,
+                              high_precision=checked)
+        assert path.name == "track_(Vocals)_model.wav"
+    assert "--single_stem" in commands[0] and "--single_stem" not in commands[1]
+
+
+def test_no_vocals_stem_is_not_mistaken_for_singer(monkeypatch, tmp_path):
+    (tmp_path / "track_(No_Vocals)_model.wav").touch()
+    (tmp_path / "track_(Vocals)_model.wav").touch()
+    monkeypatch.setattr(separator.subprocess, "run", lambda *a, **k: SimpleNamespace(returncode=0))
+    result = separator._run(tmp_path / "source.wav", tmp_path, "model.onnx", lambda *a, **k: None,
+                            high_precision=True)
+    assert result.name == "track_(Vocals)_model.wav"
+
+
+@pytest.mark.parametrize("split", [False, True])
+def test_instrumental_reference_uses_actual_nonvocal_stems_in_float_without_changing_voice(tmp_path, split):
+    voice = tmp_path / "track_(Vocals)_model.wav"
+    sf.write(voice, stereo_tone(), SR, subtype="FLOAT")
+    before = hashlib.sha256(voice.read_bytes()).hexdigest()
+    reference = stereo_tone(pitch=330)
+    if split:
+        for role in ("Drums", "Bass", "Other"):
+            sf.write(tmp_path / f"track_({role})_model.wav", reference / 3, SR, subtype="FLOAT")
+    else:
+        sf.write(tmp_path / "track_(Instrumental)_model.wav", reference, SR, subtype="FLOAT")
+    output = separator.instrumental_stem(voice, tmp_path / "reference.wav")
+    actual, rate = sf.read(output, always_2d=True)
+    np.testing.assert_allclose(actual, reference, atol=2e-8)
+    assert rate == SR and sf.info(output).subtype == "FLOAT"
+    assert hashlib.sha256(voice.read_bytes()).hexdigest() == before
+
+
+def test_missing_instrumental_is_not_replaced_with_original_mix(tmp_path):
+    voice = tmp_path / "Vocals.wav"
+    sf.write(voice, stereo_tone(), SR, subtype="FLOAT")
+    with pytest.raises(RuntimeError, match="paired instrumental"):
+        separator.instrumental_stem(voice, tmp_path / "reference.wav")
+
+
+def test_instrumental_with_wrong_duration_is_rejected(tmp_path):
+    voice, music = tmp_path / "Vocals.wav", tmp_path / "Instrumental.wav"
+    sf.write(voice, stereo_tone(), SR, subtype="FLOAT")
+    sf.write(music, stereo_tone(seconds=4), SR, subtype="FLOAT")
+    with pytest.raises(RuntimeError, match="timelines"):
+        separator.instrumental_stem(voice, tmp_path / "reference.wav")
+
+
+def test_rebuild_never_analyzes_the_full_mix_for_harmony(monkeypatch, tmp_path):
+    source, voice, reference = [tmp_path / name for name in ("source.wav", "voice.wav", "reference.wav")]
+    for path in (source, voice, reference):
+        sf.write(path, stereo_tone(), SR, subtype="FLOAT")
+    monkeypatch.setattr(arrangement, "soundfont_path", lambda: tmp_path / "font.sf2")
+    read = []
+
+    def read_audio(path, rate):
+        read.append(path)
+        assert path != source
+        return np.zeros(rate * 6)
+
+    monkeypatch.setattr(arrangement, "read_audio", read_audio)
+    monkeypatch.setattr(arrangement, "harmony_plan",
+                        lambda *a, **k: (_ for _ in ()).throw(arrangement.ArrangementError("analysis reached")))
+    with pytest.raises(arrangement.ArrangementError, match="analysis reached"):
+        arrangement.rebuild(source, voice, tmp_path / "mix.wav", tmp_path / "work", instrumental=reference)
+    assert read == [reference, voice]
+    with pytest.raises(arrangement.ArrangementError, match="separate instrumental"):
+        arrangement.rebuild(source, voice, tmp_path / "mix.wav", tmp_path / "work", instrumental=source)
+
+
+def test_midi_supports_sparse_single_notes_percussion_and_instrument_tuning(tmp_path):
+    import pretty_midi
+
+    plan = [{"start": 0, "end": 2, "root": 0, "minor": False, "score": 0.3,
+             "reliable": True, "intervals": [0], "beats": [0.2, 1.2]},
+            {"start": 2, "end": 4, "root": 0, "minor": False, "score": 0,
+             "reliable": False, "intervals": [], "beats": []}]
+    target = tmp_path / "sparse.mid"
+    arrangement.write_midi(plan, target, tuning_cents=-25)
+    midi = pretty_midi.PrettyMIDI(str(target))
+    assert len(midi.instruments) == 4 and midi.instruments[-1].is_drum
+    for instrument in midi.instruments[:3]:
+        assert instrument.pitch_bends[0].pitch == -1024
+        assert all(note.pitch % 12 == 0 and note.end <= 2.01 for note in instrument.notes)
+
+
+def test_synthesis_work_path_cannot_overwrite_an_input_stem(monkeypatch, tmp_path):
+    source, voice, reference = [tmp_path / name for name in ("instrumental.wav", "voice.wav", "reference.wav")]
+    for path in (source, voice, reference):
+        sf.write(path, stereo_tone(), SR, subtype="FLOAT")
+    before = hashlib.sha256(source.read_bytes()).hexdigest()
+    monkeypatch.setattr(arrangement, "soundfont_path", lambda: tmp_path / "font.sf2")
+    with pytest.raises(arrangement.ArrangementError, match="Synthesis output must not overwrite"):
+        arrangement.rebuild(source, voice, tmp_path / "master.wav", tmp_path, instrumental=reference)
+    assert hashlib.sha256(source.read_bytes()).hexdigest() == before
