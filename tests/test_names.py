@@ -43,7 +43,8 @@ def test_song_32_uses_known_singer_instead_of_literal_unknown():
 
 
 @pytest.mark.parametrize("brand", ["Yedestayaye Eleleta", "Yedestayeeye Eleleta",
-                                  "Yedestayaeye Eleleta", "የደስታዬ እልልታ"])
+                                  "Yedestayaeye Eleleta", "የደስታዬ እልልታ",
+                                  "ተወዳጁ የደስታዬ እልልታ", "Tewedaju Yedestaye Ellta"])
 def test_channel_brand_is_not_aster_abebes_name_or_song_title(brand):
     r = resolve({"title": f"{brand} | Aster Abebe - Selam",
                  "performer": brand, "filename": f"{brand}_Aster Abebe_Selam.mp3"})

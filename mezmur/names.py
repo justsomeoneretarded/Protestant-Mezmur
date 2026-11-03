@@ -71,8 +71,10 @@ PLACEHOLDERS = {
     "notavailable", "notspecified",
 }
 # Source-channel branding, not a singer or a song. Match only at the start of a field.
-CHANNEL_BRANDS = ("Yedestayaye Eleleta", "Yedestayeeye Eleleta", "Yedestayaeye Eleleta",
-                  "የደስታዬ እልልታ", "የደስታዬ እልልታዎች")
+CHANNEL_BRANDS = ("ተወዳጁ የደስታዬ እልልታ", "Tewedaju Yedestaye Ellta",
+                  "Tewedaju Yedestayaye Eleleta", "Yedestayaye Eleleta",
+                  "Yedestayeeye Eleleta", "Yedestayaeye Eleleta", "Yedestaye Ellta",
+                  "የደስታዬ እልልታዎች", "የደስታዬ እልልታ")
 
 
 def is_placeholder(value):
