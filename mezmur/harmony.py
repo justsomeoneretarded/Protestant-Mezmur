@@ -174,7 +174,8 @@ def harmony_plan(samples, sr=ANALYSIS_SR, vocals=None):
                      "kind": kind if mode == "chord" else mode, "score": score,
                      "intervals": intervals, "mode": mode, "reliable": bool(intervals),
                      "reference_confident": mode == "chord", "beats": [float(t) for t in local_beats],
-                     "vocal_pitch_classes": [int(p) for p in np.flatnonzero(sung[index] >= 0.20)]})
+                     "vocal_pitch_classes": [int(p) for p in np.flatnonzero(sung[index] >= 0.20)],
+                     "vocal_pitch_weights": [float(weight) for weight in sung[index]]})
     if not any(segment["reliable"] for segment in plan):
         raise ArrangementError("No supported, vocal-compatible pitched accompaniment could be inferred")
     active_seconds = sum(s["end"] - s["start"] for s, on in zip(plan, active) if on)

@@ -1,4 +1,4 @@
-"""Read-only native regression on the recording that failed the previous arranger."""
+"""Final read-only hybrid regression, including generated-voicing / vocal-note consistency."""
 import ast
 import hashlib
 import json
@@ -14,6 +14,7 @@ import srt
 from mezmur import arrangement, separate
 from mezmur.audio import read_audio
 from mezmur.common import write_json
+from mezmur.harmony import compatible_notes
 
 out, work = Path("verification/song-40"), Path(".runtime/hybrid-40")
 out.mkdir(parents=True, exist_ok=True)
@@ -63,6 +64,11 @@ assert report["vocal_offset_samples"] == report["vocal_pitch_shift_semitones"] =
 assert report["vocal_tempo_factor"] == 1 and report["true_peak_dbfs"] <= -0.999
 assert report["vocal_analysis_ran"] and report["vocal_conflicts_checked"], report
 assert report["vocal_melody_stable_frames"] > 0
+assert report["analysis_instrumental"] == reference.name
+sections = json.loads((out / "arrangement-plan.json").read_text())["segments"]
+for section in sections:
+    notes = [(section["root"] + interval) % 12 for interval in section["intervals"]]
+    assert compatible_notes(notes, np.asarray(section["vocal_pitch_weights"])) == notes, section
 assert hashlib.sha256(source.read_bytes()).hexdigest() == source_hash
 assert hashlib.sha256(voice.read_bytes()).hexdigest() == voice_hash
 assert {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in (out / "captions").glob("*.srt")} == caption_hashes
