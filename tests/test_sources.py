@@ -112,3 +112,49 @@ def test_phrase_search_uses_english_web_keyword_and_all_telegram_sources(monkeyp
     assert queries == [f'"{phrase}" lyrics']
     assert searched_channels == channels
     assert REQUESTED_CHANNELS | {"CustomLyrics"} <= set(searched_channels)
+
+
+@pytest.mark.parametrize("record,artist", [
+    ({"title_latin": "Yedestayaye Eleleta | Aster Abebe Selam Official Lyrics",
+      "artist_am": "አስቴር አበበ", "artist_latin": "Yedestayaye Eleleta"}, "Aster Abebe"),
+    ({"title_am": "መደምደሚያዬ", "artist_am": "አገኘሁ ይደግ",
+      "artist_latin": "<unknown>"}, "Agegnehu Yideg"),
+])
+def test_all_title_query_paths_clean_channel_brands_and_unknowns(monkeypatch, record, artist):
+    queries = []
+    monkeypatch.setattr(web, "youtube_search", lambda q: queries.append(q) or [])
+    monkeypatch.setattr(web, "search", lambda q, **k: queries.append(q) or [])
+    lyrics_sources.youtube_titles(record)
+    lyrics_sources.from_youtube(record, log=lambda *a, **k: None)
+    lyrics_sources.from_web(record, log=lambda *a, **k: None)
+    telegram_queries = fetch._title_queries(record)
+    assert queries and telegram_queries
+    joined = " ".join(queries + telegram_queries).casefold()
+    assert "yedest" not in joined and "eleleta" not in joined and "unknown" not in joined
+    assert artist.casefold() in joined
+    assert all(q.count(artist) <= 1 for q in queries)
+    assert_english_lyric_queries(queries)
+
+
+def test_missing_song_title_does_not_make_broad_unusable_queries(monkeypatch):
+    queries = []
+    monkeypatch.setattr(web, "youtube_search", lambda q: queries.append(q) or [])
+    r = {"title_latin": "<unknown>", "artist_latin": "Agegnehu Yideg"}
+    assert lyrics_sources._queries(r) == []
+    assert lyrics_sources.youtube_titles(r) == []
+    lyrics_sources.from_youtube(r, log=lambda *a, **k: None)
+    assert queries == []
+
+
+def test_structured_lyrics_apis_and_direct_site_lookups_use_clean_identity(monkeypatch):
+    tracks, requests = [], []
+    record = {"title_latin": "Yedestayaye Eleleta | Aster Abebe Selam Official Lyrics",
+              "artist_am": "አስቴር አበበ", "artist_latin": "<unknown>"}
+    monkeypatch.setattr(web, "lrclib", lambda title, artist, seconds: tracks.append((title, artist)) or [])
+    monkeypatch.setattr(web, "get", lambda url, **kwargs: requests.append((url, kwargs)) or None)
+    lyrics_sources.from_lrclib(record, 180, log=lambda *a, **k: None)
+    lyrics_sources.from_sites(record, log=lambda *a, **k: None)
+    assert tracks == [("Selam", "Aster Abebe")]
+    assert requests and any("Aster_Abebe" in url for url, _ in requests)
+    assert any(kwargs.get("params") == {"q": "Selam"} for _, kwargs in requests)
+    assert not any("unknown" in str(item).lower() or "Yedest" in str(item) for item in requests)

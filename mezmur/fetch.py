@@ -10,7 +10,7 @@ from pathlib import Path
 
 from .common import required, write_json
 from .geez import has_ethiopic
-from .names import resolve
+from .names import resolve, search_record
 from .telegram import client, download, is_song, resolve_channel, select, song_info
 
 DEFAULT_LYRICS_CHANNELS = ("MezmurLyrics0,mezmur1,Amharic_spiritual_song_lyrics,SongLegetaLyrics,mezmurlyricsbb,"
@@ -68,6 +68,7 @@ async def neighbours(tg, entity, message, folder, span=6):
 
 
 def _title_queries(record):
+    record = search_record(record)
     qs = []
     t_am, t_lat = record.get("title_am", ""), record.get("title_latin", "")
     if t_am:

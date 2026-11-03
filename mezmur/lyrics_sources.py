@@ -4,6 +4,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
 from . import web
+from .names import search_record
 from .geez import fold, has_ethiopic
 from .lyrics_text import extract_blocks, html_to_text, parse_lyrics, script_texts, stanzas_text, title_overlap
 
@@ -47,6 +48,7 @@ def from_telegram(data):
 
 
 def from_lrclib(record, duration, log=print):
+    record = search_record(record)
     out, seen = [], set()
     queries = [(record.get("title_latin"), record.get("artist_latin")), (record.get("title_am"), record.get("artist_am")),
                (record.get("title_am"), "")]
@@ -90,11 +92,14 @@ def latin_variants(text, amharic=""):
 
 
 def _queries(record):
+    record = search_record(record)
     t_am, a_am = record.get("title_am", ""), record.get("artist_am", "")
     t_lats = latin_variants(record.get("title_latin", ""), t_am)
     a_lats = latin_variants(record.get("artist_latin", ""), a_am)
     a_lat = a_lats[0] if a_lats else ""
     qs = []
+    if not t_am and not t_lats:
+        return []
     if t_am:
         qs += [f"{t_am} {a_am or a_lat} lyrics", f"\"{t_am}\" መዝሙር lyrics"]
     for t in t_lats[:3]:
@@ -168,6 +173,7 @@ def _page_candidates(url, html, record):
 
 
 def from_web(record, log=print, max_pages=10):
+    record = search_record(record)
     results, seen = [], set()
     titles = []
     for q in _queries(record):
@@ -280,6 +286,7 @@ def _follow(page_url, html, record, source, base, artist_check=False, minimum=0.
 
 def from_sites(record, log=print):
     """Look the song up directly on mezmur lyrics sites (no search engine needed)."""
+    record = search_record(record)
     out = []
     artist = record.get("artist_latin", "")
     try:
@@ -333,10 +340,12 @@ def from_youtube(record, videos=(), log=print, max_videos=15, phrases=(), report
                 found.append({**v, "origin": origin})
 
     take(videos or [], "title")
+    record = search_record(record)
     t_am, a_am = record.get("title_am", ""), record.get("artist_am", "")
     t_lats = latin_variants(record.get("title_latin", ""), t_am)
     a_lat = (latin_variants(record.get("artist_latin", ""), a_am) or [""])[0]
-    queries = [f"{t_am} {a_am or a_lat} lyrics"] + [f"{a_lat} {t} lyrics" for t in t_lats[:2]]
+    queries = ([f"{t_am} {a_am or a_lat} lyrics"] if t_am else [])
+    queries += [f"{a_lat} {t} lyrics" for t in t_lats[:2]]
     for q in queries:
         q = " ".join(q.split())
         if len(q) >= 4:
@@ -437,8 +446,9 @@ def from_library(record, draft_text, folder, report=None):
 
 
 def youtube_titles(record):
+    record = search_record(record)
     q = " ".join(p for p in [record.get("title_am") or record.get("title_latin"), record.get("artist_latin") or record.get("artist_am")] if p)
-    videos = web.youtube_search(f"{q} lyrics") if q else []
+    videos = web.youtube_search(f"{q} lyrics") if q and (record.get("title_am") or record.get("title_latin")) else []
     return videos
 
 
@@ -457,6 +467,7 @@ def dedupe(cands):
 def gather(record, message_id, telegram_data, corrections_dir, duration, log=print, videos=(), draft=(),
            channels=(), library=None):
     """All lyric candidates for one song, plus a report of what each source returned."""
+    record = search_record(record)
     cands, titles = [], []
     report = {"searched title": " / ".join(x for x in [record.get("title_am"), record.get("title_latin")] if x),
               "searched singer": " / ".join(x for x in [record.get("artist_am"), record.get("artist_latin")] if x)}
