@@ -136,6 +136,12 @@ def rebuild(source, vocals, target, work, seed=0, instrumental=None):
     reference_path = Path(instrumental)
     if reference_path.resolve() in (source.resolve(), vocals.resolve(), target.resolve()):
         raise ArrangementError("Harmony analysis needs a separate instrumental stem, not the original mix or vocals")
+    reference_info = sf.info(reference_path)
+    if reference_info.subtype not in ("FLOAT", "DOUBLE", "PCM_24", "PCM_32"):
+        raise ArrangementError("Hybrid rebuilding needs a high-precision instrumental stem")
+    synthesized = work / "instrumental.wav"
+    if synthesized.resolve() in {p.resolve() for p in (source, vocals, reference_path, target)}:
+        raise ArrangementError("Synthesis output must not overwrite an input stem or the final master")
     reference = read_audio(reference_path, ANALYSIS_SR)
     melody = read_audio(vocals, ANALYSIS_SR)
     plan, report = harmony_plan(reference, vocals=melody)
@@ -144,9 +150,8 @@ def rebuild(source, vocals, target, work, seed=0, instrumental=None):
                              "melody": "separated vocals"}, "segments": plan, "report": report})
     midi = target.parent / "arrangement.mid"
     write_midi(plan, midi, seed=seed, tuning_cents=report["tuning_cents"])
-    instrumental = work / "instrumental.wav"
-    render_instrumental(midi, instrumental, font, sr)
-    backing, backing_sr = sf.read(instrumental, dtype="float32", always_2d=True)
+    render_instrumental(midi, synthesized, font, sr)
+    backing, backing_sr = sf.read(synthesized, dtype="float32", always_2d=True)
     if backing_sr != sr or backing.shape[1] != 2 or not np.isfinite(backing).all():
         raise ArrangementError("The synthesizer returned an unexpected audio format")
     backing = np.pad(backing[:expected], ((0, max(0, expected - len(backing))), (0, 0)))

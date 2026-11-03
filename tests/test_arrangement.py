@@ -332,3 +332,14 @@ def test_midi_supports_sparse_single_notes_percussion_and_instrument_tuning(tmp_
     for instrument in midi.instruments[:3]:
         assert instrument.pitch_bends[0].pitch == -1024
         assert all(note.pitch % 12 == 0 and note.end <= 2.01 for note in instrument.notes)
+
+
+def test_synthesis_work_path_cannot_overwrite_an_input_stem(monkeypatch, tmp_path):
+    source, voice, reference = [tmp_path / name for name in ("instrumental.wav", "voice.wav", "reference.wav")]
+    for path in (source, voice, reference):
+        sf.write(path, stereo_tone(), SR, subtype="FLOAT")
+    before = hashlib.sha256(source.read_bytes()).hexdigest()
+    monkeypatch.setattr(arrangement, "soundfont_path", lambda: tmp_path / "font.sf2")
+    with pytest.raises(arrangement.ArrangementError, match="Synthesis output must not overwrite"):
+        arrangement.rebuild(source, voice, tmp_path / "master.wav", tmp_path, instrumental=reference)
+    assert hashlib.sha256(source.read_bytes()).hexdigest() == before

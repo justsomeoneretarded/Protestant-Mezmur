@@ -455,6 +455,11 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
                             "encoding": "One AAC encode from a lossless 32-bit float WAV master",
                             "arrangement": arrangement}
         review["reasons"].append("Backing music was rebuilt automatically; listen for harmony and vocal-separation artifacts.")
+        if arrangement.get("method") == "instrumental-led-vocal-constrained":
+            if not arrangement.get("vocal_conflicts_checked"):
+                review["reasons"].append("No stable vocal pitches were available; accompaniment was not validated against the melody.")
+            if arrangement.get("reliable_harmony_share", 1) < 0.55:
+                review["reasons"].append("Uncertain harmony used supported open/single-note voicings or rests; review the sparse sections.")
         notice(mid, "New backing rendered without changing vocal pitch or timing; listening review recommended")
         timings["music_rebuild"] = round(time.time() - t, 1)
 
