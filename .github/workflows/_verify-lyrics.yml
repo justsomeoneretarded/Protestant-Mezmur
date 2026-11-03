@@ -1,0 +1,63 @@
+name: Temporary saved-song regression
+on:
+  push:
+    branches: [fix/clean-lyric-search-and-coverage]
+    paths: ['.github/workflows/_verify-lyrics.yml', 'scripts/_verify_lyrics.py']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  replay:
+    name: Original audio ${{ matrix.id }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        id: [35, 37]
+    env:
+      MEZMUR_MODEL_CACHE: ${{ github.workspace }}/.model-cache
+      OMP_NUM_THREADS: '4'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Decoder
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg
+      - name: Model cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .model-cache
+          key: mezmur-models-v3-UVR-MDX-NET-Voc_FT.onnx
+          restore-keys: mezmur-models-v3-
+      - name: Recognition dependencies
+        run: |
+          pip install torch==2.5.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cpu
+          pip install -e '.[render]'
+      - name: Isolated separator
+        run: |
+          python -m venv "$RUNNER_TEMP/sep"
+          "$RUNNER_TEMP/sep/bin/pip" install -q torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu
+          "$RUNNER_TEMP/sep/bin/pip" install -q "audio-separator[cpu]>=0.39"
+          echo "AUDIO_SEPARATOR_BIN=$RUNNER_TEMP/sep/bin/audio-separator" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: '41494534784'
+          name: inputs-41494534784
+          path: inputs
+      - name: Replay original audio through forced alignment and subtitle creation
+        env:
+          MESSAGE_ID: ${{ matrix.id }}
+        run: python scripts/_verify_lyrics.py "$MESSAGE_ID"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lyric-verification-${{ matrix.id }}
+          path: verification/
+          retention-days: 2
