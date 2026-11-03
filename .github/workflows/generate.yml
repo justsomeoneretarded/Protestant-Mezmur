@@ -35,7 +35,7 @@ on:
         type: boolean
         default: true
       rebuild_music:
-        description: Rebuild backing music (experimental; keeps vocal pitch and timing)
+        description: Guitar-led acoustic backing (adaptive guitar and bass; preserves vocals and video length)
         type: boolean
         default: false
   push:

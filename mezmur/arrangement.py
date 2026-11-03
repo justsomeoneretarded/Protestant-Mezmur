@@ -9,6 +9,7 @@ import numpy as np
 import soundfile as sf
 from scipy.signal import resample_poly
 
+from .acoustic import write_midi
 from .audio import read_audio
 from .common import duration as audio_duration, write_json
 from .harmony import ANALYSIS_SR, ArrangementError, harmony_plan
@@ -22,55 +23,6 @@ def soundfont_path():
     if not path.is_file():
         raise ArrangementError("Backing rebuild needs FluidSynth and a SoundFont; install fluid-soundfont-gm")
     return path
-
-
-def write_midi(plan, target, seed=0, tuning_cents=0.0):
-    import pretty_midi
-
-    midi = pretty_midi.PrettyMIDI(initial_tempo=120, resolution=960)
-    piano = pretty_midi.Instrument(program=0, name="New piano arrangement")
-    bass = pretty_midi.Instrument(program=32, name="New acoustic bass")
-    pad = pretty_midi.Instrument(program=89, name="New warm pad")
-    drums = pretty_midi.Instrument(program=0, is_drum=True, name="New light percussion")
-    rng = np.random.default_rng(seed)
-    for segment in plan:
-        start, end = segment["start"], segment["end"]
-        for index, beat in enumerate(segment.get("beats", [])):
-            stop = min(end, beat + 0.06)
-            if stop > beat:
-                drums.notes.append(pretty_midi.Note(velocity=34, pitch=42, start=beat, end=stop))
-                if index == 0:
-                    drums.notes.append(pretty_midi.Note(velocity=42, pitch=36, start=beat, end=stop))
-        if not segment["reliable"] or end - start < 0.12:
-            continue
-        root = segment["root"]
-        intervals = segment.get("intervals")
-        if intervals is None:
-            intervals = (0, 3 if segment["minor"] else 4, 7) if segment["score"] >= 0.78 else (0, 7)
-        if not intervals:
-            continue
-        pitches = [48 + root + interval for interval in intervals]
-        pattern = [0, len(pitches) - 1, min(1, len(pitches) - 1), len(pitches) - 1]
-        if rng.integers(2):
-            pattern = pattern[::-1]
-        for index, degree in enumerate(pattern):
-            t = start + index * (end - start) / 4
-            stop = min(end, t + min(0.65, (end - start) * 0.40))
-            piano.notes.append(pretty_midi.Note(velocity=int(rng.integers(58, 72)),
-                                                pitch=pitches[degree], start=t, end=stop))
-        bass.notes.append(pretty_midi.Note(velocity=52, pitch=36 + root, start=start, end=end))
-        for pitch in pitches:
-            pad.notes.append(pretty_midi.Note(velocity=30, pitch=pitch + 12, start=start, end=end))
-    bend = int(np.clip(round(float(tuning_cents) / 200 * 8192), -8192, 8191))
-    for instrument in (piano, bass, pad):
-        # Explicit two-semitone pitch-bend range; tune the new instruments, never the singer.
-        for number, value in ((101, 0), (100, 0), (6, 2), (38, 0), (101, 127), (100, 127)):
-            instrument.control_changes.append(pretty_midi.ControlChange(number, value, 0))
-        instrument.pitch_bends.append(pretty_midi.PitchBend(bend, 0))
-    midi.instruments = [piano, bass, pad] + ([drums] if drums.notes else [])
-    if not piano.notes:
-        raise ArrangementError("No reliable notes were available to synthesize")
-    midi.write(str(target))
 
 
 def render_instrumental(midi, target, font, sr):
@@ -110,7 +62,7 @@ def mix_tracks(vocals, backing, sr):
                    "vocal_offset_samples": 0, "vocal_pitch_shift_semitones": 0, "vocal_tempo_factor": 1.0}
 
 
-def rebuild(source, vocals, target, work, seed=0, instrumental=None):
+def rebuild(source, vocals, target, work, seed=0, instrumental=None, cues=()):
     source, vocals, target, work = map(Path, (source, vocals, target, work))
     if target.resolve() in (source.resolve(), vocals.resolve()):
         raise ArrangementError("Rebuilt audio must not overwrite the source recording or vocal stem")
@@ -145,20 +97,28 @@ def rebuild(source, vocals, target, work, seed=0, instrumental=None):
     reference = read_audio(reference_path, ANALYSIS_SR)
     melody = read_audio(vocals, ANALYSIS_SR)
     plan, report = harmony_plan(reference, vocals=melody)
+    midi = target.parent / "arrangement.mid"
+    performance = write_midi(plan, midi, seed=seed, tuning_cents=report["tuning_cents"],
+                             duration=expected / sr, cues=cues)
+    sections = performance.pop("segments")
     write_json(target.parent / "arrangement-plan.json", {
         "analysis_sources": {"rhythm": "separated instrumental", "harmony": "separated instrumental",
-                             "melody": "separated vocals"}, "segments": plan, "report": report})
-    midi = target.parent / "arrangement.mid"
-    write_midi(plan, midi, seed=seed, tuning_cents=report["tuning_cents"])
+                             "melody": "separated vocals"}, "segments": sections,
+        "report": {**report, **performance}})
     render_instrumental(midi, synthesized, font, sr)
     backing, backing_sr = sf.read(synthesized, dtype="float32", always_2d=True)
     if backing_sr != sr or backing.shape[1] != 2 or not np.isfinite(backing).all():
         raise ArrangementError("The synthesizer returned an unexpected audio format")
+    rendered_samples = len(backing)
+    if rendered_samples == 0:
+        raise ArrangementError("The synthesized backing is empty")
     backing = np.pad(backing[:expected], ((0, max(0, expected - len(backing))), (0, 0)))
     fade = min(sr * 2, expected // 2)
     backing[:fade] *= np.linspace(0, 1, fade)[:, None]
     backing[-fade:] *= np.linspace(1, 0, fade)[:, None]
     mixed, levels = mix_tracks(voice, backing, sr)
+    if len(mixed) != expected:
+        raise ArrangementError("Rebuilt audio failed the original-duration lock")
     sf.write(target, mixed, sr, subtype="FLOAT")
     with source.open("rb") as handle:
         if hashlib.file_digest(handle, "sha256").hexdigest() != before:
@@ -166,14 +126,16 @@ def rebuild(source, vocals, target, work, seed=0, instrumental=None):
     license_file = Path("/usr/share/doc/fluid-soundfont-gm/copyright")
     if font == DEFAULT_SOUNDFONT and license_file.is_file():
         shutil.copy2(license_file, target.parent / "arrangement-license.txt")
-    return {**report, **levels, "mode": "rebuilt-accompaniment", "experimental": True,
+    return {**report, **performance, **levels, "mode": "rebuilt-accompaniment", "experimental": True,
             "sample_rate": sr, "vocal_stem_format": stem_format, "samples": expected, "duration_seconds": expected / sr,
             "soundfont": font.name, "master_format": "32-bit float WAV",
             "original_recording_unchanged": True, "original_instrumental_reused": False,
             "analysis_sources": {"rhythm": "separated instrumental", "harmony": "separated instrumental",
                                  "melody": "separated vocals"},
             "analysis_instrumental": reference_path.name,
-            "instruments": ["piano", "acoustic bass", "warm pad", "light percussion"],
+            "duration_locked": True, "source_duration_seconds": expected / sr,
+            "trimmed_backing_samples": max(0, rendered_samples - expected),
+            "padded_backing_samples": max(0, expected - rendered_samples),
             "warnings": ["Vocal separation can leave artifacts or instrumental bleed.",
                          "Automatic harmony is an estimate and requires listening review.",
                          "A rebuilt arrangement does not guarantee a different acoustic fingerprint or grant music rights."]}

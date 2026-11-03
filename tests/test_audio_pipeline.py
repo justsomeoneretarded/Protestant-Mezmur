@@ -115,3 +115,21 @@ def test_workflows_and_public_api_cannot_enable_sound_effects():
     assert "Rubber Band" not in Path(".github/workflows/generate.yml").read_text()
     assert not hasattr(audio, "prepare_source") and not hasattr(audio, "master")
     assert not Path("mezmur/augmentation.py").exists()
+
+
+def test_fractional_duration_rebuilt_master_does_not_extend_video_or_audio(tmp_path):
+    sr = 44100
+    frames = int(sr * 4.913)
+    samples = 0.12 * np.sin(2 * np.pi * 220 * np.arange(frames) / sr)
+    master, ass, video = tmp_path / "rebuilt.wav", tmp_path / "captions.ass", tmp_path / "video.mp4"
+    sf.write(master, np.column_stack([samples, samples]), sr, subtype="FLOAT")
+    write_ass([], ass)
+    renderer = TinyRenderer(frames / sr)
+    renderer.fps = 25
+    visuals.render_video(renderer, master, ass, video, preset="ultrafast")
+    info = audio.probe(video)
+    expected = frames / sr
+    assert abs(float(info["format"]["duration"]) - expected) < 0.065
+    for stream in info["streams"]:
+        assert float(stream["duration"]) <= expected + 0.065
+    assert sf.info(master).frames == frames
