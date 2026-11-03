@@ -1,4 +1,11 @@
 """Small subtitle formatting helpers shared by the writers."""
+import unicodedata
+
+
+def is_amharic_text(text):
+    """Require Ethiopic-script lyric letters, allowing normal punctuation, spaces and numbers."""
+    letters = [char for char in text if char.isalpha()]
+    return bool(letters) and all(unicodedata.name(char, "").startswith("ETHIOPIC ") for char in letters)
 
 
 def timestamp(seconds, ass=False):

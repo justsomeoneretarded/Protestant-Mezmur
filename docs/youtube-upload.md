@@ -124,7 +124,10 @@ not-made-for-kids setting. It uploads one selected thumbnail and **automatically
 `subtitle.srt` as a timed Amharic caption track**, named Amharic lyrics (Rehoboth Mezmur).
 This file is generated from the same main lyric text and line-display windows as the
 burned-in lyrics, including their short display lead and the video's end boundary.
-It contains no karaoke styling, next-line preview or title/artist overlays.
+It contains **Amharic script only**, never English or romanized Amharic lyric lines,
+and no karaoke styling, next-line preview or title/artist overlays.
+Generation and upload validation both reject non-Ethiopic lyric letters instead of
+silently stripping or translating words. SRT cue numbers, timestamps and punctuation remain.
 The burned-in appearance and word highlighting stay unchanged. Alternative sung-line
 and romanized SRTs remain in `captions/` for manual use; only one Amharic track is
 uploaded automatically. Older complete kits can use `captions/am.srt` as a fallback.

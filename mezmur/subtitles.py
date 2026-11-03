@@ -4,7 +4,7 @@ from pathlib import Path
 from PIL import ImageFont
 
 from .geez import romanize
-from .lyrics import safe_ass, timestamp
+from .lyrics import is_amharic_text, safe_ass, timestamp
 
 FONTS = Path(__file__).parent / "assets" / "fonts"
 LEAD = 0.45          # line appears before its first word
@@ -203,7 +203,7 @@ def write_ass(cues, path, romanized=True, preview=True, theme=None, duration=Non
     Path(path).write_text(header(theme) + "\n".join(events) + "\n", encoding="utf-8")
 
 
-def write_srt(cues, path, romanized=False, display_timing=False, duration=None):
+def write_srt(cues, path, romanized=False, display_timing=False, duration=None, amharic_only=False):
     blocks = []
     for i, cue in enumerate(cues):
         text = cue["romanized"] if romanized else cue["text"]
@@ -213,5 +213,7 @@ def write_srt(cues, path, romanized=False, display_timing=False, duration=None):
             end = min(end, duration)
         if end <= start:
             continue
+        if amharic_only and not is_amharic_text(text):
+            raise ValueError("subtitle.srt requires Amharic script only, without English or romanized lyrics")
         blocks.append(f"{len(blocks) + 1}\n{timestamp(start)} --> {timestamp(end)}\n{text}")
     Path(path).write_text("\n\n".join(blocks) + "\n", encoding="utf-8")

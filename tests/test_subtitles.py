@@ -61,3 +61,16 @@ def test_display_subtitles_skip_cues_outside_video_without_extending_it(tmp_path
     captions = list(srt.parse((tmp_path / "subtitle.srt").read_text(encoding="utf-8")))
     assert len(captions) == 1
     assert captions[-1].end.total_seconds() <= 1.913
+
+
+def test_upload_subtitle_writer_is_amharic_script_only_not_romanized(tmp_path):
+    import pytest
+
+    cues = build_cues(words())
+    target = tmp_path / "subtitle.srt"
+    write_srt(cues, target, display_timing=True, amharic_only=True)
+    text = target.read_text(encoding="utf-8")
+    assert "ሲወድ ጌታ" in text and "siwed" not in text and "haleluya" not in text
+    with pytest.raises(ValueError, match="Amharic script only"):
+        write_srt(cues, tmp_path / "roman.srt", romanized=True, amharic_only=True)
+    assert not (tmp_path / "roman.srt").exists()

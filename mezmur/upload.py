@@ -12,6 +12,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from .common import required, write_json
+from .lyrics import is_amharic_text
 from .state import Store
 from .youtube import limit_description, limit_tags, limit_title
 
@@ -147,6 +148,8 @@ def load_subtitle(folder, duration=None):
     except (OSError, UnicodeError, TypeError, ValueError, OverflowError, srt.SRTParseError):
         raise UploadError("A valid UTF-8 timed subtitle.srt (or legacy captions/am.srt) is required; "
                           "use the original complete generation artifact") from None
+    if not all(is_amharic_text(cue.content) for cue in cues):
+        raise UploadError("subtitle.srt must contain Amharic script only; no English or romanized Amharic")
     return {"subtitle": path.relative_to(folder).as_posix(), "subtitle_sha256": hashlib.sha256(data).hexdigest(),
             "subtitle_cues": len(cues)}
 

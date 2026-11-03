@@ -16,7 +16,7 @@ For every song you get:
 | `title.txt` | Title options, first one in the common search style: `Addisalem Assefa siwed geta ሲወድ ጌታ አዲስዓለም አሰፋ lyrics` |
 | `description.txt` | Ready to paste: both scripts, full Amharic lyrics, lyrics in Latin letters, credits, hashtags |
 | `tags.txt` | Song-specific + general tags, under YouTube's 500-character limit |
-| `subtitle.srt` | Timed Amharic subtitles using the same main lyric text and display windows as the burned-in lyrics; automatically uploaded with the video |
+| `subtitle.srt` | Amharic-script-only timed subtitles (no romanization), using the same main lyric text and display windows as the burned-in lyrics; automatically uploaded with the video |
 | `captions/am.srt`, `captions/am-Latn.srt` | Alternative sung-line timings and optional Amharic in Latin letters for manual use |
 | `pinned_comment.txt` | A comment to post and pin |
 

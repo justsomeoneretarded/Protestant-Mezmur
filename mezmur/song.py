@@ -430,7 +430,7 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
                                  "spot-check the karaoke timing.")
 
     # 6. Subtitles & lyrics files.
-    write_srt(cues, out / "subtitle.srt", display_timing=True, duration=duration)
+    write_srt(cues, out / "subtitle.srt", display_timing=True, duration=duration, amharic_only=True)
     (out / "captions").mkdir(exist_ok=True)
     write_srt(cues, out / "captions" / "am.srt")
     write_srt(cues, out / "captions" / "am-Latn.srt", romanized=True)
