@@ -262,6 +262,7 @@ jobs:
             output/song-${{ matrix.id }}/description.txt
             output/song-${{ matrix.id }}/tags.txt
             output/song-${{ matrix.id }}/pinned_comment.txt
+            output/song-${{ matrix.id }}/subtitle.srt
             output/song-${{ matrix.id }}/captions/
             output/song-${{ matrix.id }}/youtube.json
             output/song-${{ matrix.id }}/metadata.json
@@ -338,7 +339,7 @@ jobs:
       - name: Where are my files?
         run: |
           echo "### Download each song from this run's **Artifacts** (mezmur-<message id>-run…)" >> "$GITHUB_STEP_SUMMARY"
-          echo "Inside: video.mp4, thumbnail.jpg (+ -b, -c, -d), title.txt, description.txt, tags.txt, pinned_comment.txt, captions/" >> "$GITHUB_STEP_SUMMARY"
+          echo "Inside: video.mp4, thumbnail.jpg (+ -b, -c, -d), title.txt, description.txt, tags.txt, pinned_comment.txt, subtitle.srt, captions/" >> "$GITHUB_STEP_SUMMARY"
           echo "Anything to check before publishing is listed per song above." >> "$GITHUB_STEP_SUMMARY"
 
   publish:

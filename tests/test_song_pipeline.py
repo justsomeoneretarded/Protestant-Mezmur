@@ -128,6 +128,8 @@ def test_original_source_drives_every_output_without_effects(clean_pipeline):
     assert words[0]["start"] == 0.5
     for cues in (calls["ass_cues"], calls["video_cues"], calls["kit_cues"]):
         assert cues[0]["start"] == 0.5 and all(c["chorus"] for c in cues)
+    subtitle = (out / "subtitle.srt").read_text()
+    assert "00:00:00,050" in subtitle and "one" in subtitle and "two" in subtitle
     for name in ("am.srt", "am-Latn.srt"):
         assert "00:00:00,500" in (out / "captions" / name).read_text()
     meta = json.loads((out / "metadata.json").read_text())

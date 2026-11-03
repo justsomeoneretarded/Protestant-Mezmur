@@ -4,6 +4,7 @@ import copy
 import hashlib
 import json
 import logging
+import math
 import os
 import random
 import re
@@ -20,6 +21,10 @@ THUMBNAILS = {"a": "thumbnail.jpg", "b": "thumbnail-b.jpg",
               "c": "thumbnail-c.jpg", "d": "thumbnail-d.jpg"}
 PUBLISH_DELAY = timedelta(hours=4)
 PLAYLIST_NAME = "Mezmurs"
+CAPTION_LANGUAGE = "am"
+CAPTION_NAME = "Amharic lyrics (Rehoboth Mezmur)"
+CAPTION_MAX_BYTES = 100 * 1024 * 1024
+CAPTION_ACCEPTED = ("uploaded", "serving", "syncing")
 
 
 class UploadError(RuntimeError):
@@ -114,6 +119,38 @@ def _json(path):
         raise UploadError(f"Missing or invalid {path.name}; use a newly generated complete YouTube kit") from None
 
 
+def load_subtitle(folder, duration=None):
+    """Validate UTF-8 timed SRT before any OAuth, queue reservation or video upload."""
+    import srt
+
+    path = folder / "subtitle.srt"
+    if not path.exists():
+        path = folder / "captions" / "am.srt"  # Older complete artifacts already contain aligned SRT.
+    try:
+        if not path.is_file() or not 0 < path.stat().st_size <= CAPTION_MAX_BYTES:
+            raise ValueError
+        data = path.read_bytes()
+        text = data.decode("utf-8-sig")
+        cues = list(srt.parse(text))
+        if not cues:
+            raise ValueError
+        previous = -1.0
+        for cue in cues:
+            start, end = cue.start.total_seconds(), cue.end.total_seconds()
+            if start < 0 or end <= start or start < previous or not cue.content.strip():
+                raise ValueError
+            previous = start
+        if duration is not None:
+            seconds = float(duration)
+            if not math.isfinite(seconds) or seconds <= 0 or max(c.end.total_seconds() for c in cues) > seconds + 0.5:
+                raise ValueError
+    except (OSError, UnicodeError, ValueError, OverflowError, srt.SRTParseError):
+        raise UploadError("A valid UTF-8 timed subtitle.srt (or legacy captions/am.srt) is required; "
+                          "use the original complete generation artifact") from None
+    return {"subtitle": path.relative_to(folder).as_posix(), "subtitle_sha256": hashlib.sha256(data).hexdigest(),
+            "subtitle_cues": len(cues)}
+
+
 def load_kit(folder, thumbnail="b"):
     folder = Path(folder)
     kit, meta = _json(folder / "youtube.json"), _json(folder / "metadata.json")
@@ -152,13 +189,14 @@ def load_kit(folder, thumbnail="b"):
             raise UploadError("Kit is missing its publishing review status")
     review_needed = any(r.get("needs_review") or r.get("reasons")
                         for r in (kit["review"], meta["review"]))
+    subtitle = load_subtitle(folder, meta.get("duration_seconds"))
     tags = limit_tags(kit["tags"])
     adjusted = [name for name, before, after in (
         ("title", original_title, title), ("description", original_description, description),
         ("tags", kit["tags"], tags)) if before != after]
     return {"folder": folder, "message_id": int(mid), "telegram_channel_id": str(int(channel)),
             "title": title, "description": description, "tags": tags, "metadata_adjusted": adjusted,
-            "review_needed": bool(review_needed), "thumbnail": THUMBNAILS[thumbnail]}
+            "review_needed": bool(review_needed), "thumbnail": THUMBNAILS[thumbnail], **subtitle}
 
 
 def source_key(kit, channel):
@@ -280,6 +318,47 @@ def _video(service, video_id, channel, marker, require_marker=True):
     return items[0]
 
 
+def ensure_captions(kit, service, store, key, record, previous):
+    """Checkpoint caption intent and reconcile an accepted insert before attempting another POST."""
+    digest = kit["subtitle_sha256"]
+    if record.get("caption_sha256") and record["caption_sha256"] != digest:
+        raise UploadError("An existing upload uses different subtitle bytes; retry with the original run's artifact")
+    if record.get("caption_id") and record.get("caption_status") in CAPTION_ACCEPTED:
+        return previous
+    path = kit["folder"] / kit["subtitle"]
+    if hashlib.sha256(path.read_bytes()).hexdigest() != digest:
+        raise UploadError("Subtitle bytes changed after validation; reload the original artifact before retrying")
+    if not record.get("caption_sha256"):
+        record.update(caption_file=kit["subtitle"], caption_sha256=digest, caption_language=CAPTION_LANGUAGE,
+                      caption_name=CAPTION_NAME, caption_status="pending")
+        save_record(store, key, record, previous)
+        previous = copy.deepcopy(record)
+    tracks = service.captions().list(part="id,snippet", videoId=record["video_id"]).execute(
+        num_retries=3).get("items", [])
+    matches = [track for track in tracks if track.get("snippet", {}).get("language") == CAPTION_LANGUAGE
+               and track.get("snippet", {}).get("name") == CAPTION_NAME]
+    if len(matches) > 1:
+        raise UploadError("Multiple managed Amharic caption tracks exist; inspect the existing video in Studio")
+    if matches:
+        track = matches[0]
+    else:
+        # A timed SRT needs no deprecated auto-sync parameter. Never retry a possibly accepted insert.
+        track = service.captions().insert(part="snippet", body={"snippet": {
+            "videoId": record["video_id"], "language": CAPTION_LANGUAGE, "name": CAPTION_NAME, "isDraft": False}},
+            media_body=media(path, "application/octet-stream")).execute(num_retries=0)
+    caption_id = track.get("id")
+    snippet = track.get("snippet", {})
+    if not isinstance(caption_id, str) or not caption_id:
+        raise UploadError("YouTube returned no caption ID; retry the existing video, not a new upload")
+    record.update(caption_id=caption_id, caption_status="draft" if snippet.get("isDraft") else snippet.get("status", "uploaded"))
+    save_record(store, key, record, previous)
+    previous = copy.deepcopy(record)
+    if snippet.get("status") == "failed" or snippet.get("isDraft") is True:
+        raise UploadError("YouTube could not publish the Amharic caption track; inspect Subtitles in Studio "
+                          "and retry the existing video after correcting the track")
+    return previous
+
+
 def upload_song(kit, service, store, channel, visibility="public", recover_video_id=None, playlist=None):
     if visibility not in PRIVACIES:
         raise UploadError("Visibility must be private, unlisted or public")
@@ -298,10 +377,21 @@ def upload_song(kit, service, store, channel, visibility="public", recover_video
     if playlist.get("channel_id") != channel or not playlist.get("id"):
         raise UploadError("The destination playlist must belong to the connected YouTube channel")
     if record and record.get("status") == "complete":
-        if record.get("playlist_id") != playlist["id"] or not record.get("playlist_item_id"):
+        needs_captions = not record.get("caption_id") or record.get("caption_status") not in CAPTION_ACCEPTED
+        needs_playlist = record.get("playlist_id") != playlist["id"] or not record.get("playlist_item_id")
+        if needs_captions:
+            with (folder / "video.mp4").open("rb") as fh:
+                digest = hashlib.file_digest(fh, "sha256").hexdigest()
+            if record.get("video_sha256") != digest:
+                raise UploadError("Caption backfill requires the original artifact's video bytes, not a regenerated video")
+        if needs_playlist or needs_captions:
             _video(service, record["video_id"], channel, marker, require_marker=False)
+        if needs_playlist:
             record.update(playlist_membership(service, playlist, record["video_id"]))
             save_record(store, key, record, previous)
+            previous = copy.deepcopy(record)
+        if needs_captions:
+            ensure_captions(kit, service, store, key, record, previous)
         write_json(folder / "youtube-upload.json", record)
         print(f"Song {kit['message_id']}: already uploaded, https://youtu.be/{record['video_id']}", flush=True)
         return record
@@ -309,6 +399,8 @@ def upload_song(kit, service, store, channel, visibility="public", recover_video
         digest = hashlib.file_digest(fh, "sha256").hexdigest()
     if record and record.get("status") != "queued" and record.get("video_sha256") != digest:
         raise UploadError("An unfinished upload uses different video bytes; retry Publish Generated Videos with the original run's artifact")
+    if record and record.get("caption_sha256") and record["caption_sha256"] != kit["subtitle_sha256"]:
+        raise UploadError("An unfinished upload uses different subtitle bytes; retry the original run's artifact")
     if record and record["status"] == "uploading":
         if not recover_video_id:
             raise UploadError("An earlier upload has an uncertain outcome. Check YouTube Studio, then use recover_video_id; no duplicate will be created")
@@ -327,7 +419,9 @@ def upload_song(kit, service, store, channel, visibility="public", recover_video
                   "created_at": utc_now().isoformat(),
                   "requested_visibility": record.get("requested_visibility", visibility) if record else visibility,
                   "held_for_review": False, "review_warnings": kit["review_needed"],
-                  "thumbnail_done": False, "metadata_adjusted": kit.get("metadata_adjusted", [])}
+                  "thumbnail_done": False, "metadata_adjusted": kit.get("metadata_adjusted", []),
+                  "caption_file": kit["subtitle"], "caption_sha256": kit["subtitle_sha256"],
+                  "caption_language": CAPTION_LANGUAGE, "caption_name": CAPTION_NAME, "caption_status": "pending"}
         # A durable reservation precedes all upload requests. Unknown outcomes never trigger a fresh insert.
         save_record(store, key, record, previous)
         previous = copy.deepcopy(record)
@@ -367,6 +461,8 @@ def upload_song(kit, service, store, channel, visibility="public", recover_video
         save_record(store, key, record, previous)
         previous = copy.deepcopy(record)
         write_json(folder / "youtube-upload.json", record)
+    previous = ensure_captions(kit, service, store, key, record, previous)
+    write_json(folder / "youtube-upload.json", record)
     # Scheduling is private -> public; YouTube does not support publishAt on unlisted videos.
     # Persist the deadline before requesting it so retries cannot slide an accepted schedule.
     requested = record["requested_visibility"]
@@ -407,7 +503,7 @@ def upload_song(kit, service, store, channel, visibility="public", recover_video
     write_json(folder / "youtube-upload.json", record)
     when = f"; public at {record['publish_at']}" if record.get("publish_at") else ""
     print(f"Song {kit['message_id']}: {record['url']} ({actual}{when}); playlist={record['playlist_title']}; "
-          "end screen requires Studio; no subtitle tracks uploaded", flush=True)
+          f"captions={record['caption_id']}; end screen requires Studio", flush=True)
     return record
 
 
@@ -469,6 +565,7 @@ def main():
             if record.get("review_warnings"):
                 line += " - review notes remain in the kit"
             line += f" - playlist: [Mezmurs]({record['playlist_url']})"
+            line += f" - Amharic timed captions uploaded ({record['caption_status']})"
             line += (f"\n- Song {kit['message_id']} end screen: "
                      f"[Open YouTube Studio]({record['end_screen']['studio_url']}). "
                      "Manually add two Video elements: **Best for viewer** and **Most recent upload**, then Save. "

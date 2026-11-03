@@ -16,7 +16,8 @@ For every song you get:
 | `title.txt` | Title options, first one in the common search style: `Addisalem Assefa siwed geta ሲወድ ጌታ አዲስዓለም አሰፋ lyrics` |
 | `description.txt` | Ready to paste: both scripts, full Amharic lyrics, lyrics in Latin letters, credits, hashtags |
 | `tags.txt` | Song-specific + general tags, under YouTube's 500-character limit |
-| `captions/am.srt`, `captions/am-Latn.srt` | Caption files to upload in YouTube Studio: Amharic, and Amharic in Latin letters (name that track "Amharic (Latin letters)") |
+| `subtitle.srt` | Timed Amharic subtitles using the same main lyric text and display windows as the burned-in lyrics; automatically uploaded with the video |
+| `captions/am.srt`, `captions/am-Latn.srt` | Alternative sung-line timings and optional Amharic in Latin letters for manual use |
 | `pinned_comment.txt` | A comment to post and pin |
 
 ## How the lyrics are made accurate
@@ -152,7 +153,9 @@ artifact with its log is added instead.
 For upload-only retries, use **Actions > Publish Generated Videos** with the generation run ID.
 Review warnings remain in the kit; only verified lyric videos are eligible. Upload receipts,
 YouTube links and scheduled publication times appear in the run summary. Finished video
-artifacts, including separate lyrics and optional subtitle files, remain available.
+artifacts, including separate lyrics and the timed `subtitle.srt`, remain available.
+Amharic captions upload automatically before native scheduling; caption failures retry on
+the same saved video ID without rendering or posting a second video.
 
 ### Progress
 

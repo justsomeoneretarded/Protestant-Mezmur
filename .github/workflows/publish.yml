@@ -83,7 +83,7 @@ jobs:
           path: uploads
       - name: Install uploader
         run: pip install -e '.[upload]'
-      - name: Upload videos and thumbnail; queue publication at four-hour intervals
+      - name: Upload videos and thumbnail with timed captions; queue publication at four-hour intervals
         env:
           YOUTUBE_OAUTH_JSON: ${{ secrets.YOUTUBE_OAUTH_JSON }}
           YOUTUBE_CHANNEL_ID: ${{ vars.YOUTUBE_CHANNEL_ID }}

@@ -47,6 +47,7 @@ def folder(tmp_path):
                "tags": ["amharic mezmur", "worship"], "review": {"needs_review": False, "reasons": []}})
     (root / "description.txt").write_text("Worship lyrics\n#AmharicMezmur", encoding="utf-8")
     (root / "video.mp4").write_bytes(b"video-payload")
+    (root / "subtitle.srt").write_text("1\n00:00:01,000 --> 00:00:03,000\nWorship lyrics\n", encoding="utf-8")
     for name in upload.THUMBNAILS.values():
         (root / name).write_bytes(b"jpeg-data")
     return root
@@ -61,7 +62,8 @@ def service(monkeypatch):
              "thumbnail_error": False, "schedule_error": False, "reject_schedule": False,
              "playlists": [{"id": PLAYLIST, "snippet": {"title": "Mezmurs", "channelId": CHANNEL}}],
              "playlist_items": {}, "playlist_insert_count": 0, "playlist_error": False,
-             "playlist_lost_response": False}
+             "playlist_lost_response": False, "caption_tracks": {}, "caption_insert_count": 0,
+             "caption_error": False, "caption_lost_response": False, "caption_status": "serving"}
 
     def execute(value):
         request = MagicMock()
@@ -140,13 +142,39 @@ def service(monkeypatch):
     api.playlists.return_value.list.side_effect = list_playlists
     api.playlistItems.return_value.list.side_effect = list_playlist_items
     api.playlistItems.return_value.insert.side_effect = insert_playlist_item
-    api.captions.side_effect = AssertionError("Subtitle tracks must never be uploaded")
+    def list_captions(**kwargs):
+        return execute({"items": list(state["caption_tracks"].get(kwargs["videoId"], {}).values())})
+
+    def insert_caption(**kwargs):
+        request = MagicMock()
+
+        def insert_track(num_retries):
+            assert num_retries == 0
+            if state["caption_error"]:
+                raise OSError("Simulated caption transport failure")
+            snippet = copy.deepcopy(kwargs["body"]["snippet"])
+            tracks = state["caption_tracks"].setdefault(snippet["videoId"], {})
+            assert not any(t["snippet"]["language"] == snippet["language"] and
+                           t["snippet"]["name"] == snippet["name"] for t in tracks.values())
+            state["caption_insert_count"] += 1
+            caption_id = f"caption-{state['caption_insert_count']}"
+            track = {"id": caption_id, "snippet": snippet | {"status": state["caption_status"]}}
+            tracks[caption_id] = track
+            if state["caption_lost_response"]:
+                raise OSError("Caption insert accepted but response lost")
+            return copy.deepcopy(track)
+
+        request.execute.side_effect = insert_track
+        return request
+
+    api.captions.return_value.list.side_effect = list_captions
+    api.captions.return_value.insert.side_effect = insert_caption
     api.endScreens.side_effect = AssertionError("End screens require YouTube Studio")
     api.test_state = state
     return api
 
 
-def test_default_upload_schedules_after_four_hours_without_subtitle_tracks(folder, service):
+def test_default_upload_schedules_after_four_hours_with_timed_captions(folder, service):
     store = MemoryStore()
     result = upload.upload_song(upload.load_kit(folder, "d"), service, store, CHANNEL)
     body = service.test_state["insert_args"]["body"]
@@ -159,7 +187,7 @@ def test_default_upload_schedules_after_four_hours_without_subtitle_tracks(folde
     assert result["publish_at"] == "2026-11-01T16:00:00Z"
     schedule = service.videos.return_value.update.call_args.kwargs["body"]["status"]
     assert schedule["privacyStatus"] == "private" and schedule["publishAt"] == result["publish_at"]
-    service.captions.assert_not_called()
+    assert service.test_state["caption_insert_count"] == service.test_state["insert_count"]
     assert result["status"] == "complete" and result["privacy"] == "private"
     assert json.loads((folder / "youtube-upload.json").read_text())["video_id"] == VIDEO
     assert store.state["channels"]["42"]["last_message_id"] == 22
@@ -168,11 +196,11 @@ def test_default_upload_schedules_after_four_hours_without_subtitle_tracks(folde
 
 
 @pytest.mark.parametrize("visibility", ["private", "unlisted"])
-def test_local_visibility_overrides_do_not_publish_or_upload_subtitles(folder, service, visibility):
+def test_local_visibility_overrides_still_include_timed_captions(folder, service, visibility):
     result = upload.upload_song(upload.load_kit(folder), service, MemoryStore(), CHANNEL, visibility)
     assert result["privacy"] == visibility and "publish_at" not in result
     assert service.test_state["insert_args"]["body"]["status"]["privacyStatus"] == "private"
-    service.captions.assert_not_called()
+    assert service.test_state["caption_insert_count"] == service.test_state["insert_count"]
 
 
 def test_review_notes_do_not_prevent_requested_automatic_scheduling(folder, service):
@@ -191,7 +219,7 @@ def test_completed_song_is_never_inserted_again_on_a_replay(folder, service):
     second = upload.upload_song(kit, service, store, CHANNEL)
     assert second["video_id"] == first["video_id"]
     assert service.test_state["insert_count"] == 1
-    service.captions.assert_not_called()
+    assert service.test_state["caption_insert_count"] == service.test_state["insert_count"]
 
 
 def test_partial_failure_resumes_the_same_video_and_finishes_assets(folder, service):
@@ -255,8 +283,8 @@ def test_unfinished_upload_rejects_regenerated_video_bytes(folder, service):
 
 def test_accepted_schedule_is_reconciled_after_final_checkpoint_failure(folder, service, monkeypatch):
     store, kit = MemoryStore(), upload.load_kit(folder)
-    # Reserve, video ID, thumbnail, playlist, deadline, then fail final completion.
-    store.fail_write = 6
+    # Reserve, video ID, thumbnail, playlist, caption, deadline, then fail final completion.
+    store.fail_write = 7
     with pytest.raises(RuntimeError):
         upload.upload_song(kit, service, store, CHANNEL)
     deadline = service.test_state["video"]["status"]["publishAt"]
@@ -281,7 +309,7 @@ def test_past_failed_schedule_gets_a_fresh_four_hour_delay_not_immediate_publica
 
 def test_already_published_schedule_is_not_made_private_or_uploaded_again(folder, service, monkeypatch):
     store, kit = MemoryStore(), upload.load_kit(folder)
-    store.fail_write = 6
+    store.fail_write = 7
     with pytest.raises(RuntimeError):
         upload.upload_song(kit, service, store, CHANNEL)
     monkeypatch.setattr(upload, "utc_now", lambda: datetime(2026, 11, 2, 8, tzinfo=timezone.utc))
@@ -345,7 +373,7 @@ def test_metadata_is_limited_before_upload_instead_of_rejecting_long_text(folder
     assert len(snippet["title"]) <= 100 and len(snippet["description"].encode("utf-8")) <= 5000
     cost = sum(len(t) + (2 if " " in t else 0) for t in snippet["tags"]) + len(snippet["tags"]) - 1
     assert cost <= 500
-    service.captions.assert_not_called()
+    assert service.test_state["caption_insert_count"] == service.test_state["insert_count"]
 
 
 def test_marker_and_keyword_tags_always_fit_the_api_limit():
@@ -405,6 +433,7 @@ def test_generation_upload_is_default_on_and_after_progress():
     assert "YOUTUBE_OAUTH_JSON" not in str(doc["jobs"]["song"].get("env", {}))
     artifacts = next(s for s in doc["jobs"]["song"]["steps"] if s.get("name", "").startswith("Upload the YouTube kit"))
     assert "/metadata.json" in artifacts["with"]["path"] and "/youtube.json" in artifacts["with"]["path"]
+    assert "/subtitle.srt" in artifacts["with"]["path"]
 
 
 def test_publish_workflow_guards_artifacts_and_keeps_secrets_out_of_receipts():
@@ -446,6 +475,22 @@ def test_actual_google_sdk_accepts_upload_and_native_schedule_shapes(folder):
     insert_item = api.playlistItems().insert(part="snippet", body={"snippet": {
         "playlistId": PLAYLIST, "resourceId": {"kind": "youtube#video", "videoId": VIDEO}}})
     assert json.loads(insert_item.body)["snippet"]["resourceId"]["videoId"] == VIDEO
+    lookup_captions = api.captions().list(part="id,snippet", videoId=VIDEO)
+    assert f"videoId={VIDEO}" in lookup_captions.uri
+    caption = api.captions().insert(part="snippet", body={"snippet": {
+        "videoId": VIDEO, "language": "am", "name": upload.CAPTION_NAME, "isDraft": False}},
+        media_body=MediaFileUpload(str(folder / "subtitle.srt"), mimetype="application/octet-stream"))
+    assert "sync=" not in caption.uri
+    from email import policy
+    from email.parser import BytesParser
+
+    payload = caption.body.encode() if isinstance(caption.body, str) else caption.body
+    multipart = BytesParser(policy=policy.default).parsebytes(
+        f"Content-Type: {caption.headers['content-type']}\r\n\r\n".encode() + payload)
+    parts = list(multipart.iter_parts())
+    assert json.loads(parts[0].get_payload(decode=True))["snippet"]["isDraft"] is False
+    assert parts[1].get_payload(decode=True) == (folder / "subtitle.srt").read_bytes()
+    assert caption.method == "POST" and "uploadType=multipart" in caption.uri
     with pytest.raises(AttributeError):
         api.endScreens()
     api.close()
@@ -517,11 +562,15 @@ def test_schedule_rejects_missing_timezone_or_invalid_saved_times(value):
         upload.publish_time(value)
 
 
-def test_no_subtitle_files_are_required_or_sent(folder, service):
+def test_root_timed_subtitle_is_uploaded_in_amharic_without_auto_sync(folder, service):
     assert not (folder / "captions").exists()
     result = upload.upload_song(upload.load_kit(folder), service, MemoryStore(), CHANNEL)
-    assert result["status"] == "complete"
-    service.captions.assert_not_called()
+    request = service.captions.return_value.insert.call_args.kwargs
+    assert request == {"part": "snippet", "body": {"snippet": {
+        "videoId": VIDEO, "language": "am", "name": upload.CAPTION_NAME, "isDraft": False}},
+        "media_body": ("subtitle.srt", "application/octet-stream", False)}
+    assert result["caption_file"] == "subtitle.srt" and result["caption_id"] == "caption-1"
+    assert result["caption_language"] == "am" and result["caption_status"] == "serving"
 
 
 def test_default_schedule_is_exactly_four_hours_in_the_future(folder, service):
@@ -710,7 +759,7 @@ def test_all_four_uploads_use_youtube_scheduler_and_enforce_metadata_limits(fold
         cost = sum(len(t) + (2 if " " in t else 0) for t in snippet["tags"]) + len(snippet["tags"]) - 1
         assert cost <= 500
         assert status["privacyStatus"] == "private" and status["publishAt"]
-    service.captions.assert_not_called()
+    assert service.test_state["caption_insert_count"] == service.test_state["insert_count"]
 
 
 def test_cli_summary_displays_publication_time_in_east_africa_time(folder, service, monkeypatch, tmp_path):
@@ -960,3 +1009,160 @@ def test_multiple_expired_slots_move_after_remaining_queue_at_four_hour_interval
     assert [upload.publish_time(kit["planned_publish_at"]) - base for kit in retry] == [
         timedelta(hours=h) for h in (16, 20, 24, 28)]
     assert retry[0]["planned_publish_at"] == future
+
+
+@pytest.mark.parametrize("data", [
+    b"", b"just a transcript", b"1\nnot a timestamp\nlyrics\n", b"\xff",
+    b"1\n00:00:03,000 --> 00:00:01,000\nlyrics\n",
+    b"1\n00:00:01,000 --> 00:00:01,000\nlyrics\n",
+    b"1\n00:00:02,000 --> 00:00:03,000\nfirst\n\n2\n00:00:01,000 --> 00:00:02,000\nsecond\n",
+])
+def test_invalid_timed_subtitles_fail_before_upload(folder, service, data):
+    (folder / "subtitle.srt").write_bytes(data)
+    with pytest.raises(upload.UploadError, match="timed subtitle"):
+        upload.load_kit(folder)
+    service.videos.return_value.insert.assert_not_called()
+    service.captions.assert_not_called()
+
+
+def test_missing_subtitle_is_rejected_and_legacy_aligned_srt_is_supported(folder):
+    (folder / "subtitle.srt").unlink()
+    with pytest.raises(upload.UploadError, match="subtitle.srt"):
+        upload.load_kit(folder)
+    (folder / "captions").mkdir()
+    (folder / "captions" / "am.srt").write_text(
+        "1\n00:00:01,000 --> 00:00:03,000\nAmharic lyrics\n", encoding="utf-8")
+    assert upload.load_kit(folder)["subtitle"] == "captions/am.srt"
+
+
+def test_subtitle_beyond_video_end_is_rejected_before_upload(folder):
+    meta = json.loads((folder / "metadata.json").read_text())
+    write_json(folder / "metadata.json", meta | {"duration_seconds": 1.0})
+    with pytest.raises(upload.UploadError, match="timed subtitle"):
+        upload.load_kit(folder)
+
+
+def test_caption_failure_leaves_video_private_and_retries_same_video(folder, service):
+    store, kit = MemoryStore(), upload.load_kit(folder)
+    service.test_state["caption_error"] = True
+    with pytest.raises(OSError):
+        upload.upload_song(kit, service, store, CHANNEL)
+    record = store.state["youtube_uploads"][upload.source_key(kit, CHANNEL)]
+    assert record["status"] == "uploaded" and record["caption_status"] == "pending"
+    assert service.test_state["video"]["status"]["privacyStatus"] == "private"
+    service.videos.return_value.update.assert_not_called()
+    service.test_state["caption_error"] = False
+    result = upload.upload_song(kit, service, store, CHANNEL)
+    assert result["status"] == "complete" and result["caption_id"] == "caption-1"
+    assert service.test_state["insert_count"] == service.test_state["caption_insert_count"] == 1
+
+
+def test_caption_insert_with_lost_response_is_reconciled_on_retry(folder, service):
+    store, kit = MemoryStore(), upload.load_kit(folder)
+    kit = upload.plan_batch([kit], store, CHANNEL, "original")[0]
+    service.test_state["caption_lost_response"] = True
+    with pytest.raises(OSError):
+        upload.upload_song(kit, service, store, CHANNEL)
+    service.test_state["caption_lost_response"] = False
+    record = upload.upload_song(kit, service, store, CHANNEL)
+    assert record["publish_at"] == kit["planned_publish_at"]
+    assert record["caption_id"] == "caption-1"
+    assert service.test_state["insert_count"] == service.test_state["caption_insert_count"] == 1
+
+
+def test_caption_checkpoint_failure_reuses_existing_track(folder, service):
+    store, kit = MemoryStore(), upload.load_kit(folder)
+    store.fail_write = 5
+    with pytest.raises(RuntimeError):
+        upload.upload_song(kit, service, store, CHANNEL)
+    record = store.state["youtube_uploads"][upload.source_key(kit, CHANNEL)]
+    assert record["status"] == "uploaded" and not record.get("caption_id")
+    result = upload.upload_song(kit, service, store, CHANNEL)
+    assert result["caption_id"] == "caption-1" and result["status"] == "complete"
+    assert service.test_state["caption_insert_count"] == service.test_state["insert_count"] == 1
+
+
+def test_different_subtitle_bytes_cannot_replace_an_unfinished_uploads_timing(folder, service):
+    store, kit = MemoryStore(), upload.load_kit(folder)
+    service.test_state["caption_error"] = True
+    with pytest.raises(OSError):
+        upload.upload_song(kit, service, store, CHANNEL)
+    path = folder / "subtitle.srt"
+    path.write_text(path.read_text().replace("Worship lyrics", "Different lyrics"), encoding="utf-8")
+    with pytest.raises(upload.UploadError, match="different subtitle bytes"):
+        upload.upload_song(upload.load_kit(folder), service, store, CHANNEL)
+    assert service.test_state["insert_count"] == 1
+
+
+def test_completed_older_upload_can_add_captions_without_rescheduling_or_reupload(folder, service):
+    store, kit = MemoryStore(), upload.load_kit(folder)
+    first = upload.upload_song(kit, service, store, CHANNEL)
+    key = upload.source_key(kit, CHANNEL)
+    store.state["youtube_uploads"][key] = {k: v for k, v in first.items() if not k.startswith("caption_")}
+    service.test_state["caption_tracks"].clear()
+    updates = service.videos.return_value.update.call_count
+    result = upload.upload_song(kit, service, store, CHANNEL)
+    assert result["status"] == "complete" and result["caption_id"] == "caption-2"
+    assert result["publish_at"] == first["publish_at"]
+    assert service.test_state["insert_count"] == 1
+    assert service.videos.return_value.update.call_count == updates
+
+
+def test_completed_caption_backfill_refuses_regenerated_video_bytes(folder, service):
+    store, kit = MemoryStore(), upload.load_kit(folder)
+    first = upload.upload_song(kit, service, store, CHANNEL)
+    key = upload.source_key(kit, CHANNEL)
+    store.state["youtube_uploads"][key] = {k: v for k, v in first.items() if not k.startswith("caption_")}
+    (folder / "video.mp4").write_bytes(b"new-video")
+    with pytest.raises(upload.UploadError, match="original artifact"):
+        upload.upload_song(kit, service, store, CHANNEL)
+    assert service.test_state["insert_count"] == service.test_state["caption_insert_count"] == 1
+
+
+@pytest.mark.parametrize("problem", ["failed", "draft"])
+def test_failed_or_draft_caption_never_silently_schedules_and_can_be_corrected(folder, service, problem):
+    store, kit = MemoryStore(), upload.load_kit(folder)
+    if problem == "failed":
+        service.test_state["caption_status"] = "failed"
+    else:
+        service.test_state["caption_tracks"][VIDEO] = {"existing": {"id": "existing", "snippet": {
+            "language": "am", "name": upload.CAPTION_NAME, "status": "serving", "isDraft": True}}}
+    for _ in range(2):
+        with pytest.raises(upload.UploadError, match="caption track"):
+            upload.upload_song(kit, service, store, CHANNEL)
+        service.videos.return_value.update.assert_not_called()
+    for track in service.test_state["caption_tracks"][VIDEO].values():
+        track["snippet"].update(status="serving", isDraft=False)
+    result = upload.upload_song(kit, service, store, CHANNEL)
+    assert result["status"] == "complete" and result["caption_status"] == "serving"
+    assert service.test_state["insert_count"] == 1
+
+
+def test_replay_of_completed_caption_makes_no_caption_requests_or_checkpoints(folder, service):
+    store, kit = MemoryStore(), upload.load_kit(folder)
+    first = upload.upload_song(kit, service, store, CHANNEL)
+    writes, lists = store.writes, service.captions.return_value.list.call_count
+    assert upload.upload_song(kit, service, store, CHANNEL) == first
+    assert store.writes == writes and service.captions.return_value.list.call_count == lists
+    assert service.test_state["caption_insert_count"] == 1
+
+
+def test_other_caption_tracks_are_never_deleted_or_modified(folder, service):
+    unrelated = {"id": "english", "snippet": {"language": "en", "name": "English", "status": "serving"}}
+    service.test_state["caption_tracks"][VIDEO] = {"english": copy.deepcopy(unrelated)}
+    result = upload.upload_song(upload.load_kit(folder), service, MemoryStore(), CHANNEL)
+    assert result["caption_id"] == "caption-1"
+    assert service.test_state["caption_tracks"][VIDEO]["english"] == unrelated
+    service.captions.return_value.delete.assert_not_called()
+    service.captions.return_value.update.assert_not_called()
+
+
+def test_missing_caption_id_cannot_mark_video_complete(folder, service):
+    request = MagicMock()
+    request.execute.return_value = {}
+    service.captions.return_value.insert.side_effect = lambda **kw: request
+    store, kit = MemoryStore(), upload.load_kit(folder)
+    with pytest.raises(upload.UploadError, match="caption ID"):
+        upload.upload_song(kit, service, store, CHANNEL)
+    assert store.state["youtube_uploads"][upload.source_key(kit, CHANNEL)]["status"] == "uploaded"
+    service.videos.return_value.update.assert_not_called()
