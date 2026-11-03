@@ -67,3 +67,27 @@ def test_tag_limiter_counts_implicit_quotes_commas_and_duplicates():
     result = limit_tags(["worship song", "WORSHIP SONG", "a" * 600, "gospel"] * 100)
     cost = sum(len(t) + (2 if " " in t else 0) for t in result) + len(result) - 1
     assert result == ["worship song", "gospel"] and cost <= 500
+
+
+def test_unknown_metadata_is_cleaned_in_all_upload_kit_outputs(tmp_path):
+    from mezmur.youtube import description, hashtag, write_kit
+
+    m = {"title_am": "መደምደሚያዬ", "title_latin": "Medmdemiyaye",
+         "artist_am": "አገኘሁ ይደግ", "artist_latin": "<unknown>", "album": "<unknown>"}
+    stanzas = [{"lines": ["Unknown Road"]}]
+    assert "Agegnehu Yideg" in titles(m)[0]
+    assert "Agegnehu Yideg" in tags(m, "<unknown>")
+    desc = description(m, stanzas, [], [], [], "telegram")
+    assert "Agegnehu Yideg" in desc and "Unknown Road" in desc
+    assert "<unknown>" not in desc and "#Unknown" not in desc and "Album:" not in desc
+    assert hashtag("<unknown>") == ""
+    write_kit(tmp_path, m, stanzas, [], 180, set(), [], "telegram", 175, {})
+    for path in tmp_path.iterdir():
+        assert "<unknown>" not in path.read_text(encoding="utf-8")
+    assert m["artist_latin"] == "<unknown>"
+
+
+def test_missing_title_still_has_a_valid_noninvented_upload_title():
+    result = titles({"title_latin": "<unknown>", "artist_latin": "Agegnehu Yideg"})
+    assert result and "Agegnehu Yideg" in result[0]
+    assert all("unknown" not in t.lower() and len(t) <= 100 for t in result)

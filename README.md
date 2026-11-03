@@ -30,22 +30,23 @@ For every song you get:
    Titles are searched in Amharic and in several Latin spellings, and a few clearly sung phrases from
    the song (usually its chorus) are searched too, so lyrics are found even when the title is wrong.
    YouTube and web lyric searches use the English keyword **lyrics**, including searches with Amharic titles
-   and sung phrases. Each song's run page lists what every source returned.
+   and sung phrases. Channel branding and unknown-value markers are removed from search names;
+   known singer aliases are separated from titles. Each song's run page lists what every source returned.
 2. **Listen to the original song.** The vocals are isolated for analysis
    (UVR-MDX-NET) and the Amharic acoustic model Ethio-ASR turns them into per-moment character
    probabilities. The original recording remains the soundtrack; no audio effects are applied.
-3. **Check every candidate against the audio.** Strong acoustic matches pass directly.
-   A low score such as 0.11 is not an automatic veto: a recognized lyrics source that identifies
-   the song and artist can proceed when vocal/line coverage, draft agreement and complete
-   phrases support it. Unrelated lyrics, weak coverage and absent acoustic evidence still fail.
+3. **Check every candidate against the audio.** Automatic candidates require at least
+   **40% vocal coverage**, **40% lyric-line coverage** and **0.07 acoustic gain**, evaluated at
+   two-decimal decision precision. Raw scores remain in diagnostics. Gain is not a word-accuracy
+   percentage; these more permissive thresholds need timing review.
    [Acceptance and timing diagnostics](docs/lyrics-matching.md).
 4. **Align word by word.** The aligner follows the song through the lyric lines: choruses can
    repeat, lines can be skipped or start halfway, instrumentals and ad-libs are allowed, but
    singing that the lyrics do not explain costs extra, so lines stay on screen for exactly as
    long as they are sung.
 5. **Complete the accepted lyrics.** The existing forced-alignment pass uses heard word anchors,
-   vocal activity and lyric structure to fill partially heard lines. Source-supported lyrics can
-   continue with estimated timings, marked for review. If no candidate is supported, the song is
+   vocal activity and lyric structure to fill partially heard lines. Accepted lyrics continue with
+   estimated timings marked for review, without another estimated-share veto. If no candidate passes, the song is
    skipped with diagnostics instead of producing a garbled automatic transcription.
 
 ### Fixing lyrics (from your phone, no computer needed)

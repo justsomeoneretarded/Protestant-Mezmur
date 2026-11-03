@@ -132,7 +132,7 @@ def test_original_source_drives_every_output_without_effects(clean_pipeline):
     assert not (calls["work"] / "master.wav").exists()
 
 
-def test_source_supported_011_is_force_aligned_even_when_completion_estimates_some_words(clean_pipeline):
+def test_acoustic_011_is_force_aligned_even_when_completion_estimates_some_words(clean_pipeline):
     calls = clean_pipeline
     calls["record"] = {"title_latin": "Nefsen Befith", "artist_latin": "Kalkidan Lily Tilahun"}
     calls["candidates"][0].update(source="web:mezmuroch.com",
@@ -144,7 +144,7 @@ def test_source_supported_011_is_force_aligned_even_when_completion_estimates_so
     assert result["mode"] == "lyrics-aligned"
     assert "force-complete" in calls["events"] and "render" in calls["events"]
     meta = json.loads((calls["output"] / "metadata.json").read_text())
-    assert meta["lyrics_verification"]["method"] == "source-supported"
+    assert meta["lyrics_verification"]["method"] == "acoustic"
     assert meta["review"]["needs_review"]
     assert "estimated" in " ".join(meta["review"]["reasons"])
     quality = json.loads((calls["output"] / "quality.json").read_text())
@@ -152,15 +152,13 @@ def test_source_supported_011_is_force_aligned_even_when_completion_estimates_so
     assert quality["alignment"]["gain_per_vocal_frame"] == 0.11
 
 
-@pytest.mark.parametrize("failure", ["weak-unknown-source", "missing-lyrics", "estimated-unknown-source"])
+@pytest.mark.parametrize("failure", ["weak-unknown-source", "missing-lyrics"])
 def test_unsupported_songs_still_skip_before_rendering(clean_pipeline, failure):
     calls = clean_pipeline
     if failure == "weak-unknown-source":
-        calls["report"]["gain_per_vocal_frame"] = 0.10
+        calls["report"]["gain_per_vocal_frame"] = 0.06
     elif failure == "missing-lyrics":
         calls["candidates"].clear()
-    else:
-        calls["filled"]["estimated_words"] = 2
     result = song.produce(calls["input"], calls["output"], calls["work"])
     assert result["mode"] == "skipped"
     assert "render" not in calls["events"]
@@ -238,3 +236,19 @@ def test_cli_backing_rebuild_is_explicit_opt_in(monkeypatch, checked):
     monkeypatch.setattr(song, "produce", lambda *a, **kwargs: calls.append(kwargs))
     song.main()
     assert calls[0]["rebuild_music"] is checked
+
+
+@pytest.mark.parametrize("share,gain", [(0.48, 0.07), (0.40, 0.09)])
+def test_accepted_telegram_lyrics_continue_even_with_estimated_timings(clean_pipeline, share, gain):
+    calls = clean_pipeline
+    calls["report"].update(matched_share=share, gain_per_vocal_frame=gain)
+    calls["candidates"][0]["source"] = "telegram:caption"
+    calls["filled"]["estimated_words"] = 2
+    result = song.produce(calls["input"], calls["output"], calls["work"])
+    assert result["mode"] == "lyrics-aligned"
+    assert "force-complete" in calls["events"] and "render" in calls["events"]
+    assert (calls["output"] / "captions" / "am.srt").is_file()
+    assert not (calls["output"] / "skipped.json").exists()
+    meta = json.loads((calls["output"] / "metadata.json").read_text())
+    assert meta["review"]["needs_review"]
+    assert "estimated" in " ".join(meta["review"]["reasons"])

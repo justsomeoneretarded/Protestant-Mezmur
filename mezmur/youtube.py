@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 
 from .geez import romanize
+from .names import clean_name, finalize
 
 GENERIC_TAGS = ["amharic mezmur", "protestant mezmur", "ethiopian gospel song", "amharic worship song",
                 "mezmur lyrics", "amharic mezmur lyrics", "new amharic mezmur", "ethiopian protestant mezmur",
@@ -56,6 +57,7 @@ def _fit(parts, limit=100):
 def titles(m):
     """First option follows the common search pattern on YouTube:
     'Addisalem Assefa siwed geta ሲወድ ጌታ አዲስዓለም አሰፋ lyrics'."""
+    m = finalize(dict(m))
     t_am, t_lat, a_am, a_lat = m.get("title_am", ""), m.get("title_latin", ""), m.get("artist_am", ""), m.get("artist_latin", "")
     opts = [_fit([a_lat, t_lat.lower() if t_lat else "", t_am, a_am, "lyrics", "| Amharic Mezmur"]),
             _fit([f"{t_am} - {a_am}" if t_am and a_am else (t_am or t_lat),
@@ -139,7 +141,9 @@ def sections(cues, duration, chorus_lines, max_chapters=10):
 
 
 def tags(m, album=""):
+    m = finalize(dict(m))
     t_am, t_lat, a_am, a_lat = m.get("title_am", ""), m.get("title_latin", ""), m.get("artist_am", ""), m.get("artist_latin", "")
+    album = clean_name(album)
     specific = [t_am, t_lat, a_am, a_lat, f"{t_lat} lyrics" if t_lat else "", f"{t_am} ግጥም" if t_am else "",
                 f"{a_lat} {t_lat}" if a_lat and t_lat else "", f"{a_am} {t_am}" if a_am and t_am else "",
                 f"{a_lat} mezmur" if a_lat else "", f"{a_lat} new song" if a_lat else "", f"{a_am} መዝሙር" if a_am else "",
@@ -150,13 +154,14 @@ def tags(m, album=""):
 def hashtag(text):
     """#NameLikeThis from a singer or song name, without extra words ('Official', 'Lyrics', 'Mezmur'...)."""
     from .names import NAME_FILLER
-    words = [w for w in re.findall(r"[A-Za-z0-9ሀ-፿]+", text or "") if w.lower() not in NAME_FILLER]
+    words = [w for w in re.findall(r"[A-Za-z0-9ሀ-፿]+", clean_name(text)) if w.lower() not in NAME_FILLER]
     return "#" + "".join(w[:1].upper() + w[1:] for w in words) if words else ""
 
 
 def description(m, stanzas, cues, chapters, credits, lyrics_source):
     """YouTube description: title in both scripts, lyrics (Ge'ez + Latin letters), credits, hashtags.
     No chapters; credits are the song, the singer, and the photo/footage used.)"""
+    m = finalize(dict(m))
     t_am, t_lat, a_am, a_lat = m.get("title_am", ""), m.get("title_latin", ""), m.get("artist_am", ""), m.get("artist_latin", "")
     head = " | ".join(p for p in [" - ".join(x for x in [t_am, a_am] if x), " - ".join(x for x in [t_lat, a_lat] if x)] if p)
     lines = [f"{head} (Lyrics • ግጥም)", ""]
@@ -190,6 +195,7 @@ def description(m, stanzas, cues, chapters, credits, lyrics_source):
 
 
 def write_kit(folder, m, stanzas, cues, duration, chorus_lines, credits, lyrics_source, outro_start, review):
+    m = finalize(dict(m))
     folder = Path(folder)
     chapters = sections(cues, duration, chorus_lines)
     ts = titles(m)

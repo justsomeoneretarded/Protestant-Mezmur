@@ -27,15 +27,13 @@ from .subtitles import build_cues, write_ass, write_srt
 from .visuals import Renderer, Source, render_video
 from .youtube import write_kit
 
-# Acoustic evidence is one signal, not a calibrated word-accuracy percentage.
-# Identified lyrics can proceed to forced completion when coverage and draft agreement support them.
-ACCEPT_SHARE = 0.52       # share of vocal frames inside aligned lyric lines
-ACCEPT_GAIN = 0.12        # per-vocal-frame log-likelihood gain over "unscripted singing"
-ACCEPT_LINES = 0.70       # share of the found lines that were actually sung
-MAX_ESTIMATED = 0.35      # share of word timings that may be estimated rather than heard
+# These are coverage/evidence thresholds, not calibrated lyric-accuracy percentages.
+ACCEPT_SHARE = 0.40
+ACCEPT_GAIN = 0.07
+ACCEPT_LINES = 0.40
+SCORE_DECIMALS = 2
+ESTIMATED_REVIEW_SHARE = 0.35
 MIN_TEXT_SIM = 0.06       # cheap pre-filter against the automatic draft
-SUPPORTED_TEXT_SIM = 0.15
-SUPPORTED_COMPLETE = 0.50
 
 def notice(mid, text, level="notice"):
     """A line on the Actions run page (readable later, unlike the step log)."""
@@ -110,28 +108,34 @@ def choose_lyrics(cands, draft_text, logp, frame_s, vocab, energy, max_aligned=6
                                   repeats=line_repeats(c["stanzas"]))
         lines_share = rep["lines_used"] / max(1, rep["lines_total"])
         identity = identity_evidence(c, record)
-        finite = np.isfinite([rep["matched_share"], rep["gain_per_vocal_frame"], rep["complete_share"]]).all()
-        coverage = bool(finite and rep["matched_share"] >= ACCEPT_SHARE and lines_share >= ACCEPT_LINES)
-        acoustic = coverage and rep["gain_per_vocal_frame"] >= ACCEPT_GAIN
-        support_checks = {
-            "song_and_artist_identified": identity["matched"],
-            "positive_acoustic_evidence": rep["gain_per_vocal_frame"] > 0,
-            "draft_agreement": c["similarity"]["score"] >= SUPPORTED_TEXT_SIM,
-            "complete_phrases": rep["complete_share"] >= SUPPORTED_COMPLETE,
-            "vocal_and_line_coverage": coverage,
-        }
-        supported = all(support_checks.values())
-        method = "correction" if c["trusted"] else "acoustic" if acoustic else "source-supported" if supported else "rejected"
-        rep = {**rep, "verification": {"method": method, "identity": identity,
-                                      "support_checks": support_checks, "acoustic_threshold": ACCEPT_GAIN}}
+        finite = bool(np.isfinite([rep["matched_share"], rep["gain_per_vocal_frame"],
+                                   rep["complete_share"], lines_share]).all())
+        # Admission uses the same precision as the displayed policy; retain raw evidence below.
+        decision = {"matched_share": round(float(rep["matched_share"]), SCORE_DECIMALS),
+                    "gain_per_vocal_frame": round(float(rep["gain_per_vocal_frame"]), SCORE_DECIMALS),
+                    "lines_share": round(float(lines_share), SCORE_DECIMALS)}
+        checks = {"finite_scores": finite,
+                  "vocal_coverage": decision["matched_share"] >= ACCEPT_SHARE,
+                  "lyric_line_coverage": decision["lines_share"] >= ACCEPT_LINES,
+                  "acoustic_gain": decision["gain_per_vocal_frame"] >= ACCEPT_GAIN}
+        acoustic = all(checks.values())
+        method = "correction" if c["trusted"] else "acoustic" if acoustic else "rejected"
+        rep = {**rep, "verification": {"method": method, "identity": identity, "checks": checks,
+                "decision_scores": decision, "score_decimals": SCORE_DECIMALS,
+                "raw_scores": {"matched_share": float(rep["matched_share"]),
+                               "gain_per_vocal_frame": float(rep["gain_per_vocal_frame"]),
+                               "lines_share": float(lines_share)},
+                "thresholds": {"matched_share": ACCEPT_SHARE, "lines_share": ACCEPT_LINES,
+                               "gain_per_vocal_frame": ACCEPT_GAIN},
+                "acoustic_threshold": ACCEPT_GAIN}}
         entry = {"source": c["source"], "url": c["url"], "similarity": c["similarity"],
                  **{k: (round(v, 3) if isinstance(v, float) else v) for k, v in rep.items() if k != "phrase_details"},
                  "lines_share": round(lines_share, 3), "seconds": round(time.time() - t0, 1)}
-        ok = c["trusted"] or acoustic or supported
+        ok = c["trusted"] or acoustic
         entry["accepted"] = bool(ok)
         reports.append(entry)
-        log(f"  candidate {c['source']}: sim={c['similarity']['score']} share={rep['matched_share']:.2f} "
-            f"gain={rep['gain_per_vocal_frame']:.2f} lines={rep['lines_used']}/{rep['lines_total']} "
+        log(f"  candidate {c['source']}: sim={c['similarity']['score']} share={rep['matched_share']:.4f} "
+            f"gain={rep['gain_per_vocal_frame']:.4f} lines={rep['lines_used']}/{rep['lines_total']} "
             f"complete={rep['complete_share']:.2f} -> {method if ok else 'no'}")
         if ok:
             score = (rep["matched_share"] + rep["gain_per_vocal_frame"] + 0.3 * rep["complete_share"]
@@ -345,12 +349,6 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     review = {"needs_review": False, "reasons": []}
     if best:
         _, chosen, aligned, align_report, lines = best
-        source_supported = align_report.get("verification", {}).get("method") == "source-supported"
-        if source_supported:
-            review["reasons"].append(
-                f"Lyrics identified by song/artist and supported by vocal coverage; acoustic gain "
-                f"{align_report['gain_per_vocal_frame']:.2f} is below {ACCEPT_GAIN}. "
-                "Forced alignment used the original vocals; spot-check weakly heard word timings.")
         stanzas = chosen["stanzas"]
         flat = [word for line in lines for word in line]
         aligned, filled = complete_with_lyrics(aligned, lines, energy, frame_s, duration, logp=logp,
@@ -389,29 +387,25 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
         else:
             r = max(checked, key=lambda r: r["matched_share"] + r.get("gain_per_vocal_frame", 0))
             fails = []
-            if r["matched_share"] < ACCEPT_SHARE:
+            decision = r.get("verification", {}).get("decision_scores", r)
+            if decision["matched_share"] < ACCEPT_SHARE:
                 fails.append(f"they explain only {r['matched_share']:.0%} of the singing ({ACCEPT_SHARE:.0%} needed)")
-            if r.get("lines_share", 1) < ACCEPT_LINES:
+            if decision.get("lines_share", 1) < ACCEPT_LINES:
                 fails.append(f"only {r.get('lines_used')} of their {r.get('lines_total')} lines are sung in this song "
                              f"({ACCEPT_LINES:.0%} needed — the page may hold a different version or extra lines)")
-            if r.get("gain_per_vocal_frame", 1) < ACCEPT_GAIN:
-                checks = r.get("verification", {}).get("support_checks", {})
-                missing = ", ".join(k.replace("_", " ") for k, passed in checks.items() if not passed)
-                fails.append(f"acoustic gain is {r['gain_per_vocal_frame']:.2f}; source-supported alignment "
-                             f"could not be used" + (f" ({missing})" if missing else ""))
+            if decision.get("gain_per_vocal_frame", 1) < ACCEPT_GAIN:
+                fails.append(f"acoustic gain is {r['gain_per_vocal_frame']:.4f} "
+                             f"({ACCEPT_GAIN:.2f} needed at {SCORE_DECIMALS}-decimal decision precision)")
+            if not r.get("verification", {}).get("checks", {}).get("finite_scores", True):
+                fails.append("alignment returned non-finite scores")
             reason = (f"The best lyrics found ({r['source']} {r.get('url', '')}) did not pass: "
                       + "; ".join(fails or ["checks failed"]) + ".")
         return skip(out, mid, record, cand_reports, timings, reason)
-    if not chosen["trusted"] and est > MAX_ESTIMATED:
-        if not source_supported:
-            return skip(out, mid, record, cand_reports, timings,
-                        f"The lyrics were found, but {est:.0%} of the word timings could only be estimated "
-                        f"(limit {MAX_ESTIMATED:.0%}), so the karaoke would not be reliable.")
-        notice(mid, f"Continuing identified lyrics with {est:.0%} estimated word timings; review notes are in the kit",
+    if not chosen["trusted"] and est > ESTIMATED_REVIEW_SHARE:
+        notice(mid, f"Continuing accepted lyrics with {est:.0%} estimated word timings; review notes are in the kit",
                level="warning")
     sure = ("your corrected lyrics" if chosen["trusted"] else
-            "song/artist identity and vocal anchors" if source_supported else
-            f"{align_report['matched_share']:.0%} of the singing matched")
+            f"{align_report['matched_share']:.0%} vocal coverage; gain {align_report['gain_per_vocal_frame']:.4f}")
     notice(mid, f"Lyrics accepted ({sure}) — source: {lyrics_source}")
     if not chosen["source"].startswith("library"):
         from .names import slug

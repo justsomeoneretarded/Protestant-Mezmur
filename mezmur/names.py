@@ -64,8 +64,81 @@ def same_person_name(candidate, *names):
     return False
 
 
+PLACEHOLDERS = {
+    "unknown", "unknow", "unknownartist", "unknowartist", "artistunknown",
+    "unknowntitle", "unknowtitle", "titleunknown", "unknowntrack", "unknownsong",
+    "unknownalbum", "unknownsinger", "untitled", "na", "none", "null", "undefined",
+    "notavailable", "notspecified",
+}
+# Source-channel branding, not a singer or a song. Match only at the start of a field.
+CHANNEL_BRANDS = ("Yedestayaye Eleleta", "Yedestayeeye Eleleta", "Yedestayaeye Eleleta",
+                  "የደስታዬ እልልታ", "የደስታዬ እልልታዎች")
+
+
+def is_placeholder(value):
+    text = str(value or "").strip()
+    key = re.sub(r"[\s_<>\[\](){}./-]+", "", text).casefold()
+    return not text or key in PLACEHOLDERS
+
+
+def clean_name(value):
+    """Discard missing markers and known channel prefixes, not legitimate 'Unknown Road' titles."""
+    text = str(value or "")
+    if is_placeholder(text):
+        return ""
+    text = re.sub(r"[<\[({]\s*(?:unknown|unknow)(?:[ _-]+(?:artist|title|album|singer))?\s*[>\])}]",
+                  " ", text, flags=re.I)
+    text = text.strip(" <>[](){}|:;-–—")
+    for brand in CHANNEL_BRANDS:
+        n = len(brand.split())
+        words = list(re.finditer(r"[^\W_]+", text))
+        if len(words) < n:
+            continue
+        prefix = text[words[0].start():words[n - 1].end()]
+        if fold(prefix) == fold(brand) or similar(prefix, brand) >= 0.90:
+            text = text[words[n - 1].end():].lstrip(" <>[](){}|:;-–—_/")
+            break
+    text = re.sub(r"^(?:unknown|unknow)(?:[ _]+artist)?\s*[-|:/]+\s*", "", text, flags=re.I)
+    text = tidy_name(text)
+    return "" if is_placeholder(text) else text
+
+
+def artist_mentions(text, artists):
+    """Find bounded artist aliases inside filename/title fields, preserving the remaining title."""
+    words = list(re.finditer(r"[^\W\d_]+", text))
+    hits = []
+    for artist in artists:
+        for alias in [artist.get("latin", ""), artist.get("amharic", ""), *artist.get("aliases", [])]:
+            n = len(alias.split())
+            if n < 2:
+                continue
+            for i in range(len(words) - n + 1):
+                start, end = words[i].start(), words[i + n - 1].end()
+                span = text[start:end]
+                if fold(span) == fold(alias) or similar(span, alias) >= 0.90:
+                    hits.append((start, end, artist))
+    return hits
+
+
+def without_artist(text, artists):
+    for start, end, _ in sorted(artist_mentions(text, artists), reverse=True, key=lambda h: (h[0], h[1])):
+        text = text[:start] + " " * (end - start) + text[end:]
+    return strip_junk(text)
+
+
+def search_record(record):
+    """Use clean song/artist fields everywhere queries are constructed; leave the caller untouched."""
+    record = finalize(dict(record))
+    for key in ("title_am", "title_latin", "artist_am", "artist_latin"):
+        record[key] = strip_junk(record.get(key, ""))
+    artist = {"latin": record["artist_latin"], "amharic": record["artist_am"]}
+    for key in ("title_am", "title_latin"):
+        record[key] = without_artist(record[key], [artist])
+    return record
+
+
 def strip_junk(text):
-    text = re.sub(r"https?://\S+|t\.me/\S+|@\w+|#\w+", " ", str(text))
+    text = re.sub(r"https?://\S+|t\.me/\S+|@\w+|#\w+", " ", clean_name(text))
     text = re.sub(r"(?i)\b(join|subscribe|follow)\b.*$", " ", text)  # 'Join us ...' tails in captions
     text = re.sub(r"(ቻናላችንን|ቴሌግራም|ይቀላቀሉ|ተቀላቀሉ|ሰብስክራይብ).*$", " ", text)
     text = re.sub(r"[\U0001F000-\U0001FAFF☀-➿️]", " ", text)
@@ -75,7 +148,7 @@ def strip_junk(text):
     if has_ethiopic(text):
         text = AM_JUNK.sub(" ", text)
     text = JUNK.sub(" ", text)
-    return " ".join(text.replace("_", " ").split()).strip(" -–—.,/|:")
+    return clean_name(" ".join(text.replace("_", " ").split()).strip(" -–—.,/|:"))
 
 
 def pieces(*texts):
@@ -83,7 +156,7 @@ def pieces(*texts):
     for text in texts:
         if not text:
             continue
-        for part in SEPARATORS.split(str(text)):
+        for part in SEPARATORS.split(clean_name(text)):
             part = strip_junk(part)
             if (len(re.findall(r"[^\W\d_]", part)) >= 2
                     and part.lower() not in {p.lower() for p in out}):
@@ -123,13 +196,19 @@ def resolve(info, artists=None):
         m = re.search(r"ዘማሪት?\s*[:፡]?\s*([ሀ-፿ ]{3,40})", line)
         if m:
             singer_hint = strip_junk(m.group(1))
-    performer = strip_junk(info.get("performer") or tags.get("artist") or tags.get("album_artist") or "")
-    parts = pieces(info.get("title"), info.get("filename"), *caption_lines[:3])
+    performers = [strip_junk(value) for value in
+                  (info.get("performer"), tags.get("artist"), tags.get("album_artist"))]
+    performer = next((value for value in performers if value), "")
+    parts = pieces(info.get("title"), tags.get("title"), info.get("filename"), *caption_lines[:3])
     record = {"title_am": "", "title_latin": "", "artist_am": "", "artist_latin": "", "evidence": parts}
 
     artist_names = [n for n in [performer, singer_hint] if n]
-    if not artist_names:
-        artist_names = [p for p in parts if known_artist(p, artists)][:1]
+    identified = next((known_artist(n, artists) for n in artist_names if known_artist(n, artists)), None)
+    if not identified:
+        identified = next((hit[2] for p in parts for hit in artist_mentions(p, artists)), None)
+    if identified:
+        artist_names = [identified.get("amharic", ""), identified.get("latin", "")]
+        artist_names = [n for n in artist_names if n]
     for part in parts:
         for name in list(artist_names):
             if part not in artist_names and similar(part, name) >= 0.72:
@@ -139,7 +218,10 @@ def resolve(info, artists=None):
             record["artist_am"] = record["artist_am"] or name
         elif name:
             record["artist_latin"] = record["artist_latin"] or name
-    title_parts = [p for p in parts if p not in artist_names and not any(similar(p, a) >= 0.72 for a in artist_names)]
+    singer = identified or {"amharic": record["artist_am"], "latin": record["artist_latin"]}
+    title_parts = [without_artist(p, [singer]) for p in parts]
+    title_parts = [p for p in title_parts if p and p not in artist_names
+                   and not any(similar(p, a) >= 0.72 for a in artist_names)]
     am_titles = [p for p in title_parts if ethiopic_share(p) > 0.6]
     latin_titles = [p for p in title_parts if ethiopic_share(p) < 0.2]
     if am_titles:
@@ -154,7 +236,7 @@ def resolve(info, artists=None):
         record["artist_am"] = known.get("amharic") or record["artist_am"]
         record["artist_latin"] = known.get("latin") or record["artist_latin"]
         record["artist_known"] = True
-    return finalize(record)
+    return finalize(record, artists=artists)
 
 
 def tidy_name(value):
@@ -170,18 +252,25 @@ def tidy_name(value):
     return " ".join(value.split())
 
 
-def finalize(record):
-    """Fill missing romanized forms from the Ge'ez spelling; title-case Latin; tidy every name."""
-    for key in ["title_am", "title_latin", "artist_am", "artist_latin"]:
-        if record.get(key):
-            record[key] = tidy_name(record[key])
+def finalize(record, artists=None):
+    """Clean placeholders and fill script forms, preferring known singer spellings."""
+    for key in ("title_am", "title_latin", "artist_am", "artist_latin", "album"):
+        if key in record:
+            record[key] = clean_name(record[key])
+    artists = load_artists() if artists is None else artists
+    known = next((known_artist(record.get(key, ""), artists) for key in ("artist_am", "artist_latin")
+                  if known_artist(record.get(key, ""), artists)), None)
+    if known:
+        record["artist_am"] = known.get("amharic") or record.get("artist_am", "")
+        record["artist_latin"] = known.get("latin") or record.get("artist_latin", "")
+        record["artist_known"] = True
     if record.get("title_am") and not record.get("title_latin"):
         record["title_latin"] = romanize(record["title_am"], title_case=True)
         record["title_latin_auto"] = True
     if record.get("artist_am") and not record.get("artist_latin"):
         record["artist_latin"] = romanize(record["artist_am"], title_case=True)
         record["artist_latin_auto"] = True
-    for key in ["title_latin", "artist_latin"]:
+    for key in ("title_latin", "artist_latin"):
         value = record.get(key, "")
         if value:
             record[key] = " ".join(w[:1].upper() + w[1:] for w in value.split())
@@ -190,6 +279,7 @@ def finalize(record):
 
 def learn_from_titles(record, titles):
     """Fill a missing Ge'ez title/artist from titles that show both scripts (YouTube, lyrics sites)."""
+    record = finalize(record)
     want = []
     if not record.get("title_am") and record.get("title_latin"):
         want.append(("title_am", record["title_latin"]))
