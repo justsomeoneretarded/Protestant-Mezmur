@@ -118,8 +118,8 @@ YouTube channel and the web, checking that the faces agree.
 - `separator`: vocal-isolation model (default is the fast, accurate UVR-MDX-NET).
 - `upload_youtube`: automatic YouTube upload, **on by default**; uncheck for artifacts only. Requires
   `YOUTUBE_OAUTH_JSON` (secret) and `YOUTUBE_CHANNEL_ID` (variable). Uploads privately,
-  then uses YouTube's built-in scheduler with randomized two-hour slots: four
-  new videos get +2, +4, +6 and +8 hours when the queue is empty. New batches
+  then uses YouTube's built-in scheduler with randomized four-hour slots: four
+  new videos get +4, +8, +12 and +16 hours when the queue is empty. New batches
   follow existing queued videos; retries keep their saved order and future slots.
   Automatic uploads choose portrait thumbnail B (or D when configured); all four
   designs remain downloadable. Each uploaded video is added to your existing **Mezmurs** playlist automatically.
