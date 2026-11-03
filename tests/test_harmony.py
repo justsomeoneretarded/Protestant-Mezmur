@@ -68,3 +68,8 @@ def test_native_melody_extraction_finds_sung_pitch_and_does_not_voice_silence():
     assert np.mean(melody["pitch_classes"][reliable] == 9) > 0.9
     assert not np.any(reliable[melody["times"] > 4.2])
     np.testing.assert_array_equal(values, before)
+
+
+def test_single_pitch_does_not_masquerade_as_a_fully_observed_power_chord():
+    root, intervals, mode = select_voicing(0, "fifth", 0.9, histogram(0), histogram(0), histogram(0))
+    assert root == 0 and intervals == [0] and mode == "single"

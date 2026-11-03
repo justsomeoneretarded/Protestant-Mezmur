@@ -1,5 +1,6 @@
 """Native audio tests for the explicitly requested, CPU-only backing rebuild."""
 import hashlib
+import json
 import subprocess
 from pathlib import Path
 from types import SimpleNamespace
@@ -175,6 +176,10 @@ def test_native_soundfont_rebuild_writes_lossless_master_without_modifying_sourc
     assert report["vocal_melody_stable_frames"] > 0 and report["vocal_conflicts_checked"]
     assert report["analysis_instrumental"] == "instrumental-reference.wav"
     assert (target.parent / "arrangement-plan.json").is_file()
+    sections = json.loads((target.parent / "arrangement-plan.json").read_text())["segments"]
+    for second, expected_root in ((2, 0), (6, 5), (10, 7), (14, 0)):
+        section = next(part for part in sections if part["start"] <= second < part["end"])
+        assert section["root"] == expected_root, section
     assert report["duration_seconds"] == seconds and report["vocal_offset_samples"] == 0
     assert report["vocal_stem_format"] == "FLOAT"
     assert report["true_peak_dbfs"] <= -0.9999

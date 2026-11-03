@@ -79,7 +79,9 @@ def select_voicing(root, kind, score, reference, bass, vocal_histogram):
     """Use identified chords where supported; uncertain regions get evidenced open/single-note voicings."""
     chord = [(root + interval) % 12 for interval in CHORDS[kind]]
     safe = compatible_notes(chord, vocal_histogram)
-    if score >= 0.68 and len(safe) == len(chord):
+    floor = max(0.08, float(np.max(reference)) * 0.20)
+    supported = all(reference[note] >= floor or vocal_histogram[note] >= 0.20 for note in chord)
+    if score >= 0.68 and supported and len(safe) == len(chord):
         return root, list(CHORDS[kind]), "chord"
 
     support = np.asarray(reference) + 0.35 * np.asarray(bass) + 0.65 * np.asarray(vocal_histogram)
@@ -147,15 +149,15 @@ def harmony_plan(samples, sr=ANALYSIS_SR, vocals=None):
         notes = [(root + interval) % 12 for interval in CHORDS[kind]]
         templates[index, notes] = 1 / np.sqrt(len(notes))
     scores = templates @ reference.T
-    evidence = scores * 4.0
+    evidence = scores * 12.0
     for index, (root, kind) in enumerate(states):
         notes = [(root + interval) % 12 for interval in CHORDS[kind]]
         clash = np.mean([sung[:, [(note + i) % 12 for i in ROUGH_INTERVALS]].sum(axis=1)
                          for note in notes], axis=0)
-        evidence[index] += 0.35 * bass[:, root] - 1.2 * clash
+        evidence[index] += 0.70 * bass[:, root] - 2.5 * clash
     probabilities = np.exp(evidence - evidence.max(axis=0, keepdims=True))
-    transition = np.full((len(states), len(states)), 0.18 / (len(states) - 1))
-    np.fill_diagonal(transition, 0.82)
+    transition = np.full((len(states), len(states)), 0.30 / (len(states) - 1))
+    np.fill_diagonal(transition, 0.70)
     decoded = librosa.sequence.viterbi(probabilities, transition)
     plan = []
     for index, (start, end, state) in enumerate(zip(bounds, bounds[1:], decoded)):
