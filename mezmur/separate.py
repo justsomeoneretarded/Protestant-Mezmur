@@ -1,4 +1,4 @@
-"""Vocal isolation for the acoustic model. The final video always uses the original mix."""
+"""Vocal isolation for recognition and the explicitly enabled backing-arrangement mode."""
 import os
 import subprocess
 from pathlib import Path
@@ -22,9 +22,11 @@ def _run(wav, out, model, log):
     return None
 
 
-def separate(audio, folder, model=None, log=print):
-    """Return a vocal stem path; falls back to faster models, then to the full mix."""
+def separate(audio, folder, model=None, log=print, require_vocals=False):
+    """Return vocals, allowing full-mix fallback only when a separated stem is not required."""
     model = model or os.environ.get("MEZMUR_SEPARATOR") or DEFAULT_MODEL
+    if require_vocals and model == "none":
+        raise ValueError("Music rebuilding requires vocal isolation; choose a separator other than none")
     folder = Path(folder)
     wav = folder / "sep_input.wav"
     subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", str(audio), "-ar", "44100", "-ac", "2", str(wav)],
@@ -37,5 +39,7 @@ def separate(audio, folder, model=None, log=print):
         vocals = _run(wav, out, name, log)
         if vocals:
             return vocals
+    if require_vocals:
+        raise RuntimeError("Vocal isolation failed; refusing to rebuild music over the original full mix")
     log("  WARNING: vocal separation unavailable; using the full mix", flush=True)
     return wav

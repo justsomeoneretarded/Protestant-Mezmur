@@ -12,7 +12,7 @@ For every song you get:
 | File | What it is |
 | --- | --- |
 | `video.mp4` | 1080p lyric video: karaoke Amharic lyrics timed word-by-word to the real singing, romanized line underneath, next line preview, one calm photograph for the whole song (waterfall, mountains, sea, sky, stars, skyline…) with nothing drawn or written on it, never reused for another video, a smooth music spectrum, title card and a clean end-screen area |
-| `thumbnail.jpg`, `thumbnail-b.jpg`, `thumbnail-c.jpg`, `thumbnail-d.jpg` | Four 1280×720 layouts: A centered text with a frame; B enlarged centered circular portrait with smaller text and a frame; C text without the frame; D portrait without the frame. The portrait matches the one in the video. Choose up to three for YouTube's *Test & Compare* |
+| `thumbnail.jpg`, `thumbnail-b.jpg`, `thumbnail-c.jpg`, `thumbnail-d.jpg` | Four 1280×720 layouts: A centered text with a frame; B centered circular portrait with smaller text and a frame; C text without the frame; D larger right-side circular portrait with vertically centered text at left and no frame. The portrait matches the one in the video. Choose up to three for YouTube's *Test & Compare* |
 | `title.txt` | Title options, first one in the common search style: `Addisalem Assefa siwed geta ሲወድ ጌታ አዲስዓለም አሰፋ lyrics` |
 | `description.txt` | Ready to paste: both scripts, full Amharic lyrics, lyrics in Latin letters, credits, hashtags |
 | `tags.txt` | Song-specific + general tags, under YouTube's 500-character limit |
@@ -116,6 +116,10 @@ YouTube channel and the web, checking that the faces agree.
   runner at the same time, so 5 songs take about as long as 1 (≈ 25–35 minutes).
 - `message_ids`: remake specific songs (e.g. `2,3`) without moving your place in the channel.
 - `separator`: vocal-isolation model (default is the fast, accurate UVR-MDX-NET).
+- `rebuild_music`: **off by default**. When checked, after lyrics have been matched, replace the
+  instrumental with an experimental synthesized piano/bass/pad arrangement while keeping the
+  separated vocals on their original timeline. Requires vocal isolation (not `none`).
+  [Quality safeguards and limitations](docs/backing-arrangement.md).
 - `upload_youtube`: automatic YouTube upload, **on by default**; uncheck for artifacts only. Requires
   `YOUTUBE_OAUTH_JSON` (secret) and `YOUTUBE_CHANNEL_ID` (variable). Uploads privately,
   then uses YouTube's built-in scheduler with randomized four-hour slots: four
@@ -128,11 +132,13 @@ YouTube channel and the web, checking that the faces agree.
   Titles, descriptions and tags are automatically
   limited before upload; saved video IDs prevent duplicates.
   [Setup, visibility settings and retry without rendering](docs/youtube-upload.md).
-The rendered soundtrack is the **original recording**, with no pitch, tempo,
+With `rebuild_music` unchecked, the rendered soundtrack is the **original recording**, with no pitch, tempo,
 noise, reverb, room-space effects or loudness normalization. Compatible AAC/MP3
 streams are copied into the MP4; other formats receive AAC encoding only.
-Vocal isolation and waveform analysis are used only for recognition/visuals,
-never as the final soundtrack. Historical workflow reruns use their old code;
+In this default mode vocal isolation is used only for recognition, never as the final soundtrack.
+When rebuilding is enabled, the kit also contains a lossless `rebuilt-audio.wav`,
+`arrangement.mid` and `arrangement.json`. The master is encoded to AAC once for MP4;
+YouTube can re-encode again. Automatic arrangements and separated vocals need listening review. Historical workflow reruns use their old code;
 start a fresh run on main to use this path.
 
 When it finishes, open the run and download each `mezmur-<message id>-run…` artifact

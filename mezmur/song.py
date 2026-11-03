@@ -16,6 +16,7 @@ import numpy as np
 
 from . import asr, audio, backgrounds, names, thumbnail, web
 from .align import Lyrics, align_lyrics, build_target, complete_with_lyrics, smooth_words
+from .arrangement import rebuild as rebuild_backing
 from .common import duration as common_duration, write_json
 from .features import analyze
 from .geez import fold, romanize
@@ -263,7 +264,8 @@ def _subs(text):
     return float(m.group(1)) * {"": 1, "K": 1e3, "M": 1e6}[m.group(2)]
 
 
-def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium", corrections="corrections"):
+def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium", corrections="corrections",
+            rebuild_music=False):
     inp, out, work = Path(inp), Path(out), Path(work)
     out.mkdir(parents=True, exist_ok=True)
     work.mkdir(parents=True, exist_ok=True)
@@ -288,8 +290,9 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     # 3. Vocals + acoustic model (load the model first so a broken install fails fast).
     vocab = asr.vocabulary()
     t = time.time()
-    # Isolated vocals are for analysis; rendering keeps the original recording.
-    vocals = separate(source_audio, work, model=separator, log=log)
+    # Recognition always uses the original timeline, even when a new backing is requested.
+    separation_options = {"require_vocals": True} if rebuild_music else {}
+    vocals = separate(source_audio, work, model=separator, log=log, **separation_options)
     timings["separation"] = round(time.time() - t, 1)
     t = time.time()
     logp, frame_s = asr.frame_log_probs(vocals, log=log)
@@ -442,6 +445,23 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
                                                encoding="utf-8")
     write_json(out / "words.json", [{k: (round(v, 3) if isinstance(v, float) else v) for k, v in w.items()} for w in words])
 
+    render_audio = source_audio
+    arrangement = None
+    audio_processing = {"source": "original", "effects_applied": False, "loudness_normalization": False,
+                        "encoding": "AAC/MP3 stream copy when supported; otherwise AAC encoding only"}
+    if rebuild_music:
+        t = time.time()
+        render_audio = out / "rebuilt-audio.wav"
+        arrangement = rebuild_backing(source_audio, vocals, render_audio, work / "arrangement", seed=mid)
+        write_json(out / "arrangement.json", arrangement)
+        audio_processing = {"source": "rebuilt-accompaniment", "effects_applied": True,
+                            "loudness_normalization": False, "vocal_timing": "original",
+                            "encoding": "One AAC encode from a lossless 32-bit float WAV master",
+                            "arrangement": arrangement}
+        review["reasons"].append("Backing music was rebuilt automatically; listen for harmony and vocal-separation artifacts.")
+        notice(mid, "New backing rendered without changing vocal pitch or timing; listening review recommended")
+        timings["music_rebuild"] = round(time.time() - t, 1)
+
     # 7. Artist photo.
     t = time.time()
     photo_cands = photo_candidates(work, inp, record, videos)
@@ -498,11 +518,11 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     # 10. Video.
     t = time.time()
     width = height * 16 // 9
-    feats = analyze(source_audio, fps=fps)
+    feats = analyze(render_audio, fps=fps)
     accent = tuple(int(theme["sung"][i:i + 2], 16) for i in (1, 3, 5))
     renderer = Renderer(width, height, fps, duration, feats, sources, cues, meta, artist_photo=badge_photo, seed=mid,
                         bright=bright, accent=accent)
-    render_video(renderer, source_audio, work / "lyrics.ass", out / "video.mp4", preset=preset, log=log)
+    render_video(renderer, render_audio, work / "lyrics.ass", out / "video.mp4", preset=preset, log=log)
     timings["render"] = round(time.time() - t, 1)
 
     if mode == "transcription":
@@ -513,6 +533,8 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     credits = [c["credit"] for c in clip_records if c.get("credit")]
     if photo_credit:
         credits.insert(0, f"Photo: {photo_credit}")
+    if arrangement:
+        credits.append(f"Backing arrangement: FluidSynth with {arrangement['soundfont']}; automated piano, bass and pad.")
     review["needs_review"] = bool(review["reasons"]) or mode != "lyrics-aligned"
     if record.get("title_latin_auto") or record.get("artist_latin_auto"):
         review["reasons"].append("The romanized title/artist was generated automatically; check spelling in title.txt.")
@@ -521,13 +543,12 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     write_json(out / "metadata.json", {
         "message_id": mid, "telegram_channel_id": info.get("channel_id"),
         "names": record, "duration_seconds": round(duration, 2),
-        "audio_processing": {"source": "original", "effects_applied": False, "loudness_normalization": False,
-                             "encoding": "AAC/MP3 stream copy when supported; otherwise AAC encoding only"},
+        "audio_processing": audio_processing,
         "lyrics_mode": mode, "lyrics_source": lyrics_source,
         "lyrics_verification": align_report.get("verification", {}), "artist_photo": photo_source,
         "backgrounds": clip_records, "tempo_bpm": round(feats.tempo, 1), "timings_seconds": timings,
         "review": review, "model": asr.MODEL})
-    write_json(out / "quality.json", {"mode": mode, "alignment_timeline": "original",
+    write_json(out / "quality.json", {"mode": mode, "alignment_timeline": "original", "arrangement": arrangement,
         "candidates": cand_reports, "lrc_check": lrc, "alignment": {
         k: v for k, v in align_report.items() if k != "phrase_details"}, "phrases": align_report.get("phrase_details", []),
         "draft_text": draft_text, "draft_word_count": len(draft), "review": review})
@@ -544,8 +565,10 @@ def main():
     p.add_argument("--separator", default=None, help="audio-separator model, 'htdemucs' or 'none'")
     p.add_argument("--height", type=int, default=1080, choices=[720, 1080])
     p.add_argument("--preset", default="medium")
+    p.add_argument("--rebuild-music", action="store_true",
+                   help="Experimental new backing; preserves vocal pitch/timing and requires separated vocals")
     a = p.parse_args()
-    produce(a.input, a.output, a.work, a.separator, a.height, preset=a.preset)
+    produce(a.input, a.output, a.work, a.separator, a.height, preset=a.preset, rebuild_music=a.rebuild_music)
 
 
 if __name__ == "__main__":

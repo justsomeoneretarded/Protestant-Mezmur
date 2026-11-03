@@ -24,15 +24,14 @@ def test_text_only_variants_never_draw_a_person(variant):
     assert plain.size == (1280, 720)
 
 
-@pytest.mark.parametrize("variant", ["b", "d"])
-def test_portrait_is_large_circular_and_centered(variant):
-    image = np.array(thumbnail.compose(META, background=BACKGROUND, photo=PORTRAIT, variant=variant))
+def test_b_portrait_remains_circular_and_centered():
+    image = np.array(thumbnail.compose(META, background=BACKGROUND, photo=PORTRAIT, variant="b"))
     np.testing.assert_array_equal(image[242, 640], PORTRAIT[200, 200][::-1])
     assert not np.array_equal(image[81, 479], PORTRAIT[200, 200][::-1])
     np.testing.assert_array_equal(image[242, 485], image[242, 794])
 
 
-@pytest.mark.parametrize("pair", [("a", "c"), ("b", "d")])
+@pytest.mark.parametrize("pair", [("a", "c")])
 def test_unframed_versions_differ_only_at_the_outer_rectangle(pair):
     a, b = [np.array(thumbnail.compose(META, background=BACKGROUND, photo=PORTRAIT, variant=v)) for v in pair]
     changed = np.any(a != b, axis=2)
@@ -78,3 +77,41 @@ def test_four_thumbnail_files_are_in_the_upload_kit_and_artifact(tmp_path):
     upload = next(s for s in workflow["jobs"]["song"]["steps"] if s.get("name", "").startswith("Upload the YouTube kit"))
     assert all(name in upload["with"]["path"] for name in expected)
     assert "thumbnail-d.jpg" in (tmp_path / "UPLOAD.md").read_text()
+
+
+def test_d_has_larger_circular_portrait_on_right_and_no_outer_frame():
+    image = np.array(thumbnail.compose(META, background=BACKGROUND, photo=PORTRAIT, variant="d"))
+    np.testing.assert_array_equal(image[360, 950], PORTRAIT[200, 200][::-1])
+    np.testing.assert_array_equal(image[360, 710], PORTRAIT[200, 200][::-1])
+    np.testing.assert_array_equal(image[360, 1190], PORTRAIT[200, 200][::-1])
+    assert not np.array_equal(image[90, 680], PORTRAIT[200, 200][::-1])
+    # The portrait cannot touch the outer frame or the left-hand text region.
+    np.testing.assert_array_equal(image[10, 10], image[20, 20])
+
+
+@pytest.mark.parametrize("long", [False, True])
+def test_d_text_is_vertically_centered_in_left_region_without_portrait_overlap(monkeypatch, long):
+    calls = []
+
+    def capture(canvas, xy, text, font, *args, **kwargs):
+        assert kwargs["anchor"] == "ma" and xy[0] == 345
+        assert font.length(text) <= 570
+        calls.append((xy[1], sum(font.metrics())))
+
+    monkeypatch.setattr(thumbnail, "gradient_text", capture)
+    monkeypatch.setattr(thumbnail, "shadow_text", capture)
+    meta = dict(META)
+    if long:
+        meta["title_am"] = "ስለማይለወጠው የጌታ ፍቅር እና ምሕረት " * 4
+        meta["title_latin"] = "The Love And Mercy Of The Lord " * 4
+    thumbnail.compose(meta, background=BACKGROUND, photo=PORTRAIT, variant="d")
+    assert calls[0][0] >= 80 and calls[-1][0] + calls[-1][1] <= 640
+    assert all(b[0] >= a[0] + a[1] for a, b in zip(calls, calls[1:]))
+    center = (calls[0][0] + calls[-1][0] + calls[-1][1]) / 2
+    assert abs(center - 360) <= 2
+
+
+def test_b_and_d_fallback_to_same_text_layout_when_no_face_is_confirmed():
+    b = np.array(thumbnail.compose(META, background=BACKGROUND, variant="b"))
+    d = np.array(thumbnail.compose(META, background=BACKGROUND, variant="d"))
+    np.testing.assert_array_equal(b[20:700, 20:1260], d[20:700, 20:1260])
