@@ -295,7 +295,7 @@
       "completed_at": "2026-11-03T14:30:32+00:00"
     },
     "UCNSSLKyhXrG50l694M48zTQ:4335601101:25": {
-      "status": "uploading",
+      "status": "uploaded",
       "message_id": 25,
       "telegram_channel_id": "4335601101",
       "youtube_channel_id": "UCNSSLKyhXrG50l694M48zTQ",
@@ -310,7 +310,9 @@
       "created_at": "2026-11-03T22:24:37+00:00",
       "review_warnings": false,
       "thumbnail_done": false,
-      "metadata_adjusted": []
+      "metadata_adjusted": [],
+      "video_id": "FfnBTYSC-So",
+      "url": "https://youtu.be/FfnBTYSC-So"
     }
   }
 }
