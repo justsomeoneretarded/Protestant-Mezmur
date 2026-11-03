@@ -144,3 +144,17 @@ def test_missing_song_title_does_not_make_broad_unusable_queries(monkeypatch):
     assert lyrics_sources.youtube_titles(r) == []
     lyrics_sources.from_youtube(r, log=lambda *a, **k: None)
     assert queries == []
+
+
+def test_structured_lyrics_apis_and_direct_site_lookups_use_clean_identity(monkeypatch):
+    tracks, requests = [], []
+    record = {"title_latin": "Yedestayaye Eleleta | Aster Abebe Selam Official Lyrics",
+              "artist_am": "አስቴር አበበ", "artist_latin": "<unknown>"}
+    monkeypatch.setattr(web, "lrclib", lambda title, artist, seconds: tracks.append((title, artist)) or [])
+    monkeypatch.setattr(web, "get", lambda url, **kwargs: requests.append((url, kwargs)) or None)
+    lyrics_sources.from_lrclib(record, 180, log=lambda *a, **k: None)
+    lyrics_sources.from_sites(record, log=lambda *a, **k: None)
+    assert tracks == [("Selam", "Aster Abebe")]
+    assert requests and any("Aster_Abebe" in url for url, _ in requests)
+    assert any(kwargs.get("params") == {"q": "Selam"} for _, kwargs in requests)
+    assert not any("unknown" in str(item).lower() or "Yedest" in str(item) for item in requests)
