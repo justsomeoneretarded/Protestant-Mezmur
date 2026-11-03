@@ -7,10 +7,12 @@ DEFAULT_MODEL = "UVR-MDX-NET-Voc_FT.onnx"
 FALLBACKS = ["UVR_MDXNET_KARA_2.onnx", "htdemucs_ft.yaml"]
 
 
-def _run(wav, out, model, log):
+def _run(wav, out, model, log, high_precision=False):
     cmd = [os.environ.get("AUDIO_SEPARATOR_BIN", "audio-separator"), str(wav), "-m", model, "--output_dir", str(out), "--single_stem", "Vocals",
            "--model_file_dir", os.environ.get("MEZMUR_MODEL_CACHE", ".model-cache") + "/separator",
            "--output_format", "WAV"]
+    if high_precision:
+        cmd += ["--use_soundfile", "--normalization", "1.0", "--amplification", "0.0"]
     if "roformer" in model.lower():
         cmd += ["--mdxc_overlap", "2"]  # default 8 is ~4x slower on CPU for a tiny quality gain
     code = subprocess.run(cmd).returncode
@@ -29,14 +31,15 @@ def separate(audio, folder, model=None, log=print, require_vocals=False):
         raise ValueError("Music rebuilding requires vocal isolation; choose a separator other than none")
     folder = Path(folder)
     wav = folder / "sep_input.wav"
-    subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", str(audio), "-ar", "44100", "-ac", "2", str(wav)],
-                   check=True)
+    codec = ["-c:a", "pcm_f32le"] if require_vocals else []
+    subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", str(audio), "-ar", "44100", "-ac", "2",
+                    *codec, str(wav)], check=True)
     if model == "none":
         return wav
     for i, name in enumerate([model] + [m for m in FALLBACKS if m != model]):
         out = folder / f"stems{i}"
         out.mkdir(parents=True, exist_ok=True)
-        vocals = _run(wav, out, name, log)
+        vocals = _run(wav, out, name, log, high_precision=require_vocals)
         if vocals:
             return vocals
     if require_vocals:

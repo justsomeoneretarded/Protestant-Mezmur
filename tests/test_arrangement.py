@@ -135,7 +135,7 @@ def test_rebuild_cannot_overwrite_original_or_stem(tmp_path):
 def test_duration_mismatch_fails_before_analysis_or_synthesis(monkeypatch, tmp_path):
     source, vocals = tmp_path / "original.wav", tmp_path / "vocals.wav"
     sf.write(source, stereo_tone(seconds=6), SR)
-    sf.write(vocals, stereo_tone(seconds=5), SR)
+    sf.write(vocals, stereo_tone(seconds=5), SR, subtype="FLOAT")
     monkeypatch.setattr(arrangement, "soundfont_path", lambda: tmp_path / "font.sf2")
     monkeypatch.setattr(arrangement, "harmony_plan", lambda *a: pytest.fail("Bad timing reached composition"))
     with pytest.raises(arrangement.ArrangementError, match="duration"):
@@ -170,6 +170,42 @@ def test_native_soundfont_rebuild_writes_lossless_master_without_modifying_sourc
     assert report["original_recording_unchanged"] and not report["original_instrumental_reused"]
     assert report["beat_count"] >= 4 and report["reliable_harmony_share"] >= 0.55
     assert report["duration_seconds"] == seconds and report["vocal_offset_samples"] == 0
+    assert report["vocal_stem_format"] == "FLOAT"
     assert report["true_peak_dbfs"] <= -0.9999
     assert (target.parent / "arrangement.mid").is_file()
     assert not np.allclose(mixed, voice)
+
+
+def test_required_vocal_path_requests_float_decode_and_soundfile_export(monkeypatch, tmp_path):
+    commands, precision = [], []
+    monkeypatch.setattr(separator.subprocess, "run", lambda command, **kwargs: commands.append(command))
+
+    def isolate(wav, out, model, log, high_precision=False):
+        precision.append(high_precision)
+        return out / "vocals.wav"
+
+    monkeypatch.setattr(separator, "_run", isolate)
+    separator.separate(tmp_path / "source.mp3", tmp_path, require_vocals=True)
+    assert commands[0][commands[0].index("-c:a") + 1] == "pcm_f32le"
+    assert precision == [True]
+
+
+def test_high_precision_separator_command_avoids_pydub_quantization(monkeypatch, tmp_path):
+    commands = []
+    (tmp_path / "Vocals.wav").touch()
+    monkeypatch.setattr(separator.subprocess, "run",
+                        lambda command, **kwargs: commands.append(command) or SimpleNamespace(returncode=0))
+    separator._run(tmp_path / "source.wav", tmp_path, separator.DEFAULT_MODEL, lambda *a, **k: None,
+                   high_precision=True)
+    assert "--use_soundfile" in commands[0]
+    assert commands[0][commands[0].index("--normalization") + 1] == "1.0"
+    assert commands[0][commands[0].index("--amplification") + 1] == "0.0"
+
+
+def test_low_precision_stem_is_not_silently_presented_as_a_lossless_rebuild(monkeypatch, tmp_path):
+    source, stem = tmp_path / "source.wav", tmp_path / "stem.wav"
+    sf.write(source, stereo_tone(), SR)
+    sf.write(stem, stereo_tone(), SR, subtype="PCM_16")
+    monkeypatch.setattr(arrangement, "soundfont_path", lambda: tmp_path / "font.sf2")
+    with pytest.raises(arrangement.ArrangementError, match="high-precision"):
+        arrangement.rebuild(source, stem, tmp_path / "mix.wav", tmp_path / "work")

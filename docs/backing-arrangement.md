@@ -34,6 +34,8 @@ Original timing drives the new notes; vocals are not time-stretched or pitch-shi
 - The new backing is balanced below the vocals and faded at the track edges.
   Four-times oversampled peak estimates target at least 1 dB of PCM headroom;
   these are technical checks, not a certified loudness meter or a subjective quality score.
+- The separator input/output uses floating-point WAV and SoundFile, avoiding its
+  default 16-bit pydub export. Lower-precision stems are rejected in rebuilt mode.
 - A 32-bit float WAV master is kept without lossy intermediate encodes. MP4 uses
   the existing 320 kbps AAC encoding once. Platform re-encoding is outside this tool.
 - Failed technical checks stop the job rather than falsely label the old mix as rebuilt.

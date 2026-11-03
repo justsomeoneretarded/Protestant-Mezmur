@@ -164,6 +164,9 @@ def rebuild(source, vocals, target, work, seed=0):
     font = soundfont_path()
     with source.open("rb") as handle:
         before = hashlib.file_digest(handle, "sha256").hexdigest()
+    stem_format = sf.info(vocals).subtype
+    if stem_format not in ("FLOAT", "DOUBLE", "PCM_24", "PCM_32"):
+        raise ArrangementError("Backing rebuild needs a high-precision vocal stem; update the separator and use float WAV export")
     voice, sr = sf.read(vocals, dtype="float32", always_2d=True)
     if sr < 16000 or voice.shape[1] not in (1, 2) or not np.isfinite(voice).all():
         raise ArrangementError("The separated vocal stem has an unsupported format or invalid samples")
@@ -194,7 +197,7 @@ def rebuild(source, vocals, target, work, seed=0):
     if font == DEFAULT_SOUNDFONT and license_file.is_file():
         shutil.copy2(license_file, target.parent / "arrangement-license.txt")
     return {**report, **levels, "mode": "rebuilt-accompaniment", "experimental": True,
-            "sample_rate": sr, "samples": expected, "duration_seconds": expected / sr,
+            "sample_rate": sr, "vocal_stem_format": stem_format, "samples": expected, "duration_seconds": expected / sr,
             "soundfont": font.name, "master_format": "32-bit float WAV",
             "original_recording_unchanged": True, "original_instrumental_reused": False,
             "instruments": ["piano", "acoustic bass", "warm pad"],
