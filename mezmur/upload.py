@@ -18,7 +18,7 @@ SCOPES = ["https://www.googleapis.com/auth/youtube.force-ssl"]
 PRIVACIES = ("private", "unlisted", "public")
 THUMBNAILS = {"a": "thumbnail.jpg", "b": "thumbnail-b.jpg",
               "c": "thumbnail-c.jpg", "d": "thumbnail-d.jpg"}
-PUBLISH_DELAY = timedelta(hours=2)
+PUBLISH_DELAY = timedelta(hours=4)
 PLAYLIST_NAME = "Mezmurs"
 
 
@@ -426,7 +426,7 @@ def main():
     where.add_argument("--folder", type=Path)
     where.add_argument("--root", type=Path, help="Downloaded artifact folders containing video.mp4")
     parser.add_argument("--visibility", choices=PRIVACIES, default="public",
-                        help="Public queues randomized uploads at two-hour intervals; private/unlisted are local-only overrides")
+                        help="Public queues randomized uploads at four-hour intervals; private/unlisted are local-only overrides")
     parser.add_argument("--thumbnail", choices=tuple(THUMBNAILS), default=os.environ.get("YOUTUBE_THUMBNAIL") or "b")
     parser.add_argument("--recover-video-id")
     parser.add_argument("--dry-run", action="store_true", help="Validate kits without OAuth, network access or state writes")

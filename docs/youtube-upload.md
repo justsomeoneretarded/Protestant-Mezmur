@@ -3,7 +3,7 @@
 The normal workflow can generate videos and upload them to your own YouTube
 channel. Uploading is enabled by default for manual and reusable generation runs:
 videos start **private** and are scheduled to become
-**public in randomized order at two-hour intervals**. Google OAuth is required
+**public in randomized order at four-hour intervals**. Google OAuth is required
 for uploading; open-source transcription and rendering still run on GitHub Actions.
 An API key or service account cannot replace channel-owner authorization.
 
@@ -114,7 +114,7 @@ Other repository-variable values fall back to b, so automatic uploads do not pic
 text-only layouts a/c. All four files remain available in the artifact. If no
 artist photo was confirmed, the renderer's existing text fallback still applies;
 no unverified portrait is invented. Local CLI overrides can still select a/c.
-The workflow always requests the two-hour-interval public queue. A previously configured
+The workflow always requests the four-hour-interval public queue. A previously configured
 YOUTUBE_PRIVACY variable no longer changes workflow behavior.
 
 Every new video initially uploads as **private**, with the recommended title,
@@ -125,19 +125,19 @@ can remain in the download kit for your own use.
 
 Before the first upload, the uploader shuffles newly selected songs once and saves
 every UTC publishAt slot on mezmur-state with status queued. With an empty queue,
-four selected videos get slots at **+2, +4, +6 and +8 hours** from queue planning.
+four selected videos get slots at **+4, +8, +12 and +16 hours** from queue planning.
 The randomized order and timestamps are durable, including on a subset retry.
-Previously saved five-hour reservations keep their original deadlines; new slots
-use the two-hour gap after the last existing future reservation.
+Previously saved publication reservations keep their original deadlines; new slots
+use the four-hour gap after the last existing future reservation.
 
 A new batch appends after this channel's last recorded future slot, keeping a
-two-hour gap across batches. Other destination channels have independent queues.
+four-hour gap across batches. Other destination channels have independent queues.
 Completed replays do not consume another slot. The queue only tracks this app's
 saved records; manual changes in Studio or videos scheduled outside the app are
 not automatically synchronized.
 
 Each video and its thumbnail are uploaded and its reserved publishAt is applied
-through YouTube's built-in scheduler. YouTube handles publication; no two-hour
+through YouTube's built-in scheduler. YouTube handles publication; no four-hour
 runner wait or GitHub cron is needed. The Actions summary displays times in EAT
 (Africa/Nairobi); machine-readable receipts keep UTC timestamps.
 [YouTube requires private status for scheduling](https://developers.google.com/youtube/v3/docs/videos#status.publishAt),
@@ -145,7 +145,7 @@ so an unlisted video cannot simultaneously carry this native schedule.
 
 Future deadlines remain fixed on retries: songs are not reshuffled and accepted
 schedules are not moved. An expired, unfinished slot moves behind the remaining
-future queue (or at least two hours ahead when none remains), never to a past
+future queue (or at least four hours ahead when none remains), never to a past
 time that could publish immediately. This can leave gaps when an upload fails.
 For an uploaded video, the app checks YouTube before moving a missed slot: if
 YouTube already published it, recovery records that outcome without making the
@@ -229,7 +229,7 @@ song cursor and lyrics library. Both workflows serialize state writes; generatio
 finalizes progress *before* publishing, so upload checkpoints cannot invalidate
 the generation snapshot.
 
-- A randomized batch plan with distinct two-hour slots is saved **before** any video-upload request.
+- A randomized batch plan with distinct four-hour slots is saved **before** any video-upload request.
 - A queued record is changed to an uploading reservation before a new video insert.
 - The accepted video ID is saved before thumbnail/scheduling work.
 - Completed songs are skipped on replays, even when rendered again.

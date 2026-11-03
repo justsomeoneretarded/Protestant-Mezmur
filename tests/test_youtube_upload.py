@@ -146,7 +146,7 @@ def service(monkeypatch):
     return api
 
 
-def test_default_upload_schedules_after_two_hours_without_subtitle_tracks(folder, service):
+def test_default_upload_schedules_after_four_hours_without_subtitle_tracks(folder, service):
     store = MemoryStore()
     result = upload.upload_song(upload.load_kit(folder, "d"), service, store, CHANNEL)
     body = service.test_state["insert_args"]["body"]
@@ -156,7 +156,7 @@ def test_default_upload_schedules_after_two_hours_without_subtitle_tracks(folder
     assert service.test_state["insert_args"]["notifySubscribers"] is False
     assert service.test_state["insert_args"]["media_body"][2] is True
     assert service.thumbnails.return_value.set.call_args.kwargs["media_body"][0] == "thumbnail-d.jpg"
-    assert result["publish_at"] == "2026-11-01T14:00:00Z"
+    assert result["publish_at"] == "2026-11-01T16:00:00Z"
     schedule = service.videos.return_value.update.call_args.kwargs["body"]["status"]
     assert schedule["privacyStatus"] == "private" and schedule["publishAt"] == result["publish_at"]
     service.captions.assert_not_called()
@@ -181,7 +181,7 @@ def test_review_notes_do_not_prevent_requested_automatic_scheduling(folder, serv
     write_json(folder / "metadata.json", meta)
     result = upload.upload_song(upload.load_kit(folder), service, MemoryStore(), CHANNEL)
     assert result["review_warnings"] and not result["held_for_review"]
-    assert result["publish_at"] == "2026-11-01T14:00:00Z"
+    assert result["publish_at"] == "2026-11-01T16:00:00Z"
     assert result["privacy"] == "private"
 
 
@@ -267,7 +267,7 @@ def test_accepted_schedule_is_reconciled_after_final_checkpoint_failure(folder, 
     service.videos.return_value.update.assert_called_once()
 
 
-def test_past_failed_schedule_gets_a_fresh_two_hour_delay_not_immediate_publication(folder, service, monkeypatch):
+def test_past_failed_schedule_gets_a_fresh_four_hour_delay_not_immediate_publication(folder, service, monkeypatch):
     store, kit = MemoryStore(), upload.load_kit(folder)
     service.test_state["schedule_error"] = True
     with pytest.raises(OSError):
@@ -275,7 +275,7 @@ def test_past_failed_schedule_gets_a_fresh_two_hour_delay_not_immediate_publicat
     monkeypatch.setattr(upload, "utc_now", lambda: datetime(2026, 11, 2, 8, tzinfo=timezone.utc))
     service.test_state["schedule_error"] = False
     result = upload.upload_song(kit, service, store, CHANNEL)
-    assert result["publish_at"] == "2026-11-02T10:00:00Z" and result["privacy"] == "private"
+    assert result["publish_at"] == "2026-11-02T12:00:00Z" and result["privacy"] == "private"
     assert service.test_state["insert_count"] == 1
 
 
@@ -524,9 +524,9 @@ def test_no_subtitle_files_are_required_or_sent(folder, service):
     service.captions.assert_not_called()
 
 
-def test_default_schedule_is_exactly_two_hours_in_the_future(folder, service):
+def test_default_schedule_is_exactly_four_hours_in_the_future(folder, service):
     result = upload.upload_song(upload.load_kit(folder), service, MemoryStore(), CHANNEL)
-    assert upload.publish_time(result["publish_at"]) - upload.utc_now() == timedelta(hours=2)
+    assert upload.publish_time(result["publish_at"]) - upload.utc_now() == timedelta(hours=4)
     assert service.test_state["video"]["status"]["privacyStatus"] == "private"
 
 
@@ -537,7 +537,7 @@ def test_old_privacy_variable_cannot_silently_disable_workflow_scheduling(folder
     monkeypatch.setattr(upload, "youtube_client", lambda: service)
     monkeypatch.setattr(upload, "Store", MemoryStore)
     upload.main()
-    assert service.test_state["video"]["status"]["publishAt"] == "2026-11-01T14:00:00Z"
+    assert service.test_state["video"]["status"]["publishAt"] == "2026-11-01T16:00:00Z"
 
 
 
@@ -553,7 +553,7 @@ def make_batch(folder, ids=(22, 23, 24, 25)):
     return kits
 
 
-def test_batch_randomizes_once_and_reserves_two_hour_slots_before_upload(folder, service, monkeypatch):
+def test_batch_randomizes_once_and_reserves_four_hour_slots_before_upload(folder, service, monkeypatch):
     kits, store = make_batch(folder), MemoryStore()
     monkeypatch.setattr(upload.random, "shuffle", lambda items: items.reverse())
     planned = upload.plan_batch(kits, store, CHANNEL, "generation-123")
@@ -563,7 +563,7 @@ def test_batch_randomizes_once_and_reserves_two_hour_slots_before_upload(folder,
     for index, kit in enumerate(planned, 1):
         record = records[upload.source_key(kit, CHANNEL)]
         assert record["status"] == "queued" and record["batch_id"] == "generation-123"
-        assert upload.publish_time(record["publish_at"]) - upload.utc_now() == timedelta(hours=2 * index)
+        assert upload.publish_time(record["publish_at"]) - upload.utc_now() == timedelta(hours=4 * index)
         assert record["publish_at"] == kit["planned_publish_at"]
     service.videos.return_value.insert.assert_not_called()
     assert store.state["channels"]["42"]["last_message_id"] == 22
@@ -590,8 +590,8 @@ def test_new_batch_appends_after_existing_future_slots(folder, service, monkeypa
     first = upload.plan_batch(make_batch(folder), store, CHANNEL, "first")
     second = upload.plan_batch(make_batch(folder, (26, 27)), store, CHANNEL, "second")
     times = [upload.publish_time(kit["planned_publish_at"]) for kit in first + second]
-    assert [(value - upload.utc_now()).total_seconds() / 3600 for value in times] == [2, 4, 6, 8, 10, 12]
-    assert all(b - a == timedelta(hours=2) for a, b in zip(times, times[1:]))
+    assert [(value - upload.utc_now()).total_seconds() / 3600 for value in times] == [4, 8, 12, 16, 20, 24]
+    assert all(b - a == timedelta(hours=4) for a, b in zip(times, times[1:]))
 
 
 def test_queue_is_isolated_between_youtube_channels(folder, service):
@@ -599,7 +599,7 @@ def test_queue_is_isolated_between_youtube_channels(folder, service):
     upload.plan_batch(make_batch(folder), store, CHANNEL, "first-channel")
     other = "UC" + "b" * 22
     second = upload.plan_batch(make_batch(folder, (26, 27)), store, other, "second-channel")
-    assert upload.publish_time(second[0]["planned_publish_at"]) - upload.utc_now() == timedelta(hours=2)
+    assert upload.publish_time(second[0]["planned_publish_at"]) - upload.utc_now() == timedelta(hours=4)
 
 
 def test_completed_replay_does_not_consume_an_additional_slot(folder, service, monkeypatch):
@@ -611,7 +611,7 @@ def test_completed_replay_does_not_consume_an_additional_slot(folder, service, m
     saved = store.state["youtube_uploads"][upload.source_key(first, CHANNEL)]
     assert saved["publish_at"] == completed["publish_at"] and saved["status"] == "complete"
     new = next(kit for kit in planned if kit["message_id"] == 23)
-    assert upload.publish_time(new["planned_publish_at"]) - upload.utc_now() == timedelta(hours=4)
+    assert upload.publish_time(new["planned_publish_at"]) - upload.utc_now() == timedelta(hours=8)
 
 
 def test_expired_unstarted_slots_move_after_future_queue_without_reshuffling(folder, service, monkeypatch):
@@ -620,11 +620,11 @@ def test_expired_unstarted_slots_move_after_future_queue_without_reshuffling(fol
     first = upload.plan_batch(make_batch(folder), store, CHANNEL, "first")
     future = {kit["message_id"]: kit["planned_publish_at"] for kit in first[1:]}
     base = upload.utc_now()
-    monkeypatch.setattr(upload, "utc_now", lambda: base + timedelta(hours=3))
+    monkeypatch.setattr(upload, "utc_now", lambda: base + timedelta(hours=5))
     monkeypatch.setattr(upload.random, "shuffle", lambda _: pytest.fail("Existing queue was reshuffled"))
     retry = upload.plan_batch(first, store, CHANNEL, "retry")
     moved = next(kit for kit in retry if kit["message_id"] == first[0]["message_id"])
-    assert upload.publish_time(moved["planned_publish_at"]) - base == timedelta(hours=10)
+    assert upload.publish_time(moved["planned_publish_at"]) - base == timedelta(hours=20)
     assert all(kit["planned_publish_at"] == future[kit["message_id"]] for kit in retry
                if kit["message_id"] in future)
 
@@ -638,13 +638,13 @@ def test_partial_upload_retry_never_collides_with_later_reserved_videos(folder, 
     with pytest.raises(OSError):
         upload.upload_song(kit, service, store, CHANNEL)
     service.test_state["schedule_error"] = False
-    monkeypatch.setattr(upload, "utc_now", lambda: base + timedelta(hours=3))
+    monkeypatch.setattr(upload, "utc_now", lambda: base + timedelta(hours=5))
     # The uploaded video's outcome must be checked before moving its old deadline.
     upload.plan_batch([kit], store, CHANNEL, "retry")
     old = store.state["youtube_uploads"][upload.source_key(kit, CHANNEL)]
     assert old["publish_at"] == kit["planned_publish_at"]
     result = upload.upload_song(kit, service, store, CHANNEL)
-    assert upload.publish_time(result["publish_at"]) - base == timedelta(hours=10)
+    assert upload.publish_time(result["publish_at"]) - base == timedelta(hours=20)
     assert service.test_state["insert_count"] == 1
     assert len({r["publish_at"] for r in store.state["youtube_uploads"].values()}) == 4
 
@@ -703,7 +703,7 @@ def test_all_four_uploads_use_youtube_scheduler_and_enforce_metadata_limits(fold
     results = [upload.upload_song(kit, service, store, CHANNEL) for kit in planned]
     assert len({r["video_id"] for r in results}) == 4
     assert [upload.publish_time(r["publish_at"]) - upload.utc_now() for r in results] == [
-        timedelta(hours=h) for h in (2, 4, 6, 8)]
+        timedelta(hours=h) for h in (4, 8, 12, 16)]
     for video in service.test_state["videos"].values():
         snippet, status = video["snippet"], video["status"]
         assert len(snippet["title"]) <= 100 and len(snippet["description"].encode("utf-8")) <= 5000
@@ -721,7 +721,7 @@ def test_cli_summary_displays_publication_time_in_east_africa_time(folder, servi
     monkeypatch.setattr(upload, "youtube_client", lambda: service)
     monkeypatch.setattr(upload, "Store", MemoryStore)
     upload.main()
-    assert "2026-11-01 17:00 EAT" in summary.read_text()
+    assert "2026-11-01 19:00 EAT" in summary.read_text()
 
 
 
@@ -927,11 +927,13 @@ def test_cli_missing_playlist_fails_before_queue_planning_or_upload(folder, serv
     service.videos.return_value.insert.assert_not_called()
 
 
-def test_legacy_five_hour_reservations_stay_fixed_and_new_songs_follow_after_two_hours(folder, service, monkeypatch):
+@pytest.mark.parametrize("previous_delay,new_hours", [(2, (12, 16)), (5, (24, 28))])
+def test_legacy_reservations_stay_fixed_and_new_songs_follow_after_four_hours(
+        folder, service, monkeypatch, previous_delay, new_hours):
     kits, store = make_batch(folder), MemoryStore()
     monkeypatch.setattr(upload.random, "shuffle", lambda items: items.reverse())
     with monkeypatch.context() as legacy:
-        legacy.setattr(upload, "PUBLISH_DELAY", timedelta(hours=5))
+        legacy.setattr(upload, "PUBLISH_DELAY", timedelta(hours=previous_delay))
         original = upload.plan_batch(kits, store, CHANNEL, "legacy-batch")
     saved = copy.deepcopy(store.state["youtube_uploads"])
     retry = upload.plan_batch(list(reversed(kits)), store, CHANNEL, "retry")
@@ -939,22 +941,22 @@ def test_legacy_five_hour_reservations_stay_fixed_and_new_songs_follow_after_two
     assert store.state["youtube_uploads"] == saved
     appended = upload.plan_batch(make_batch(folder, (26, 27)), store, CHANNEL, "new-batch")
     assert [upload.publish_time(kit["planned_publish_at"]) - upload.utc_now() for kit in appended] == [
-        timedelta(hours=22), timedelta(hours=24)]
+        timedelta(hours=hours) for hours in new_hours]
     assert all(store.state["youtube_uploads"][key] == record for key, record in saved.items())
     completed = upload.upload_song(original[0], service, store, CHANNEL)
     assert completed["publish_at"] == original[0]["planned_publish_at"]
     assert service.test_state["video"]["status"]["publishAt"] == original[0]["planned_publish_at"]
 
 
-def test_multiple_expired_slots_move_after_remaining_queue_at_two_hour_intervals(folder, service, monkeypatch):
+def test_multiple_expired_slots_move_after_remaining_queue_at_four_hour_intervals(folder, service, monkeypatch):
     store = MemoryStore()
     monkeypatch.setattr(upload.random, "shuffle", lambda items: items.reverse())
     first = upload.plan_batch(make_batch(folder), store, CHANNEL, "batch")
     base = upload.utc_now()
     future = first[-1]["planned_publish_at"]
-    monkeypatch.setattr(upload, "utc_now", lambda: base + timedelta(hours=7))
+    monkeypatch.setattr(upload, "utc_now", lambda: base + timedelta(hours=13))
     monkeypatch.setattr(upload.random, "shuffle", lambda _: pytest.fail("Retry reshuffled the queue"))
     retry = upload.plan_batch(first, store, CHANNEL, "retry")
     assert [upload.publish_time(kit["planned_publish_at"]) - base for kit in retry] == [
-        timedelta(hours=h) for h in (8, 10, 12, 14)]
+        timedelta(hours=h) for h in (16, 20, 24, 28)]
     assert retry[0]["planned_publish_at"] == future
