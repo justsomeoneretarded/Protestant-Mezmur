@@ -258,7 +258,7 @@
       "completed_at": "2026-11-02T18:37:54+00:00"
     },
     "UCNSSLKyhXrG50l694M48zTQ:4335601101:40": {
-      "status": "uploaded",
+      "status": "complete",
       "message_id": 40,
       "telegram_channel_id": "4335601101",
       "youtube_channel_id": "UCNSSLKyhXrG50l694M48zTQ",
@@ -288,7 +288,9 @@
           "most_recent_upload"
         ],
         "studio_url": "https://studio.youtube.com/video/FqFEYya7hPY/editor"
-      }
+      },
+      "privacy": "private",
+      "completed_at": "2026-11-03T14:30:32+00:00"
     }
   }
 }
