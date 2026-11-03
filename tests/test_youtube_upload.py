@@ -1166,3 +1166,19 @@ def test_missing_caption_id_cannot_mark_video_complete(folder, service):
         upload.upload_song(kit, service, store, CHANNEL)
     assert store.state["youtube_uploads"][upload.source_key(kit, CHANNEL)]["status"] == "uploaded"
     service.videos.return_value.update.assert_not_called()
+
+
+def test_utf8_bom_amharic_subtitle_is_preserved_without_translating_or_retiming(folder, service):
+    data = "\ufeff1\n00:00:01,000 --> 00:00:03,000\nሃሌሉያ ክብር ለስሙ\n".encode("utf-8")
+    (folder / "subtitle.srt").write_bytes(data)
+    kit = upload.load_kit(folder)
+    assert kit["subtitle_cues"] == 1
+    result = upload.upload_song(kit, service, MemoryStore(), CHANNEL)
+    assert result["caption_language"] == "am"
+    assert (folder / "subtitle.srt").read_bytes() == data
+
+
+def test_caption_size_limit_is_checked_locally_before_network(folder, monkeypatch):
+    monkeypatch.setattr(upload, "CAPTION_MAX_BYTES", 5)
+    with pytest.raises(upload.UploadError, match="timed subtitle"):
+        upload.load_kit(folder)

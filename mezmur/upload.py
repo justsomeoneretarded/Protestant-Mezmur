@@ -144,7 +144,7 @@ def load_subtitle(folder, duration=None):
             seconds = float(duration)
             if not math.isfinite(seconds) or seconds <= 0 or max(c.end.total_seconds() for c in cues) > seconds + 0.5:
                 raise ValueError
-    except (OSError, UnicodeError, ValueError, OverflowError, srt.SRTParseError):
+    except (OSError, UnicodeError, TypeError, ValueError, OverflowError, srt.SRTParseError):
         raise UploadError("A valid UTF-8 timed subtitle.srt (or legacy captions/am.srt) is required; "
                           "use the original complete generation artifact") from None
     return {"subtitle": path.relative_to(folder).as_posix(), "subtitle_sha256": hashlib.sha256(data).hexdigest(),
