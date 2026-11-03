@@ -117,10 +117,11 @@ YouTube channel and the web, checking that the faces agree.
   runner at the same time, so 5 songs take about as long as 1 (≈ 25–35 minutes).
 - `message_ids`: remake specific songs (e.g. `2,3`) without moving your place in the channel.
 - `separator`: vocal-isolation model (default is the fast, accurate UVR-MDX-NET).
-- `rebuild_music`: **off by default**. When checked, after lyrics have been matched, replace the
-  instrumental with an experimental synthesized piano/bass/pad/percussion arrangement while keeping the
-  separated vocals on their original timeline. The separated instrumental guides rhythm/harmony,
-  while confident vocal notes constrain the new voicings. Requires vocal isolation (not `none`).
+- `rebuild_music` (**Guitar-led acoustic backing**): **off by default**. When checked, after lyrics have been matched, replace the
+  instrumental with an adaptive guitar-led acoustic arrangement while keeping the
+  separated vocals on their original timeline. The separated instrumental guides rhythm, harmony and dynamics,
+  while confident vocal notes constrain the new voicings. Guitar and bass lead; picking,
+  strumming and intensity follow the song. Other instruments enter only in supported sections. Requires vocal isolation (not `none`).
   [Quality safeguards and limitations](docs/backing-arrangement.md).
 - `upload_youtube`: automatic YouTube upload, **on by default**; uncheck for artifacts only. Requires
   `YOUTUBE_OAUTH_JSON` (secret) and `YOUTUBE_CHANNEL_ID` (variable). Uploads privately,

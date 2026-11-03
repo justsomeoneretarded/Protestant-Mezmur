@@ -130,12 +130,16 @@ def harmony_plan(samples, sr=ANALYSIS_SR, vocals=None):
     bass_chroma = librosa.feature.chroma_stft(S=spectrum ** 2, sr=sr, n_fft=8192,
                                             hop_length=HOP, tuning=tuning, norm=2)
     levels = librosa.feature.rms(y=samples, hop_length=HOP, frame_length=4096)[0]
-    frames = min(chroma.shape[1], bass_chroma.shape[1], len(levels))
+    percussion_levels = librosa.feature.rms(y=percussive, hop_length=HOP, frame_length=4096)[0]
+    voice_levels = librosa.feature.rms(y=vocals, hop_length=HOP, frame_length=4096)[0] if vocals is not None else None
+    frames = min(chroma.shape[1], bass_chroma.shape[1], len(levels), len(percussion_levels))
     chroma, bass_chroma, levels = chroma[:, :frames], bass_chroma[:, :frames], levels[:frames]
     melody = vocal_melody(vocals, sr, tuning) if vocals is not None else None
     bounds = np.unique(np.r_[0.0, beats[::2], seconds])
     reference, bass, sung, active = [], [], [], []
-    floor = max(1e-5, float(np.percentile(levels, 90)) * 0.04)
+    reference_peak = max(1e-5, float(np.percentile(levels, 90)))
+    floor = reference_peak * 0.04
+    voice_floor = max(1e-5, float(np.percentile(voice_levels, 90)) * 0.04) if voice_levels is not None else 1e-5
     for start, end in zip(bounds, bounds[1:]):
         reference.append(_mean_frames(chroma, levels, start, end, sr))
         bass.append(_mean_frames(bass_chroma, levels, start, end, sr))
@@ -169,11 +173,20 @@ def harmony_plan(samples, sr=ANALYSIS_SR, vocals=None):
         else:
             intervals, mode = [], "rest"
         local_beats = beats[(beats >= start) & (beats < end)] if active[index] else []
+        a = max(0, min(frames - 1, int(start * sr / HOP)))
+        b = max(a + 1, min(frames, int(np.ceil(end * sr / HOP))))
+        level = float(np.mean(levels[a:b]))
+        percussion = float(np.mean(percussion_levels[a:b]) / max(level, 1e-9))
+        va, vb = (min(a, len(voice_levels)), min(b, len(voice_levels))) if voice_levels is not None else (0, 0)
+        vocal_activity = float(np.mean(voice_levels[va:vb] > voice_floor)) if vb > va else 0.0
         plan.append({"start": float(start), "end": float(end), "root": int(root),
                      "minor": mode == "chord" and kind in ("minor", "minor7"),
                      "kind": kind if mode == "chord" else mode, "score": score,
                      "intervals": intervals, "mode": mode, "reliable": bool(intervals),
                      "reference_confident": mode == "chord", "beats": [float(t) for t in local_beats],
+                     "energy": float(np.clip(level / reference_peak, 0, 1)),
+                     "percussive_strength": float(np.clip(percussion, 0, 1)),
+                     "vocal_activity": vocal_activity,
                      "vocal_pitch_classes": [int(p) for p in np.flatnonzero(sung[index] >= 0.20)],
                      "vocal_pitch_weights": [float(weight) for weight in sung[index]]})
     if not any(segment["reliable"] for segment in plan):

@@ -32,6 +32,7 @@ def test_rebuild_checkbox_is_typed_opt_in_and_passed_only_when_selected():
     install = next(s for s in job["steps"] if s.get("name", "").startswith("Install backing arranger"))
     assert install["if"] == "inputs.rebuild_music == true"
     assert "fluid-soundfont-gm" in install["run"] and ".[arrange]" in install["run"]
+    assert "Guitar-led acoustic" in events["workflow_dispatch"]["inputs"]["rebuild_music"]["description"]
     render = next(s for s in job["steps"] if s.get("name", "").startswith("Make video"))
     assert render["env"]["REBUILD_MUSIC"] == "${{ inputs.rebuild_music && 'true' || 'false' }}"
     assert 'if [ "$REBUILD_MUSIC" = "true" ]; then args+=(--rebuild-music); fi' in render["run"]
@@ -108,7 +109,7 @@ def test_midi_is_new_notes_on_absolute_timeline_and_skips_unreliable_harmony(tmp
     target = tmp_path / "notes.mid"
     arrangement.write_midi(plan, target, seed=29)
     midi = pretty_midi.PrettyMIDI(str(target))
-    assert [i.program for i in midi.instruments] == [0, 32, 89]
+    assert [i.program for i in midi.instruments] == [25, 32]
     for instrument in midi.instruments:
         assert instrument.notes
         assert all(0 <= n.start < n.end <= 6.001 for n in instrument.notes)
@@ -333,8 +334,9 @@ def test_midi_supports_sparse_single_notes_percussion_and_instrument_tuning(tmp_
     target = tmp_path / "sparse.mid"
     arrangement.write_midi(plan, target, tuning_cents=-25)
     midi = pretty_midi.PrettyMIDI(str(target))
-    assert len(midi.instruments) == 4 and midi.instruments[-1].is_drum
-    for instrument in midi.instruments[:3]:
+    assert [i.program for i in midi.instruments] == [25, 32]
+    assert not any(i.is_drum for i in midi.instruments)
+    for instrument in midi.instruments:
         assert instrument.pitch_bends[0].pitch == -1024
         assert all(note.pitch % 12 == 0 and note.end <= 2.01 for note in instrument.notes)
 

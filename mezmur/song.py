@@ -448,7 +448,7 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
         render_audio = out / "rebuilt-audio.wav"
         reference = instrumental_stem(vocals, work / "instrumental-reference.wav")
         arrangement = rebuild_backing(source_audio, vocals, render_audio, work / "arrangement", seed=mid,
-                                      instrumental=reference)
+                                      instrumental=reference, cues=cues)
         write_json(out / "arrangement.json", arrangement)
         audio_processing = {"source": "rebuilt-accompaniment", "effects_applied": True,
                             "loudness_normalization": False, "vocal_timing": "original",
@@ -460,7 +460,7 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
                 review["reasons"].append("No stable vocal pitches were available; accompaniment was not validated against the melody.")
             if arrangement.get("reliable_harmony_share", 1) < 0.55:
                 review["reasons"].append("Uncertain harmony used supported open/single-note voicings or rests; review the sparse sections.")
-        notice(mid, "New backing rendered without changing vocal pitch or timing; listening review recommended")
+        notice(mid, "Guitar-led acoustic backing rendered on the original timeline; listening review recommended")
         timings["music_rebuild"] = round(time.time() - t, 1)
 
     # 7. Artist photo.
@@ -535,7 +535,8 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     if photo_credit:
         credits.insert(0, f"Photo: {photo_credit}")
     if arrangement:
-        credits.append(f"Backing arrangement: FluidSynth with {arrangement['soundfont']}; automated piano, bass, pad and light percussion.")
+        instruments = ", ".join(arrangement.get("instruments", ["guitar and bass"]))
+        credits.append(f"Backing arrangement: FluidSynth with {arrangement['soundfont']}; {instruments}.")
     review["needs_review"] = bool(review["reasons"]) or mode != "lyrics-aligned"
     if record.get("title_latin_auto") or record.get("artist_latin_auto"):
         review["reasons"].append("The romanized title/artist was generated automatically; check spelling in title.txt.")
@@ -567,7 +568,7 @@ def main():
     p.add_argument("--height", type=int, default=1080, choices=[720, 1080])
     p.add_argument("--preset", default="medium")
     p.add_argument("--rebuild-music", action="store_true",
-                   help="Experimental new backing; preserves vocal pitch/timing and requires separated vocals")
+                   help="Guitar-led acoustic backing; preserves original vocal pitch, timing and duration")
     a = p.parse_args()
     produce(a.input, a.output, a.work, a.separator, a.height, preset=a.preset, rebuild_music=a.rebuild_music)
 
