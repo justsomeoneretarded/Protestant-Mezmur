@@ -32,7 +32,8 @@ Original timing drives the new notes; vocals are not time-stretched or pitch-shi
   gain when necessary. There is no voice EQ, added hiss, echo, room effect, pitch
   change, tempo change or dynamic vocal compression.
 - The new backing is balanced below the vocals and faded at the track edges.
-  Four-times oversampled peak checks leave at least 1 dB of PCM true-peak headroom.
+  Four-times oversampled peak estimates target at least 1 dB of PCM headroom;
+  these are technical checks, not a certified loudness meter or a subjective quality score.
 - A 32-bit float WAV master is kept without lossy intermediate encodes. MP4 uses
   the existing 320 kbps AAC encoding once. Platform re-encoding is outside this tool.
 - Failed technical checks stop the job rather than falsely label the old mix as rebuilt.

@@ -183,6 +183,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends fluidsynth fluid-soundfont-gm
           pip install -e '.[arrange]'
+          python -c "from transformers import AutoProcessor, AutoModelForCTC; import cv2, librosa, pretty_midi, soundfile; print('backing/render imports OK')"
       - name: Install vocal separator (isolated)
         if: (inputs.separator || 'UVR-MDX-NET-Voc_FT.onnx') != 'none'
         run: |
