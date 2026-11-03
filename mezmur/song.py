@@ -22,7 +22,7 @@ from .features import analyze
 from .geez import fold, romanize
 from .lyrics_sources import gather, identity_evidence, youtube_titles
 from .lyrics_text import all_lines, line_repeats, line_stanzas, similarity, stanzas_text
-from .separate import separate
+from .separate import instrumental_stem, separate
 from .subtitles import build_cues, write_ass, write_srt
 from .visuals import Renderer, Source, render_video
 from .youtube import write_kit
@@ -446,7 +446,9 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     if rebuild_music:
         t = time.time()
         render_audio = out / "rebuilt-audio.wav"
-        arrangement = rebuild_backing(source_audio, vocals, render_audio, work / "arrangement", seed=mid)
+        reference = instrumental_stem(vocals, work / "instrumental-reference.wav")
+        arrangement = rebuild_backing(source_audio, vocals, render_audio, work / "arrangement", seed=mid,
+                                      instrumental=reference)
         write_json(out / "arrangement.json", arrangement)
         audio_processing = {"source": "rebuilt-accompaniment", "effects_applied": True,
                             "loudness_normalization": False, "vocal_timing": "original",
@@ -528,7 +530,7 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     if photo_credit:
         credits.insert(0, f"Photo: {photo_credit}")
     if arrangement:
-        credits.append(f"Backing arrangement: FluidSynth with {arrangement['soundfont']}; automated piano, bass and pad.")
+        credits.append(f"Backing arrangement: FluidSynth with {arrangement['soundfont']}; automated piano, bass, pad and light percussion.")
     review["needs_review"] = bool(review["reasons"]) or mode != "lyrics-aligned"
     if record.get("title_latin_auto") or record.get("artist_latin_auto"):
         review["reasons"].append("The romanized title/artist was generated automatically; check spelling in title.txt.")

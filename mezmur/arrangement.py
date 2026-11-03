@@ -10,16 +10,11 @@ import soundfile as sf
 from scipy.signal import resample_poly
 
 from .audio import read_audio
-from .common import duration as audio_duration
+from .common import duration as audio_duration, write_json
+from .harmony import ANALYSIS_SR, ArrangementError, harmony_plan
 
-ANALYSIS_SR = 22050
-HOP = 512
 PEAK_LIMIT = 10 ** (-1.0 / 20)
 DEFAULT_SOUNDFONT = Path("/usr/share/sounds/sf2/FluidR3_GM.sf2")
-
-
-class ArrangementError(RuntimeError):
-    """The requested arrangement cannot be produced without violating a technical quality check."""
 
 
 def soundfont_path():
@@ -29,79 +24,33 @@ def soundfont_path():
     return path
 
 
-def harmony_plan(samples, sr=ANALYSIS_SR):
-    import librosa
-
-    samples = np.asarray(samples, dtype=np.float32)
-    if samples.ndim != 1 or not np.isfinite(samples).all() or len(samples) < sr * 4:
-        raise ArrangementError("Backing analysis needs at least four seconds of finite mono audio")
-    if np.sqrt(np.mean(samples ** 2)) < 1e-5:
-        raise ArrangementError("The recording is silent; cannot infer a backing arrangement")
-    harmonic, percussive = librosa.effects.hpss(samples)
-    onset = librosa.onset.onset_strength(y=percussive, sr=sr, hop_length=HOP)
-    tempo, beats = librosa.beat.beat_track(onset_envelope=onset, sr=sr, hop_length=HOP,
-                                          trim=False, units="time")
-    tempo = float(np.asarray(tempo).ravel()[0])
-    seconds = len(samples) / sr
-    beats = np.asarray(beats, dtype=float)
-    beats = beats[(beats > 0) & (beats < seconds)]
-    if not np.isfinite(tempo) or not 35 <= tempo <= 240 or len(beats) < 4:
-        raise ArrangementError("No usable beat timeline was detected; the original vocals will not be time-stretched")
-    bounds = np.unique(np.r_[0.0, beats[::2], seconds])
-    chroma = librosa.feature.chroma_stft(y=harmonic, sr=sr, hop_length=HOP, n_fft=4096, norm=2)
-    levels = librosa.feature.rms(y=harmonic, hop_length=HOP, frame_length=4096)[0]
-    frames = min(chroma.shape[1], len(levels))
-    chroma, levels = chroma[:, :frames], levels[:frames]
-    observations, active = [], []
-    for start, end in zip(bounds, bounds[1:]):
-        a = min(frames - 1, int(start * sr / HOP))
-        b = max(a + 1, min(frames, int(np.ceil(end * sr / HOP))))
-        weights = levels[a:b]
-        vector = np.average(chroma[:, a:b], axis=1, weights=weights + 1e-12)
-        observations.append(vector / max(np.linalg.norm(vector), 1e-12))
-        active.append(float(weights.mean()) > max(1e-5, float(np.percentile(levels, 90)) * 0.04))
-    observations = np.asarray(observations).T
-    templates = np.zeros((24, 12))
-    for state in range(24):
-        root, minor = state % 12, state >= 12
-        templates[state, [(root + interval) % 12 for interval in (0, 3 if minor else 4, 7)]] = 1 / np.sqrt(3)
-    scores = templates @ observations
-    # The library decoder discourages implausibly rapid chord switching; weak sections stay unscored.
-    probabilities = np.exp(10 * (scores - scores.max(axis=0, keepdims=True)))
-    transition = np.full((24, 24), 0.18 / 23)
-    np.fill_diagonal(transition, 0.82)
-    states = librosa.sequence.viterbi(probabilities, transition)
-    chosen = scores[states, np.arange(len(states))]
-    active = np.asarray(active, dtype=bool)
-    reliable = active & (chosen >= 0.60)
-    lengths = np.diff(bounds)
-    share = float(lengths[reliable].sum() / max(lengths[active].sum(), 1e-9))
-    if not active.any() or share < 0.55:
-        raise ArrangementError("Too little stable harmonic evidence for a backing rebuild; use the original-audio mode")
-    plan = [{"start": float(start), "end": float(end), "root": int(state % 12),
-             "minor": bool(state >= 12), "score": float(score), "reliable": bool(ok)}
-            for start, end, state, score, ok in zip(bounds, bounds[1:], states, chosen, reliable)]
-    return plan, {"tempo_bpm": round(tempo, 2), "beat_count": len(beats),
-                  "reliable_harmony_share": round(share, 4),
-                  "harmony_score_is_accuracy": False}
-
-
-def write_midi(plan, target, seed=0):
+def write_midi(plan, target, seed=0, tuning_cents=0.0):
     import pretty_midi
 
     midi = pretty_midi.PrettyMIDI(initial_tempo=120, resolution=960)
     piano = pretty_midi.Instrument(program=0, name="New piano arrangement")
     bass = pretty_midi.Instrument(program=32, name="New acoustic bass")
     pad = pretty_midi.Instrument(program=89, name="New warm pad")
+    drums = pretty_midi.Instrument(program=0, is_drum=True, name="New light percussion")
     rng = np.random.default_rng(seed)
     for segment in plan:
         start, end = segment["start"], segment["end"]
+        for index, beat in enumerate(segment.get("beats", [])):
+            stop = min(end, beat + 0.06)
+            if stop > beat:
+                drums.notes.append(pretty_midi.Note(velocity=34, pitch=42, start=beat, end=stop))
+                if index == 0:
+                    drums.notes.append(pretty_midi.Note(velocity=42, pitch=36, start=beat, end=stop))
         if not segment["reliable"] or end - start < 0.12:
             continue
         root = segment["root"]
-        intervals = (0, 3 if segment["minor"] else 4, 7) if segment["score"] >= 0.78 else (0, 7)
+        intervals = segment.get("intervals")
+        if intervals is None:
+            intervals = (0, 3 if segment["minor"] else 4, 7) if segment["score"] >= 0.78 else (0, 7)
+        if not intervals:
+            continue
         pitches = [48 + root + interval for interval in intervals]
-        pattern = [0, len(pitches) - 1, 1, len(pitches) - 1]
+        pattern = [0, len(pitches) - 1, min(1, len(pitches) - 1), len(pitches) - 1]
         if rng.integers(2):
             pattern = pattern[::-1]
         for index, degree in enumerate(pattern):
@@ -112,7 +61,13 @@ def write_midi(plan, target, seed=0):
         bass.notes.append(pretty_midi.Note(velocity=52, pitch=36 + root, start=start, end=end))
         for pitch in pitches:
             pad.notes.append(pretty_midi.Note(velocity=30, pitch=pitch + 12, start=start, end=end))
-    midi.instruments = [piano, bass, pad]
+    bend = int(np.clip(round(float(tuning_cents) / 200 * 8192), -8192, 8191))
+    for instrument in (piano, bass, pad):
+        # Explicit two-semitone pitch-bend range; tune the new instruments, never the singer.
+        for number, value in ((101, 0), (100, 0), (6, 2), (38, 0), (101, 127), (100, 127)):
+            instrument.control_changes.append(pretty_midi.ControlChange(number, value, 0))
+        instrument.pitch_bends.append(pretty_midi.PitchBend(bend, 0))
+    midi.instruments = [piano, bass, pad] + ([drums] if drums.notes else [])
     if not piano.notes:
         raise ArrangementError("No reliable notes were available to synthesize")
     midi.write(str(target))
@@ -155,7 +110,7 @@ def mix_tracks(vocals, backing, sr):
                    "vocal_offset_samples": 0, "vocal_pitch_shift_semitones": 0, "vocal_tempo_factor": 1.0}
 
 
-def rebuild(source, vocals, target, work, seed=0):
+def rebuild(source, vocals, target, work, seed=0, instrumental=None):
     source, vocals, target, work = map(Path, (source, vocals, target, work))
     if target.resolve() in (source.resolve(), vocals.resolve()):
         raise ArrangementError("Rebuilt audio must not overwrite the source recording or vocal stem")
@@ -176,9 +131,19 @@ def rebuild(source, vocals, target, work, seed=0):
     voice = np.pad(voice[:expected], ((0, max(0, expected - len(voice))), (0, 0)))
     if voice.shape[1] == 1:
         voice = np.repeat(voice, 2, axis=1)
-    plan, report = harmony_plan(read_audio(source, ANALYSIS_SR))
+    if instrumental is None:
+        raise ArrangementError("A separated instrumental reference is required for hybrid rebuilding")
+    reference_path = Path(instrumental)
+    if reference_path.resolve() in (source.resolve(), vocals.resolve(), target.resolve()):
+        raise ArrangementError("Harmony analysis needs a separate instrumental stem, not the original mix or vocals")
+    reference = read_audio(reference_path, ANALYSIS_SR)
+    melody = read_audio(vocals, ANALYSIS_SR)
+    plan, report = harmony_plan(reference, vocals=melody)
+    write_json(target.parent / "arrangement-plan.json", {
+        "analysis_sources": {"rhythm": "separated instrumental", "harmony": "separated instrumental",
+                             "melody": "separated vocals"}, "segments": plan, "report": report})
     midi = target.parent / "arrangement.mid"
-    write_midi(plan, midi, seed=seed)
+    write_midi(plan, midi, seed=seed, tuning_cents=report["tuning_cents"])
     instrumental = work / "instrumental.wav"
     render_instrumental(midi, instrumental, font, sr)
     backing, backing_sr = sf.read(instrumental, dtype="float32", always_2d=True)
@@ -200,7 +165,10 @@ def rebuild(source, vocals, target, work, seed=0):
             "sample_rate": sr, "vocal_stem_format": stem_format, "samples": expected, "duration_seconds": expected / sr,
             "soundfont": font.name, "master_format": "32-bit float WAV",
             "original_recording_unchanged": True, "original_instrumental_reused": False,
-            "instruments": ["piano", "acoustic bass", "warm pad"],
+            "analysis_sources": {"rhythm": "separated instrumental", "harmony": "separated instrumental",
+                                 "melody": "separated vocals"},
+            "analysis_instrumental": reference_path.name,
+            "instruments": ["piano", "acoustic bass", "warm pad", "light percussion"],
             "warnings": ["Vocal separation can leave artifacts or instrumental bleed.",
                          "Automatic harmony is an estimate and requires listening review.",
                          "A rebuilt arrangement does not guarantee a different acoustic fingerprint or grant music rights."]}

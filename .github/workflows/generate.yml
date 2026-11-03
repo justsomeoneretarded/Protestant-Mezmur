@@ -266,6 +266,7 @@ jobs:
             output/song-${{ matrix.id }}/youtube.json
             output/song-${{ matrix.id }}/metadata.json
             output/song-${{ matrix.id }}/arrangement.json
+            output/song-${{ matrix.id }}/arrangement-plan.json
             output/song-${{ matrix.id }}/arrangement.mid
             output/song-${{ matrix.id }}/arrangement-license.txt
             output/song-${{ matrix.id }}/rebuilt-audio.wav
