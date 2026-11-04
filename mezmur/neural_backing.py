@@ -16,6 +16,7 @@ from .harmony import ANALYSIS_SR, ArrangementError, ROUGH_INTERVALS
 
 MODEL_NAME = "acestep-v15-turbo-Q8_0"
 ENGINE_COMMIT = "de858d8e1a94f0e1939cf9bdd8ff7d9631953077"
+MODEL_REVISION = "666ac70204440867d8c01ba4b119cc79c95b370a"
 MODEL_FILES = ("Qwen3-Embedding-0.6B-Q8_0.gguf", MODEL_NAME + ".gguf", "vae-BF16.gguf")
 DEFAULT_STYLE = (
     "Instrumental Ethiopian gospel worship band. Expressive melodic bass guitar, soulful piano and warm electric "
@@ -31,7 +32,7 @@ def engine_root():
         manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
         raise ArrangementError("AI backing is not installed; run scripts/setup_ai_backing.py") from None
-    if manifest.get("engine_commit") != ENGINE_COMMIT:
+    if manifest.get("engine_commit") != ENGINE_COMMIT or manifest.get("model_revision") != MODEL_REVISION:
         raise ArrangementError("AI engine version differs from the tested build; rerun scripts/setup_ai_backing.py")
     if not (root / "source/build/ace-synth").is_file() or any(not (root / "models" / name).is_file() for name in MODEL_FILES):
         raise ArrangementError("AI backing installation is incomplete; rerun scripts/setup_ai_backing.py")

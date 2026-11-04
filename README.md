@@ -114,16 +114,18 @@ YouTube channel and the web, checking that the faces agree.
 
 **Actions → Generate Mezmur Videos → Run workflow**
 
-- `batch_size`: how many new songs (oldest unprocessed first). Each song renders on its own free
-  runner at the same time, so 5 songs take about as long as 1 (≈ 25–35 minutes).
+- `batch_size`: how many new songs (oldest unprocessed first). Original-soundtrack jobs
+  render in parallel; AI backing runs at most three songs at once and takes longer.
 - `message_ids`: remake specific songs (e.g. `2,3`) without moving your place in the channel.
 - `separator`: vocal-isolation model (default is the fast, accurate UVR-MDX-NET).
-- `rebuild_music` (**Guitar-led acoustic backing**): **off by default**. When checked, after lyrics have been matched, replace the
-  instrumental with an adaptive guitar-led acoustic arrangement while keeping the
-  separated vocals on their original timeline. The separated instrumental guides rhythm, harmony and dynamics,
-  while confident vocal notes constrain the new voicings. Guitar and bass lead; picking,
-  strumming and intensity follow the song. Other instruments enter only in supported sections. Requires vocal isolation (not `none`).
-  [Quality safeguards and limitations](docs/backing-arrangement.md).
+- `rebuild_music` (**AI worship band backing**): **off by default**. After matching lyrics, generate
+  a source-conditioned ACE-Step instrumental with expressive bass, keys, restrained drums,
+  pads and occasional guitar responses, replacing the old repeating MIDI strumming.
+  The original instrumental supplies musical context; vocal-note checks help rank candidates.
+  The singer's pitch, tempo and timing stay unchanged. CPU-only, no paid API, approximately
+  3.7 GB of cached weights; substantially slower than the original-audio path. Requires a separator
+  (not `none`). Start with one song and Upload unticked.
+  [Quality safeguards, style customization and limitations](docs/backing-arrangement.md).
 - `upload_youtube`: automatic YouTube upload, **on by default**; uncheck for artifacts only. Requires
   `YOUTUBE_OAUTH_JSON` (secret) and `YOUTUBE_CHANNEL_ID` (variable). Uploads privately,
   then uses YouTube's built-in scheduler with randomized four-hour slots: four
@@ -132,7 +134,8 @@ YouTube channel and the web, checking that the faces agree.
   Automatic uploads choose portrait thumbnail B (or D when configured); all four
   designs remain downloadable. Each uploaded video is added to your existing **Mezmurs** playlist automatically.
   The run summary links to Studio for the manual **Best for viewer** and **Most recent upload** end-screen elements;
-  the public YouTube Data API cannot create these clickable elements. Subtitle tracks are never uploaded.
+  the public YouTube Data API cannot create these clickable elements. The timed Amharic-only
+  `subtitle.srt` is uploaded automatically with the video.
   Titles, descriptions and tags are automatically
   limited before upload; saved video IDs prevent duplicates.
   [Setup, visibility settings and retry without rendering](docs/youtube-upload.md).
@@ -141,7 +144,8 @@ noise, reverb, room-space effects or loudness normalization. Compatible AAC/MP3
 streams are copied into the MP4; other formats receive AAC encoding only.
 In this default mode vocal isolation is used only for recognition, never as the final soundtrack.
 When rebuilding is enabled, the kit also contains a lossless `rebuilt-audio.wav`,
-`arrangement.mid`, `arrangement.json` and `arrangement-plan.json`. The master is encoded to AAC once for MP4;
+`arrangement.json`, `arrangement-plan.json` and an `ai-backing/` diagnostics/license folder.
+The new engine produces audio, not a fabricated MIDI transcription. The master is encoded to AAC once for MP4;
 YouTube can re-encode again. Automatic arrangements and separated vocals need listening review. Historical workflow reruns use their old code;
 start a fresh run on main to use this path.
 
