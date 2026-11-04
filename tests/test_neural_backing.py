@@ -232,3 +232,39 @@ def test_success_exit_without_a_readable_wav_is_a_rejected_candidate_not_a_crash
     assert not fake_ai["target"].exists()
     records = json.loads((fake_ai["target"].parent / "ai-backing/candidate-report.json").read_text())["candidates"]
     assert len(records) == 2 and all(record["rejected"] for record in records)
+
+
+def test_single_strength_true_cover_outputs_that_version_without_auto_selection(fake_ai):
+    report = neural_backing.compose(fake_ai["reference"], fake_ai["target"], fake_ai["work"], [], {},
+                                    fake_ai["sr"], 32, task_type="cover", cover_strengths=(0.5,),
+                                    keep_instrumentals=True)
+    assert len(fake_ai["calls"]["requests"]) == 2
+    assert all(request["task_type"] == "cover" and request["audio_cover_strength"] == 0.5
+               for request in fake_ai["calls"]["requests"])
+    assert report["cover_strengths"] == [0.5] and report["candidates_per_phrase"] == 1
+    assert report["source_fit_checks_enforced"]
+    assert (fake_ai["target"].parent / "ai-backing/before-vocal-cleanup.wav").is_file()
+    assert (fake_ai["target"].parent / "ai-backing/after-vocal-cleanup.wav").is_file()
+
+
+def test_full_song_listening_mode_flags_fit_concerns_without_rejecting_requested_version(fake_ai, monkeypatch):
+    monkeypatch.setattr(neural_backing, "assess_candidate", lambda *a, **k: {
+        "source_harmony_affinity": 0.25, "obvious_harmonic_drift": True, "selection_score": 0.25})
+    report = neural_backing.compose(fake_ai["reference"], fake_ai["target"], fake_ai["work"], [], {},
+                                    fake_ai["sr"], 32, task_type="cover", cover_strengths=(0.35,),
+                                    enforce_source_fit=False)
+    assert not report["source_fit_checks_enforced"]
+    assert report["cleanup_harmony_metrics"]["obvious_harmonic_drift"]
+    assert sf.info(fake_ai["target"]).frames == 32 * fake_ai["sr"]
+
+
+@pytest.mark.parametrize("settings", [
+    {"task_type": "text2music"}, {"cover_strengths": ()}, {"cover_strengths": (0,)},
+    {"cover_strengths": (1.1,)}, {"cover_strengths": (float("nan"),)},
+    {"cover_strengths": (0.5, 0.4, 0.3)},
+])
+def test_invalid_experimental_settings_fail_before_engine_loading(tmp_path, monkeypatch, settings):
+    monkeypatch.setattr(neural_backing, "engine_root", lambda: pytest.fail("Invalid settings reached model loading"))
+    with pytest.raises(ArrangementError):
+        neural_backing.compose(tmp_path / "reference.wav", tmp_path / "output.wav",
+                               tmp_path / "work", [], {}, 44100, 30, **settings)

@@ -1,0 +1,147 @@
+name: Full song 40 cover experiment - 50 and 35
+on:
+  push:
+    branches: [feat/neural-worship-band]
+    paths: ['.github/workflows/_full-song-trial.yml', 'scripts/_full_song_trial.py']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  validate:
+    name: Validate experimental API and existing regressions
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Native test dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg fluidsynth fluid-soundfont-gm
+          pip install -e '.[test,upload,arrange]' opencv-python-headless==4.10.0.84
+      - name: Validate workflow syntax
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 -shellcheck= -pyflakes= .github/workflows/*.yml
+      - run: pytest -q
+
+  prepare:
+    name: Prepare complete original voice, instrumental and lyrics
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      MEZMUR_MODEL_CACHE: ${{ github.workspace }}/.model-cache
+      OMP_NUM_THREADS: '4'
+      OPENBLAS_NUM_THREADS: '4'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          pip install -e '.[arrange]' srt
+      - uses: actions/cache/restore@v4
+        with:
+          path: .model-cache
+          key: mezmur-models-v3-UVR-MDX-NET-Voc_FT.onnx
+          restore-keys: mezmur-models-v3-
+      - name: Isolated separator
+        run: |
+          python -m venv "$RUNNER_TEMP/sep"
+          "$RUNNER_TEMP/sep/bin/pip" install -q torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu
+          "$RUNNER_TEMP/sep/bin/pip" install -q "audio-separator[cpu]>=0.39"
+          "$RUNNER_TEMP/sep/bin/pip" cache purge || true
+          echo "AUDIO_SEPARATOR_BIN=$RUNNER_TEMP/sep/bin/audio-separator" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: '41649241077'
+          name: inputs-41649241077
+          path: inputs
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: '41649241077'
+          name: mezmur-40-run41649241077
+          path: old-kit
+      - name: Preserve original performance and caption clock
+        run: python scripts/_full_song_trial.py --prepare
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prepared-full-song-40-${{ github.run_id }}
+          path: prepared/
+          retention-days: 1
+          compression-level: 0
+
+  versions:
+    name: Full song - ${{ matrix.strength }}
+    needs: [validate, prepare]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        strength: ['050', '035']
+    env:
+      MEZMUR_MODEL_CACHE: ${{ github.workspace }}/.model-cache
+      OMP_NUM_THREADS: '4'
+      OPENBLAS_NUM_THREADS: '4'
+      MEZMUR_BACKING_STYLE: Instrumental live gospel-soul quartet. Prominent expressive bass guitar with melodic connecting phrases, warm Rhodes electric piano with rich chord inversions and answering fills, Hammond organ swells, a light acoustic drum kit with brushed snare and tasteful tom fills. A spacious, intimate live performance with clear phrase endings, rests and dynamic movement. Follow the source harmonic movement and groove. Instrumental.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Native audio, generator and analysis dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg libopenblas-dev cmake g++
+          pip install -e '.[arrange]'
+      - uses: actions/cache/restore@v4
+        with:
+          path: .model-cache
+          key: mezmur-models-v3-UVR-MDX-NET-Voc_FT.onnx
+          restore-keys: mezmur-models-v3-
+      - name: Isolated cleanup separator
+        run: |
+          python -m venv "$RUNNER_TEMP/sep"
+          "$RUNNER_TEMP/sep/bin/pip" install -q torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu
+          "$RUNNER_TEMP/sep/bin/pip" install -q "audio-separator[cpu]>=0.39"
+          "$RUNNER_TEMP/sep/bin/pip" cache purge || true
+          echo "AUDIO_SEPARATOR_BIN=$RUNNER_TEMP/sep/bin/audio-separator" >> "$GITHUB_ENV"
+      - uses: actions/cache/restore@v4
+        with:
+          path: .ai-backing
+          key: ai-band-cpp-de858d8-666ac70-linux-x64
+      - name: Check pinned generator and weight hashes
+        run: python scripts/setup_ai_backing.py
+      - uses: actions/download-artifact@v4
+        with:
+          name: prepared-full-song-40-${{ github.run_id }}
+          path: prepared
+      - name: Build complete vocal mix and lyric-video copy
+        run: python scripts/_full_song_trial.py --strength "${{ matrix.strength }}"
+      - name: Keep complete output and diagnostics, never credentials
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: complete-song-40-cover-${{ matrix.strength }}
+          path: |
+            output/**/*.mp3
+            output/**/*.flac
+            output/**/*.mp4
+            output/**/*.srt
+            output/**/*.json
+            output/**/*.log
+            output/**/*.txt
+          if-no-files-found: warn
+          retention-days: 3
+          compression-level: 0

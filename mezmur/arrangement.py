@@ -65,7 +65,8 @@ def mix_tracks(vocals, backing, sr, backing_db=-10.0):
 
 
 def rebuild(source, vocals, target, work, seed=0, instrumental=None, cues=(), engine="midi",
-            separator_model=None):
+            separator_model=None, ai_task_type="cover-nofsq", ai_cover_strengths=(0.8, 1.0),
+            ai_enforce_source_fit=True, keep_instrumentals=False):
     source, vocals, target, work = map(Path, (source, vocals, target, work))
     if target.resolve() in (source.resolve(), vocals.resolve()):
         raise ArrangementError("Rebuilt audio must not overwrite the source recording or vocal stem")
@@ -106,7 +107,9 @@ def rebuild(source, vocals, target, work, seed=0, instrumental=None, cues=(), en
         from .neural_backing import compose
         performance = compose(reference_path, synthesized, work / "ai", plan, report, sr, expected / sr,
                               cues=cues, seed=seed, diagnostics=target.parent / "ai-backing",
-                              separator_model=separator_model)
+                              separator_model=separator_model, task_type=ai_task_type,
+                              cover_strengths=ai_cover_strengths, enforce_source_fit=ai_enforce_source_fit,
+                              keep_instrumentals=keep_instrumentals)
         sections = plan
     else:
         midi = target.parent / "arrangement.mid"

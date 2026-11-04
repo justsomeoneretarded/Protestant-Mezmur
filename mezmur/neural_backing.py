@@ -156,11 +156,18 @@ def blend_weights(windows, index, sr, beats=(), bpm=0):
 
 
 def compose(reference_path, target, work, plan, analysis, sr, duration, cues=(), seed=0, diagnostics=None,
-            separator_model=None):
+            separator_model=None, task_type="cover-nofsq", cover_strengths=(0.8, 1.0),
+            enforce_source_fit=True, keep_instrumentals=False):
     """Generate a fresh instrumental in coherent phrases, crossfaded at original-time positions."""
     reference_path, target, work = map(Path, (reference_path, target, work))
     if reference_path.resolve() == target.resolve():
         raise ArrangementError("AI output must not overwrite the original instrumental reference")
+    if task_type not in ("cover", "cover-nofsq"):
+        raise ArrangementError("Only source-conditioned cover tasks are allowed")
+    if (not isinstance(cover_strengths, (tuple, list)) or not 1 <= len(cover_strengths) <= 2
+            or any(not isinstance(value, (int, float)) or not math.isfinite(value) or not 0 < value <= 1
+                   for value in cover_strengths)):
+        raise ArrangementError("Supply one or two finite source strengths between zero and one")
     root, manifest = engine_root()
     work.mkdir(parents=True, exist_ok=True)
     diagnostics = Path(diagnostics) if diagnostics is not None else target.parent / "ai-backing"
@@ -189,14 +196,14 @@ def compose(reference_path, target, work, plan, analysis, sr, duration, cues=(),
         padded = np.pad(source, ((0, max(0, sr * 10 - len(source))), (0, 0)))
         sf.write(source_path, padded, sr, subtype="FLOAT")
         candidates = []
-        for attempt in range(2):
+        for attempt, strength in enumerate(cover_strengths):
             if time.monotonic() - started > 180 * 60:
                 raise ArrangementError("AI composition exceeded its three-hour budget; no MIDI loop fallback was used")
             request = diagnostics / f"chunk-{index:03}-candidate-{attempt}.json"
-            params = {"task_type": "cover-nofsq", "lyrics": "[Instrumental]", "caption": style,
+            params = {"task_type": task_type, "lyrics": "[Instrumental]", "caption": style,
                       "bpm": int(round(analysis.get("tempo_bpm", 0))), "duration": len(padded) / sr,
                       "seed": (int(seed) + attempt * 104729) % 2**32, "inference_steps": 8,
-                      "synth_batch_size": 1, "audio_cover_strength": 0.80 if attempt == 0 else 1.0,
+                      "synth_batch_size": 1, "audio_cover_strength": float(strength),
                       "cover_noise_strength": 0.0, "output_format": "wav32", "peak_clip": 0,
                       "synth_model": MODEL_NAME + ".gguf"}
             write_json(request, params)
@@ -218,7 +225,7 @@ def compose(reference_path, target, work, plan, analysis, sr, duration, cues=(),
                     audio = resample_poly(audio, sr // divisor, rate // divisor)
                 audio = np.pad(audio[:b - a], ((0, max(0, b - a - len(audio))), (0, 0)))
                 metrics = assess_candidate(audio, source, sr, plan, offset=start)
-                if metrics["obvious_harmonic_drift"] or metrics["source_harmony_affinity"] < 0.30:
+                if enforce_source_fit and (metrics["obvious_harmonic_drift"] or metrics["source_harmony_affinity"] < 0.30):
                     raise ArrangementError("AI accompaniment did not retain enough source harmony/timing")
                 candidates.append((metrics["selection_score"], audio, metrics, attempt))
                 records.append({"chunk": index, "candidate": attempt, "rejected": False, **metrics})
@@ -250,6 +257,10 @@ def compose(reference_path, target, work, plan, analysis, sr, duration, cues=(),
     if len(result) != expected or not np.isfinite(result).all():
         raise ArrangementError("AI phrase stitching failed the original-duration lock")
     sf.write(target, result, sr, subtype="FLOAT")
+    if keep_instrumentals:
+        sf.write(diagnostics / "before-vocal-cleanup.wav", result, sr, subtype="FLOAT")
+    write_json(diagnostics / "candidate-report.json", {"candidates": records, "cleanup_pending": True,
+                                                      "source_fit_checks_enforced": enforce_source_fit})
     # Remove any synthesized singing/bleed from the new backing only; never reprocess the real singer.
     from .separate import instrumental_stem, separate
     cleanup_work = work / "vocal-cleanup"
@@ -263,10 +274,13 @@ def compose(reference_path, target, work, plan, analysis, sr, duration, cues=(),
     if not np.isfinite(clean_audio).all() or float(np.sqrt(np.mean(clean_audio ** 2))) < 1e-5:
         raise ArrangementError("AI instrumental cleanup produced invalid/silent music")
     cleanup_metrics = assess_candidate(clean_audio, reference, sr, plan)
-    if cleanup_metrics["obvious_harmonic_drift"] or cleanup_metrics["source_harmony_affinity"] < 0.30:
+    if enforce_source_fit and (cleanup_metrics["obvious_harmonic_drift"] or cleanup_metrics["source_harmony_affinity"] < 0.30):
         raise ArrangementError("Generated-vocal cleanup lost too much accompaniment; no original music was substituted")
     sf.write(target, clean_audio, sr, subtype="FLOAT")
-    write_json(diagnostics / "candidate-report.json", {"candidates": records, "cleanup_metrics": cleanup_metrics})
+    if keep_instrumentals:
+        sf.write(diagnostics / "after-vocal-cleanup.wav", clean_audio, sr, subtype="FLOAT")
+    write_json(diagnostics / "candidate-report.json", {"candidates": records, "cleanup_metrics": cleanup_metrics,
+                                                      "source_fit_checks_enforced": enforce_source_fit})
     write_json(diagnostics / "model-manifest.json", manifest)
     if (root / "model-license.txt").is_file():
         shutil.copy2(root / "model-license.txt", diagnostics / "model-license.txt")
@@ -275,8 +289,11 @@ def compose(reference_path, target, work, plan, analysis, sr, duration, cues=(),
     return {"arrangement_style": "source-conditioned-ai-worship-band", "engine": "ACE-Step 1.5 / acestep.cpp",
             "engine_commit": manifest["engine_commit"], "model_revision": manifest["model_revision"],
             "model_name": MODEL_NAME, "instruments": ["AI worship band (prompt-guided, not guaranteed isolated stems)"],
-            "source_conditioning": "separated original instrumental, raw VAE cover context",
-            "vocal_waveform_enters_model": False, "generated_vocal_cleanup": True, "phrase_count": len(windows), "candidates_per_phrase": 2,
+            "source_conditioning": ("separated original instrumental, FSQ semantic cover context" if task_type == "cover"
+                                    else "separated original instrumental, raw VAE cover context"),
+            "task_type": task_type, "cover_strengths": list(cover_strengths),
+            "source_fit_checks_enforced": enforce_source_fit,
+            "vocal_waveform_enters_model": False, "generated_vocal_cleanup": True, "phrase_count": len(windows), "candidates_per_phrase": len(cover_strengths),
             "ai_generation_seconds": round(time.monotonic() - started, 2), "instrumental_prompt": style,
             "candidate_metrics_are_accuracy": False, "cleanup_harmony_metrics": cleanup_metrics, "no_midi_loop_fallback": True, "context_overlap_seconds": 4.0,
             "crossfade_max_seconds": 0.35, "crossfade_alignment": "original beat when available"}
