@@ -1,110 +1,124 @@
-# Optional Guitar-Led Acoustic Arrangement
+# Optional AI Worship Band Backing
 
-Check **Guitar-led acoustic backing** in Generate Mezmur Videos to enable this mode.
-It remains off by default. Unchecked runs use the original soundtrack and do
-not invoke separation of a paired instrumental or the backing arranger.
+Check **AI worship band backing** in Generate Mezmur Videos. The saved input key is
+still `rebuild_music`, off by default. Unchecked runs retain the original soundtrack.
+The checked workflow now uses **ACE-Step 1.5 through acestep.cpp**, not the old
+repeating MIDI/SoundFont guitar performer. No paid generation service, API key or
+GPU is required. CPU generation is substantially slower than GPU generation.
+
+## What Changed Musically
+
+The old performer restarted a small guitar pattern at each two-beat harmony section.
+A stronger section could therefore become continuous down/up strumming, while bass
+mostly repeated roots and fifths. Adding instruments to that loop did not make it
+a skilled composer.
+
+The new model generates an audio-conditioned instrumental arrangement: expressive
+bass guitar, piano/electric piano, restrained live drums, pads and occasional guitar
+responses. The prompt asks for breathing verses, wider choruses, breaks and fills,
+not constant strumming. These are generation instructions, not guaranteed isolated
+instrument stems or a promise of Suno-equivalent quality.
+
+[The Muser](https://github.com/noah-chelednik/the-muser) orchestrates multiple models;
+it is not itself a replacement audio model. Its ACE-Step route is relevant, but its
+full LLM/voice stack is unnecessary here. We use the smaller native ACE-Step runtime
+directly, without adding a singer generator, voice conversion or a generic text-only
+song underneath an existing performance.
 
 ## Processing Order
 
-1. Isolate vocals and retain the actual paired instrumental. Multi-stem Demucs
-   outputs are combined without vocals when no paired instrumental is provided.
-2. Search, verify and complete lyrics against the original vocal timeline.
-   Existing word/line gap-filling and subtitle timestamps are unchanged.
-3. Analyze the separated instrumental for beats, tuned chroma and bass evidence.
-4. Extract confident, stable vocal pitches with pYIN. Use these as conservative
-   constraints on accompaniment, not as a replacement for the instrumental map.
-5. Generate guitar-led acoustic accompaniment and bass on the original beat grid.
-   Quiet passages use fingerpicking; supported stronger passages use strumming.
-   Lyric verse/chorus cues, source dynamics and vocal activity guide the performance.
-   Repeated sections reuse their motifs instead of random pattern changes.
-   Guitar voicings use the standard six-string range and bounded fret spans.
-   Piano accents are reserved for confirmed vocal gaps; pads and light percussion
-   enter only in supported energetic sections. Guitar and bass remain the foundation.
-   Tune new instruments to the estimated recording tuning, never the singer.
-6. Mix the new instrumental with the full-resolution vocal stem and render video.
-   Every MIDI note is bounded by the source endpoint. Synthesizer release tails
-   are trimmed, or short backing renders end-padded, to the original sample count.
-   Vocals are never padded to match an extended instrumental.
+1. Separate the original singer and paired instrumental in float WAV.
+2. Search, verify and complete lyrics on the original performance. The burned-in
+   lyrics and Amharic-only `subtitle.srt` retain that same clock.
+3. Analyze the actual instrumental for rhythm/harmony and the singer for stable
+   pitch evidence. This analysis also supplies the BPM and candidate-ranking checks.
+4. Pass **only the separated original instrumental** to ACE-Step's raw-source
+   `cover-nofsq` mode. The real singer is never sent through the generation model.
+   Source audio supplies the musical context; this is not an unrelated generated
+   chord progression or guitar layered over the original full mix.
+5. Generate two candidates for each long coherent phrase, normally at most
+   48 seconds, rather than restarting at every chord. Source context strength is
+   0.8 and 1.0. Both use the same instrumental-only style and deterministic song seed.
+6. Compare source harmonic affinity and a conservative vocal-clash proxy. Reject
+   invalid/silent outputs, material duration changes, very weak harmonic retention
+   and identifiable large harmonic displacement. These metrics are **not**
+   musical-taste scores, pitch accuracy percentages or a guarantee of a good arrangement.
+   Where fit scores are close and vocal compatibility is comparable, prefer the
+   0.8-strength candidate's greater stylistic freedom over a near-source reconstruction.
+7. Place selected phrases at their original absolute times. Four seconds of shared
+   context help continuity, but only a short, original-beat-aligned blend (at most
+   0.35 seconds) mixes two backings, avoiding four seconds of doubled drum grooves.
+   Short final tails remain part of a longer phrase. A sub-ten-second
+   input is padded only for the model and trimmed back afterward; no bars are appended.
+8. Separate any synthesized singing/bleed out of the assembled new backing using
+   the selected separator. This can also affect instrumental timbre and requires review.
+   The real singer is not reprocessed here.
+9. Mix the untouched original vocal stem with the new instrumental at a target
+   7 dB lower whole-track RMS. Apply constant master headroom gain if necessary.
+   Never shift/stretch/pitch-correct the singer. The original instrumental is not
+   copied into the final mix; separation can still leave bleed inside the vocal stem.
 
-The original instrumental is used for analysis only, never mixed into the final
-soundtrack. Separation can still leave instrumental bleed in the vocal stem.
-No paid API, GPU or new model weights are needed.
+The generator can still make poor musical choices, drift, ignore an instrument
+request or produce separation artifacts. Start with **one song and Upload unticked**.
+Listen to the result before scheduling it. A failed AI pass does **not** silently
+substitute the original accompaniment or the previous MIDI loop.
 
-## Harmony and Uncertainty
+## Actions Runtime and Reproducibility
 
-Instrumental CQT chroma and bass evidence propose major, minor, seventh,
-suspended and open-fifth harmonies. Library Viterbi decoding smooths the
-progression. Confident sustained vocal notes discourage semitone/tritone
-conflicts; low-confidence frames and passing pitches do not automatically
-override the instrumental.
+The workflow builds the pinned MIT-licensed
+[acestep.cpp](https://github.com/ServeurpersoCom/acestep.cpp) revision
+`de858d8e1a94f0e1939cf9bdd8ff7d9631953077` with CPU/BLAS support.
 
-Full chords are used only where supported and compatible with the observed
-melody. Weak regions use supported open fifths or single-note accompaniment;
-regions without usable evidence stay unpitched. There is no longer a global
-55% major/minor-template cutoff that rejects an otherwise usable arrangement.
-This is a different uncertainty policy, not a claim of improved calibrated
-accuracy or guaranteed pleasant music.
+It downloads only three public
+[ACE-Step GGUF weights](https://huggingface.co/Serveurperso/ACE-Step-1.5-GGUF):
+Q8 text encoder, Q8 2B turbo DiT, and BF16 VAE, approximately **3.7 GB combined**.
+The model snapshot and each SHA-256 are pinned and checked. There is no LLM,
+RVC voice conversion, external inference service, or model training. Files are
+cached in `.ai-backing/`; the cache is ignored by Git.
 
-The arrangement is adaptive, not an unchanged guitar loop. A source with repeated
-harmony can retain those repetitions; variation is driven by sections and energy,
-not arbitrary chord changes. Guitar is synthesized with the existing FluidR3
-steel-string patch, not a newly recorded human guitarist.
+CPU work can add significant time per song; generation has a three-hour budget,
+with a 45-minute per-candidate subprocess timeout. These are failure limits, not
+runtime or quality guarantees. AI batches run at most three songs in parallel.
+The existing video job remains bounded by its overall Actions timeout.
 
-The system does not infer every musical intention, chord inversion or meter.
-pYIN can struggle with choirs, bleed and ornamented/microtonal singing. Pitch
-checks are conservative heuristics; intentional dissonance may be simplified.
-The report records stable vocal-frame counts and whether vocal constraints had
-usable evidence. Listen before publishing.
+To customize the sound, optionally set repository variable `MEZMUR_BACKING_STYLE`
+(up to 1500 characters), for example a more acoustic worship-band description.
+The source reference and instrumental-only lyrics token remain in force.
+An empty variable uses the band prompt above. No secret or extra setup is needed.
 
-## Technical Safeguards
+For local use, install the project's `arrange` dependencies and system
+`cmake`, `g++`, OpenBLAS and FFmpeg, then run:
 
-- Checked mode retains both stems and refuses a missing instrumental; the full
-  original mix cannot silently masquerade as an isolated instrumental.
-- The selected separator is honored without automatic model-quality fallbacks.
-  RoFormer retains its default overlap in rebuild mode.
-- Floating-point stem export is used. Unsupported/low-precision stems,
-  invalid/silent audio and mismatched stem timelines fail explicitly.
-- Original vocal pitch and timing are retained. Mixing uses constant headroom
-  gain only; no vocal EQ, added hiss, reverb, echo or dynamic compression.
-- The new backing stays below the singer and fades at track edges.
-- Four-times oversampled peak checks target at least 1 dB of PCM headroom.
-- The master is float WAV with no lossy intermediate encodes. MP4 encodes AAC
-  once; YouTube may re-encode afterward.
-- Ordered, finite MIDI sections and notes are required. Invalid/out-of-range
-  timing data fail before synthesis instead of silently extending the song.
-- The lossless master is locked to the original sample count. MP4 frame/AAC
-  packet quantization can differ by a small fraction of a second, not added
-  musical bars or a synthesizer tail. Both paths have native duration tests.
-- Original recording integrity is checked. Captions remain on the original
-  timeline even when the new backing has different instrumental patterns.
+```bash
+python scripts/setup_ai_backing.py
+```
 
-Lossless export cannot fix separation artifacts, wrong musical inference or
-unnatural instrument performance. These are technical safeguards, not a
-guarantee of studio quality. Review warnings do not disable automatic YouTube
-uploads. For the first trial, select one song and uncheck uploading.
+The old MIDI helper remains callable by Python for regression comparisons;
+the workflow checkbox no longer selects it.
 
-## Outputs
+## Technical Safeguards and Outputs
 
-- `video.mp4`: lyric video with the selected new soundtrack.
-- `rebuilt-audio.wav`: float WAV master for listening.
-- `arrangement.mid`: generated instrumental notes and tuning.
-- `arrangement.json`: rhythm/harmony/melody evidence, mix gains, zero vocal
-  offset/pitch shift, sample count and peak checks.
-- `arrangement-plan.json`: per-section voicings, confidence mode, observed vocal
-  pitch classes, guitar string/fret voicings, playing styles, dynamics and original beat timestamps.
-- `arrangement-license.txt`: installed FluidR3 copyright notice.
+- Float stems and a float WAV master; no lossy intermediate soundtrack.
+- Original vocal offset zero, pitch shift zero, tempo factor one.
+- Constant headroom adjustment only on the singer, with four-times oversampled
+  peak checks targeting at least 1 dB of PCM headroom.
+- Exact original output sample count. AI padding, overlapping phrases and release
+  tails never extend the video. MP4 can differ by ordinary frame/AAC quantization.
+- Only the final master is encoded once to AAC for MP4; YouTube can re-encode again.
+- `rebuilt-audio.wav`: final listening master.
+- `arrangement.json`: model/engine revisions, prompt, analysis, zero vocal movement,
+  duration lock, mix gains and peak checks.
+- `arrangement-plan.json`: source rhythm/harmony and vocal pitch evidence, not a
+  claim that every model-generated note follows that plan.
+- `ai-backing/`: candidate requests, native logs, selection diagnostics, pinned
+  model manifest and license. No MIDI is fabricated for an audio-generation model.
 
-The implementation uses librosa 0.11 (HPSS, CQT, pYIN and Viterbi), pretty_midi,
-FluidSynth and the MIT-licensed FluidR3 GM SoundFont. The SF2 can be changed
-locally using `MEZMUR_SOUNDFONT`; respect its license.
+The original audio and lyric timestamps are not rewritten. Upload remains an
+independent checkbox; when enabled, the existing caption upload, playlist placement
+and four-hour native YouTube queue still apply. Historical workflow reruns retain
+their old code; start a fresh run from `main`.
 
 Use only recordings and songs you have permission to rearrange and publish.
-Changing the backing does not remove rights in the vocal recording, melody or
-lyrics, or guarantee avoiding acoustic fingerprinting / Content ID.
-The upload ledger still prevents duplicate posting of the same Telegram song.
-
-The workflow input key remains `rebuild_music` for saved/reusable workflow compatibility,
-but its visible checkbox now selects this acoustic arranger, not the previous
-piano-led pattern generator. Start a fresh workflow on `main`; historical reruns
-use their original code. The independent `upload_youtube` checkbox remains checked
-by default and can be unchecked for test generations.
+Open model licensing does not grant rights in an existing singer's recording,
+melody or lyrics. A replacement backing does not guarantee a different acoustic
+fingerprint, Content ID avoidance or monetization.

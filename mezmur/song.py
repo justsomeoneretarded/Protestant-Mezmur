@@ -4,6 +4,7 @@ input folder (written by `mezmur.fetch`):  audio.*, info.json, telegram.json, ph
 output folder: video.mp4, thumbnails, captions, lyrics, YouTube upload kit, diagnostics.
 """
 import argparse
+import gc
 import json
 import re
 import os
@@ -445,11 +446,14 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     audio_processing = {"source": "original", "effects_applied": False, "loudness_normalization": False,
                         "encoding": "AAC/MP3 stream copy when supported; otherwise AAC encoding only"}
     if rebuild_music:
+        # Alignment is finished; free the CTC weights before native AI synthesis on a 16 GB runner.
+        asr.load_model.cache_clear()
+        gc.collect()
         t = time.time()
         render_audio = out / "rebuilt-audio.wav"
         reference = instrumental_stem(vocals, work / "instrumental-reference.wav")
         arrangement = rebuild_backing(source_audio, vocals, render_audio, work / "arrangement", seed=mid,
-                                      instrumental=reference, cues=cues)
+                                      instrumental=reference, cues=cues, engine="ace-step", separator_model=separator)
         write_json(out / "arrangement.json", arrangement)
         audio_processing = {"source": "rebuilt-accompaniment", "effects_applied": True,
                             "loudness_normalization": False, "vocal_timing": "original",
@@ -460,8 +464,8 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
             if not arrangement.get("vocal_conflicts_checked"):
                 review["reasons"].append("No stable vocal pitches were available; accompaniment was not validated against the melody.")
             if arrangement.get("reliable_harmony_share", 1) < 0.55:
-                review["reasons"].append("Uncertain harmony used supported open/single-note voicings or rests; review the sparse sections.")
-        notice(mid, "Guitar-led acoustic backing rendered on the original timeline; listening review recommended")
+                review["reasons"].append("Source harmony estimates were uncertain; review the AI accompaniment against the singer.")
+        notice(mid, "Source-conditioned AI worship band rendered on the original timeline; listening review recommended")
         timings["music_rebuild"] = round(time.time() - t, 1)
 
     # 7. Artist photo.
@@ -536,8 +540,11 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     if photo_credit:
         credits.insert(0, f"Photo: {photo_credit}")
     if arrangement:
-        instruments = ", ".join(arrangement.get("instruments", ["guitar and bass"]))
-        credits.append(f"Backing arrangement: FluidSynth with {arrangement['soundfont']}; {instruments}.")
+        if arrangement.get("engine"):
+            credits.append(f"AI instrumental arrangement: {arrangement['engine']}; original singer retained.")
+        else:
+            instruments = ", ".join(arrangement.get("instruments", ["guitar and bass"]))
+            credits.append(f"Backing arrangement: FluidSynth with {arrangement['soundfont']}; {instruments}.")
     review["needs_review"] = bool(review["reasons"]) or mode != "lyrics-aligned"
     if record.get("title_latin_auto") or record.get("artist_latin_auto"):
         review["reasons"].append("The romanized title/artist was generated automatically; check spelling in title.txt.")
@@ -569,7 +576,7 @@ def main():
     p.add_argument("--height", type=int, default=1080, choices=[720, 1080])
     p.add_argument("--preset", default="medium")
     p.add_argument("--rebuild-music", action="store_true",
-                   help="Guitar-led acoustic backing; preserves original vocal pitch, timing and duration")
+                   help="Source-conditioned AI worship band; preserves original vocal pitch, timing and duration")
     a = p.parse_args()
     produce(a.input, a.output, a.work, a.separator, a.height, preset=a.preset, rebuild_music=a.rebuild_music)
 
