@@ -114,18 +114,9 @@ YouTube channel and the web, checking that the faces agree.
 
 **Actions → Generate Mezmur Videos → Run workflow**
 
-- `batch_size`: how many new songs (oldest unprocessed first). Original-soundtrack jobs
-  render in parallel; AI backing runs at most three songs at once and takes longer.
+- `batch_size`: how many new songs (oldest unprocessed first). Videos render in parallel.
 - `message_ids`: remake specific songs (e.g. `2,3`) without moving your place in the channel.
 - `separator`: vocal-isolation model (default is the fast, accurate UVR-MDX-NET).
-- `rebuild_music` (**AI worship band backing**): **off by default**. After matching lyrics, generate
-  a source-conditioned ACE-Step instrumental with expressive bass, keys, restrained drums,
-  pads and occasional guitar responses, replacing the old repeating MIDI strumming.
-  The original instrumental supplies musical context; vocal-note checks help rank candidates.
-  The singer's pitch, tempo and timing stay unchanged. CPU-only, no paid API, approximately
-  3.7 GB of cached weights; substantially slower than the original-audio path. Requires a separator
-  (not `none`). Start with one song and Upload unticked.
-  [Quality safeguards, style customization and limitations](docs/backing-arrangement.md).
 - `upload_youtube`: automatic YouTube upload, **on by default**; uncheck for artifacts only. Requires
   `YOUTUBE_OAUTH_JSON` (secret) and `YOUTUBE_CHANNEL_ID` (variable). Uploads privately,
   then uses YouTube's built-in scheduler with randomized four-hour slots: four
@@ -139,15 +130,12 @@ YouTube channel and the web, checking that the faces agree.
   Titles, descriptions and tags are automatically
   limited before upload; saved video IDs prevent duplicates.
   [Setup, visibility settings and retry without rendering](docs/youtube-upload.md).
-With `rebuild_music` unchecked, the rendered soundtrack is the **original recording**, with no pitch, tempo,
-noise, reverb, room-space effects or loudness normalization. Compatible AAC/MP3
-streams are copied into the MP4; other formats receive AAC encoding only.
-In this default mode vocal isolation is used only for recognition, never as the final soundtrack.
-When rebuilding is enabled, the kit also contains a lossless `rebuilt-audio.wav`,
-`arrangement.json`, `arrangement-plan.json` and an `ai-backing/` diagnostics/license folder.
-The new engine produces audio, not a fabricated MIDI transcription. The master is encoded to AAC once for MP4;
-YouTube can re-encode again. Automatic arrangements and separated vocals need listening review. Historical workflow reruns use their old code;
-start a fresh run on main to use this path.
+The rendered soundtrack is the **original recording**, with no music composition,
+pitch or tempo changes, noise, reverb, room-space effects or loudness normalization.
+Compatible AAC/MP3 streams are copied into the MP4; other formats receive AAC encoding only.
+Vocal isolation is used only to recognize and time the lyrics, never as the final soundtrack.
+Music rebuilding and its model setup are not part of this workflow.
+Historical workflow reruns use their old code; start a fresh run on main to use this path.
 
 When it finishes, open the run and download each `mezmur-<message id>-run…` artifact
 (kept 3 days — download it before then). It holds only what you upload. Anything to check before publishing (for example

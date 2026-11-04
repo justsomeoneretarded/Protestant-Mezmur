@@ -1,10 +1,12 @@
-# Optional AI Worship Band Backing
+# Archived AI Worship Band Experiment
 
-Check **AI worship band backing** in Generate Mezmur Videos. The saved input key is
-still `rebuild_music`, off by default. Unchecked runs retain the original soundtrack.
-The checked workflow now uses **ACE-Step 1.5 through acestep.cpp**, not the old
-repeating MIDI/SoundFont guitar performer. No paid generation service, API key or
-GPU is required. CPU generation is substantially slower than GPU generation.
+Music rebuilding is no longer available in **Generate Mezmur Videos**. The normal
+workflow always uses the original recording, with no composition or audio effects.
+It does not install or download the AI backing generator.
+
+The experimental implementation is retained for development only. The sections
+below describe the former optional backing design, not the current Run workflow
+form. No experimental branch has been merged as part of this change.
 
 ## What Changed Musically
 
