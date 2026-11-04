@@ -332,6 +332,28 @@
       },
       "privacy": "private",
       "completed_at": "2026-11-03T22:25:01+00:00"
+    },
+    "UCNSSLKyhXrG50l694M48zTQ:4335601101:45": {
+      "status": "queued",
+      "message_id": 45,
+      "telegram_channel_id": "4335601101",
+      "youtube_channel_id": "UCNSSLKyhXrG50l694M48zTQ",
+      "requested_visibility": "public",
+      "held_for_review": false,
+      "batch_id": "41867670238",
+      "queued_at": "2026-11-04T16:57:08+00:00",
+      "publish_at": "2026-11-04T20:57:08Z"
+    },
+    "UCNSSLKyhXrG50l694M48zTQ:4335601101:42": {
+      "status": "queued",
+      "message_id": 42,
+      "telegram_channel_id": "4335601101",
+      "youtube_channel_id": "UCNSSLKyhXrG50l694M48zTQ",
+      "requested_visibility": "public",
+      "held_for_review": false,
+      "batch_id": "41867670238",
+      "queued_at": "2026-11-04T16:57:08+00:00",
+      "publish_at": "2026-11-05T00:57:08Z"
     }
   }
 }
