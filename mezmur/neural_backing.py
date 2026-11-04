@@ -232,9 +232,10 @@ def compose(reference_path, target, work, plan, analysis, sr, duration, cues=(),
             raise ArrangementError(f"Neither AI candidate passed phrase {index + 1}; inspect ai-backing logs, "
                                    "no original music or repeating MIDI loop was substituted")
         best_score = max(candidate[0] for candidate in candidates)
-        lowest_clash = min(candidate[2].get("vocal_clash_proxy", 0) for candidate in candidates)
-        suitable = [candidate for candidate in candidates if candidate[0] >= best_score - 0.10
-                    and candidate[2].get("vocal_clash_proxy", 0) <= lowest_clash + 0.05]
+        source_compatible = [candidate for candidate in candidates if candidate[0] >= best_score - 0.10]
+        lowest_clash = min(candidate[2].get("vocal_clash_proxy", 0) for candidate in source_compatible)
+        suitable = [candidate for candidate in source_compatible
+                    if candidate[2].get("vocal_clash_proxy", 0) <= lowest_clash + 0.05]
         # Among musically compatible candidates, favor more prompt freedom over a near-source reconstruction.
         _, selected, metrics, attempt = min(suitable, key=lambda item: item[3])
         beats = [beat for part in plan for beat in part.get("beats", ())]
@@ -251,7 +252,9 @@ def compose(reference_path, target, work, plan, analysis, sr, duration, cues=(),
     sf.write(target, result, sr, subtype="FLOAT")
     # Remove any synthesized singing/bleed from the new backing only; never reprocess the real singer.
     from .separate import instrumental_stem, separate
-    generated_voice = separate(target, work / "vocal-cleanup", model=separator_model, require_vocals=True)
+    cleanup_work = work / "vocal-cleanup"
+    cleanup_work.mkdir(parents=True, exist_ok=True)
+    generated_voice = separate(target, cleanup_work, model=separator_model, require_vocals=True)
     cleaned = instrumental_stem(generated_voice, work / "cleaned-instrumental.wav")
     clean_audio, clean_sr = sf.read(cleaned, dtype="float32", always_2d=True)
     if clean_sr != sr or clean_audio.shape[1] != 2 or abs(len(clean_audio) - expected) > sr * 0.15:

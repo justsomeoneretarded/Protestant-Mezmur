@@ -22,7 +22,9 @@ source = out / "comparison-original.wav"
 subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-i",
                 str(next(Path("old-kit").rglob("comparison-original.mp3"))), "-t", "44.913",
                 "-ar", "44100", "-ac", "2", "-c:a", "pcm_f32le", str(source)], check=True)
-voice = separate(source, work / "original-separation", require_vocals=True)
+separation_work = work / "original-separation"
+separation_work.mkdir(parents=True, exist_ok=True)
+voice = separate(source, separation_work, require_vocals=True)
 reference = instrumental_stem(voice, work / "original-instrumental.wav")
 audio, sr = sf.read(source, dtype="float32", always_2d=True)
 before = {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in (source, voice, reference)}

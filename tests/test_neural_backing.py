@@ -68,6 +68,7 @@ def fake_ai(monkeypatch, tmp_path):
         "selection_score": float(audio.mean()) * 2, "score_is_musical_quality": False})
 
     def clean_voice(source, work, **kwargs):
+        assert work.is_dir(), "The native separator requires its working directory to exist"
         calls["cleanup"].append((source, kwargs))
         return source
 
@@ -209,3 +210,15 @@ def test_style_freedom_wins_over_near_copy_when_harmony_scores_are_close(fake_ai
                            fake_ai["sr"], 32)
     audio = sf.read(fake_ai["target"])[0]
     assert np.allclose(audio, 0.1, atol=1e-6)
+
+
+def test_conflicting_source_and_vocal_rankings_never_leave_an_empty_candidate_set(fake_ai, monkeypatch):
+    monkeypatch.setattr(neural_backing, "assess_candidate", lambda audio, *a, **k: {
+        "source_harmony_affinity": 0.9 if audio.mean() < 0.15 else 0.6,
+        "vocal_clash_proxy": 0.2 if audio.mean() < 0.15 else 0.0,
+        "obvious_harmonic_drift": False,
+        "selection_score": 0.9 if audio.mean() < 0.15 else 0.6})
+    report = neural_backing.compose(fake_ai["reference"], fake_ai["target"], fake_ai["work"], [], {},
+                                    fake_ai["sr"], 32)
+    assert report["phrase_count"] == 2
+    assert len(sf.read(fake_ai["target"])[0]) == 32 * fake_ai["sr"]
