@@ -26,29 +26,25 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends ffmpeg libopenblas-dev cmake g++
           pip install -e '.[arrange]'
-      - uses: actions/cache@v4
+      - uses: actions/cache/restore@v4
+        id: ai_cache
         with:
           path: .ai-backing
           key: ai-band-cpp-de858d8-666ac70-linux-x64
       - name: Build pinned CPU generator and verify weights
+        id: ai_setup
         run: python scripts/setup_ai_backing.py
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/save@v4
+        if: steps.ai_cache.outputs.cache-hit != 'true'
         with:
-          path: .model-cache
-          key: mezmur-models-v3-UVR-MDX-NET-Voc_FT.onnx
-          restore-keys: mezmur-models-v3-
-      - name: Isolated separator
-        run: |
-          python -m venv "$RUNNER_TEMP/sep"
-          "$RUNNER_TEMP/sep/bin/pip" install -q torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu
-          "$RUNNER_TEMP/sep/bin/pip" install -q "audio-separator[cpu]>=0.39"
-          echo "AUDIO_SEPARATOR_BIN=$RUNNER_TEMP/sep/bin/audio-separator" >> "$GITHUB_ENV"
+          path: .ai-backing
+          key: ai-band-cpp-de858d8-666ac70-linux-x64
       - uses: actions/download-artifact@v4
         with:
           github-token: ${{ github.token }}
-          run-id: '41737296948'
-          name: acoustic-song40-listening-and-timing-kit
-          path: old-kit
+          run-id: '41743167377'
+          name: ai-worship-band-listening-probe
+          path: probe-source
       - name: Probe actual neural cover with unchanged real vocal
         run: python scripts/_probe_ai_band.py
       - uses: actions/upload-artifact@v4

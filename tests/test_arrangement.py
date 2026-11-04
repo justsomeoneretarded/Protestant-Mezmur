@@ -31,8 +31,9 @@ def test_rebuild_checkbox_is_typed_opt_in_and_passed_only_when_selected():
     job = doc["jobs"]["song"]
     install = next(s for s in job["steps"] if s.get("name", "").startswith("Install backing arranger"))
     assert install["if"] == "inputs.rebuild_music == true"
-    assert "fluid-soundfont-gm" in install["run"] and ".[arrange]" in install["run"]
-    assert "Guitar-led acoustic" in events["workflow_dispatch"]["inputs"]["rebuild_music"]["description"]
+    assert "setup_ai_backing.py" in install["run"] and ".[arrange]" in install["run"]
+    assert "fluid-soundfont-gm" not in install["run"]
+    assert "AI worship band" in events["workflow_dispatch"]["inputs"]["rebuild_music"]["description"]
     render = next(s for s in job["steps"] if s.get("name", "").startswith("Make video"))
     assert render["env"]["REBUILD_MUSIC"] == "${{ inputs.rebuild_music && 'true' || 'false' }}"
     assert 'if [ "$REBUILD_MUSIC" = "true" ]; then args+=(--rebuild-music); fi' in render["run"]

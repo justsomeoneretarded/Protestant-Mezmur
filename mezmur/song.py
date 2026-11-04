@@ -449,7 +449,7 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
         render_audio = out / "rebuilt-audio.wav"
         reference = instrumental_stem(vocals, work / "instrumental-reference.wav")
         arrangement = rebuild_backing(source_audio, vocals, render_audio, work / "arrangement", seed=mid,
-                                      instrumental=reference, cues=cues)
+                                      instrumental=reference, cues=cues, engine="ace-step", separator_model=separator)
         write_json(out / "arrangement.json", arrangement)
         audio_processing = {"source": "rebuilt-accompaniment", "effects_applied": True,
                             "loudness_normalization": False, "vocal_timing": "original",
@@ -460,8 +460,8 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
             if not arrangement.get("vocal_conflicts_checked"):
                 review["reasons"].append("No stable vocal pitches were available; accompaniment was not validated against the melody.")
             if arrangement.get("reliable_harmony_share", 1) < 0.55:
-                review["reasons"].append("Uncertain harmony used supported open/single-note voicings or rests; review the sparse sections.")
-        notice(mid, "Guitar-led acoustic backing rendered on the original timeline; listening review recommended")
+                review["reasons"].append("Source harmony estimates were uncertain; review the AI accompaniment against the singer.")
+        notice(mid, "Source-conditioned AI worship band rendered on the original timeline; listening review recommended")
         timings["music_rebuild"] = round(time.time() - t, 1)
 
     # 7. Artist photo.
@@ -536,8 +536,11 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     if photo_credit:
         credits.insert(0, f"Photo: {photo_credit}")
     if arrangement:
-        instruments = ", ".join(arrangement.get("instruments", ["guitar and bass"]))
-        credits.append(f"Backing arrangement: FluidSynth with {arrangement['soundfont']}; {instruments}.")
+        if arrangement.get("engine"):
+            credits.append(f"AI instrumental arrangement: {arrangement['engine']}; original singer retained.")
+        else:
+            instruments = ", ".join(arrangement.get("instruments", ["guitar and bass"]))
+            credits.append(f"Backing arrangement: FluidSynth with {arrangement['soundfont']}; {instruments}.")
     review["needs_review"] = bool(review["reasons"]) or mode != "lyrics-aligned"
     if record.get("title_latin_auto") or record.get("artist_latin_auto"):
         review["reasons"].append("The romanized title/artist was generated automatically; check spelling in title.txt.")

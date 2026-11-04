@@ -13,8 +13,12 @@ import requests
 ENGINE_REPO = "https://github.com/ServeurpersoCom/acestep.cpp.git"
 ENGINE_COMMIT = "de858d8e1a94f0e1939cf9bdd8ff7d9631953077"
 MODEL_REPO = "Serveurperso/ACE-Step-1.5-GGUF"
-MODEL_REVISION = "666ac70"
-MODEL_FILES = ("Qwen3-Embedding-0.6B-Q8_0.gguf", "acestep-v15-turbo-Q8_0.gguf", "vae-BF16.gguf")
+MODEL_REVISION = "666ac70204440867d8c01ba4b119cc79c95b370a"
+MODEL_FILES = {
+    "Qwen3-Embedding-0.6B-Q8_0.gguf": "972f23255e46adfe744a0eb9a0039f3c63988f65753b0968d776e8b27168c321",
+    "acestep-v15-turbo-Q8_0.gguf": "288f708a61cfc241013a98a62f98ba331f83fe34d0d3559acdd9b0f6a2f7cd6b",
+    "vae-BF16.gguf": "0599862ac5d15cd308e1d2e368373aea6c02e25ebd1737ad4a4562a0901b0ef8",
+}
 
 
 def sha256(path):
@@ -40,20 +44,15 @@ def install(root):
                     "-DGGML_BLAS=ON", "-DGGML_NATIVE=OFF"], check=True)
     subprocess.run(["cmake", "--build", str(build), "--target", "ace-synth", "-j",
                     str(min(4, os.cpu_count() or 2))], check=True)
-    response = requests.get(f"https://huggingface.co/api/models/{MODEL_REPO}/revision/{MODEL_REVISION}",
-                            params={"blobs": "true"}, timeout=60)
-    response.raise_for_status()
-    info = response.json()
-    manifest = {"engine_commit": ENGINE_COMMIT, "model_repo": MODEL_REPO, "model_revision": info["sha"], "files": {}}
-    siblings = {item["rfilename"]: item for item in info["siblings"]}
-    for name in MODEL_FILES:
-        expected = siblings[name]["lfs"]["sha256"]
+    manifest = {"engine_commit": ENGINE_COMMIT, "model_repo": MODEL_REPO,
+                "model_revision": MODEL_REVISION, "files": {}}
+    for name, expected in MODEL_FILES.items():
         path = models / name
         if not path.is_file() or sha256(path) != expected:
             for attempt in range(3):
                 partial = path.with_suffix(".partial")
                 try:
-                    with requests.get(f"https://huggingface.co/{MODEL_REPO}/resolve/{info['sha']}/{name}",
+                    with requests.get(f"https://huggingface.co/{MODEL_REPO}/resolve/{MODEL_REVISION}/{name}",
                                       stream=True, timeout=(30, 300)) as download:
                         download.raise_for_status()
                         with partial.open("wb") as handle:
@@ -71,7 +70,7 @@ def install(root):
         manifest["files"][name] = {"sha256": expected, "bytes": path.stat().st_size}
         print(f"Verified AI weights: {name}", flush=True)
     license_response = requests.get(
-        f"https://huggingface.co/{MODEL_REPO}/resolve/{info['sha']}/LICENSE", timeout=60)
+        f"https://huggingface.co/{MODEL_REPO}/resolve/{MODEL_REVISION}/LICENSE", timeout=60)
     license_response.raise_for_status()
     (root / "model-license.txt").write_text(license_response.text, encoding="utf-8")
     (root / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")

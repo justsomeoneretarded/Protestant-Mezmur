@@ -35,7 +35,7 @@ on:
         type: boolean
         default: true
       rebuild_music:
-        description: Guitar-led acoustic backing (adaptive guitar and bass; preserves vocals and video length)
+        description: AI worship band backing (ACE-Step; expressive bass, follows source, keeps singer and timing)
         type: boolean
         default: false
   push:
@@ -144,13 +144,15 @@ jobs:
     timeout-minutes: 300
     strategy:
       fail-fast: false
-      max-parallel: 10
+      max-parallel: ${{ inputs.rebuild_music && 3 || 10 }}
       matrix:
         id: ${{ fromJSON(needs.fetch.outputs.ids) }}
     env:
       PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
       PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
       OMP_NUM_THREADS: '4'
+      OPENBLAS_NUM_THREADS: '4'
+      MEZMUR_BACKING_STYLE: ${{ vars.MEZMUR_BACKING_STYLE }}
       LYRICS_CHANNELS: ${{ vars.LYRICS_CHANNELS }}
       MEZMUR_DEBUG: ${{ inputs.diagnostics && '1' || inputs.debug }}
     steps:
@@ -177,13 +179,19 @@ jobs:
           pip install torch==2.5.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cpu
           pip install -e '.[render]'
           python -c "from transformers import AutoProcessor, AutoModelForCTC; import cv2, onnxruntime; print('render env OK')"
+      - uses: actions/cache@v4
+        if: inputs.rebuild_music == true
+        with:
+          path: .ai-backing
+          key: ai-band-cpp-de858d8-666ac70-linux-x64
       - name: Install backing arranger (only when enabled)
         if: inputs.rebuild_music == true
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends fluidsynth fluid-soundfont-gm
+          sudo apt-get install -y --no-install-recommends libopenblas-dev cmake g++
           pip install -e '.[arrange]'
-          python -c "from transformers import AutoProcessor, AutoModelForCTC; import cv2, librosa, pretty_midi, soundfile; print('backing/render imports OK')"
+          python scripts/setup_ai_backing.py
+          python -c "from transformers import AutoProcessor, AutoModelForCTC; import cv2, librosa, soundfile; print('AI backing/render imports OK')"
       - name: Install vocal separator (isolated)
         if: (inputs.separator || 'UVR-MDX-NET-Voc_FT.onnx') != 'none'
         run: |
@@ -268,8 +276,7 @@ jobs:
             output/song-${{ matrix.id }}/metadata.json
             output/song-${{ matrix.id }}/arrangement.json
             output/song-${{ matrix.id }}/arrangement-plan.json
-            output/song-${{ matrix.id }}/arrangement.mid
-            output/song-${{ matrix.id }}/arrangement-license.txt
+            output/song-${{ matrix.id }}/ai-backing/
             output/song-${{ matrix.id }}/rebuilt-audio.wav
             output/song-${{ matrix.id }}/lyrics.txt
             output/song-${{ matrix.id }}/lyrics.romanized.txt

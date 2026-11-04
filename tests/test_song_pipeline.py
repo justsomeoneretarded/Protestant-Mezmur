@@ -207,6 +207,7 @@ def test_music_rebuild_runs_only_after_original_lyric_alignment_and_keeps_captio
         assert original == calls["source"] and vocals == calls["vocals"]
         assert kwargs["instrumental"] == calls["instrumental_reference"]
         assert kwargs["cues"][0]["start"] == 0.5
+        assert kwargs["engine"] == "ace-step"
         assert calls["require_vocals"] and "force-complete" in calls["events"]
         assert (calls["output"] / "captions" / "am.srt").is_file()
         calls["events"].append("rebuild")

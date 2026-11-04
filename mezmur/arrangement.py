@@ -42,7 +42,7 @@ def true_peak(samples, sr):
     return peak
 
 
-def mix_tracks(vocals, backing, sr):
+def mix_tracks(vocals, backing, sr, backing_db=-10.0):
     vocals, backing = np.asarray(vocals), np.asarray(backing)
     if (vocals.ndim != 2 or backing.ndim != 2 or vocals.shape != backing.shape or not len(vocals)
             or not np.isfinite(vocals).all() or not np.isfinite(backing).all()):
@@ -51,7 +51,9 @@ def mix_tracks(vocals, backing, sr):
     mrms = float(np.sqrt(np.mean(backing.astype(float) ** 2)))
     if min(vrms, mrms) < 1e-6:
         raise ArrangementError("A vocal or synthesized backing track is silent")
-    music_gain = min(4.0, (vrms / mrms) * 10 ** (-10 / 20))
+    if not np.isfinite(backing_db) or not -30 <= backing_db <= -3:
+        raise ArrangementError("Backing balance must keep the singer prominent (-30 to -3 dB)")
+    music_gain = min(4.0, (vrms / mrms) * 10 ** (backing_db / 20))
     combined = vocals.astype(float) + backing.astype(float) * music_gain
     peak = true_peak(combined, sr)
     common_gain = min(1.0, PEAK_LIMIT / max(peak, 1e-12))
@@ -62,13 +64,16 @@ def mix_tracks(vocals, backing, sr):
                    "vocal_offset_samples": 0, "vocal_pitch_shift_semitones": 0, "vocal_tempo_factor": 1.0}
 
 
-def rebuild(source, vocals, target, work, seed=0, instrumental=None, cues=()):
+def rebuild(source, vocals, target, work, seed=0, instrumental=None, cues=(), engine="midi",
+            separator_model=None):
     source, vocals, target, work = map(Path, (source, vocals, target, work))
     if target.resolve() in (source.resolve(), vocals.resolve()):
         raise ArrangementError("Rebuilt audio must not overwrite the source recording or vocal stem")
     work.mkdir(parents=True, exist_ok=True)
     target.parent.mkdir(parents=True, exist_ok=True)
-    font = soundfont_path()
+    if engine not in ("midi", "ace-step"):
+        raise ArrangementError("Unknown backing engine")
+    font = soundfont_path() if engine == "midi" else None
     with source.open("rb") as handle:
         before = hashlib.file_digest(handle, "sha256").hexdigest()
     stem_format = sf.info(vocals).subtype
@@ -97,15 +102,22 @@ def rebuild(source, vocals, target, work, seed=0, instrumental=None, cues=()):
     reference = read_audio(reference_path, ANALYSIS_SR)
     melody = read_audio(vocals, ANALYSIS_SR)
     plan, report = harmony_plan(reference, vocals=melody)
-    midi = target.parent / "arrangement.mid"
-    performance = write_midi(plan, midi, seed=seed, tuning_cents=report["tuning_cents"],
-                             duration=expected / sr, cues=cues)
-    sections = performance.pop("segments")
+    if engine == "ace-step":
+        from .neural_backing import compose
+        performance = compose(reference_path, synthesized, work / "ai", plan, report, sr, expected / sr,
+                              cues=cues, seed=seed, diagnostics=target.parent / "ai-backing",
+                              separator_model=separator_model)
+        sections = plan
+    else:
+        midi = target.parent / "arrangement.mid"
+        performance = write_midi(plan, midi, seed=seed, tuning_cents=report["tuning_cents"],
+                                 duration=expected / sr, cues=cues)
+        sections = performance.pop("segments")
+        render_instrumental(midi, synthesized, font, sr)
     write_json(target.parent / "arrangement-plan.json", {
         "analysis_sources": {"rhythm": "separated instrumental", "harmony": "separated instrumental",
                              "melody": "separated vocals"}, "segments": sections,
         "report": {**report, **performance}})
-    render_instrumental(midi, synthesized, font, sr)
     backing, backing_sr = sf.read(synthesized, dtype="float32", always_2d=True)
     if backing_sr != sr or backing.shape[1] != 2 or not np.isfinite(backing).all():
         raise ArrangementError("The synthesizer returned an unexpected audio format")
@@ -116,7 +128,7 @@ def rebuild(source, vocals, target, work, seed=0, instrumental=None, cues=()):
     fade = min(sr * 2, expected // 2)
     backing[:fade] *= np.linspace(0, 1, fade)[:, None]
     backing[-fade:] *= np.linspace(1, 0, fade)[:, None]
-    mixed, levels = mix_tracks(voice, backing, sr)
+    mixed, levels = mix_tracks(voice, backing, sr, backing_db=-7.0 if engine == "ace-step" else -10.0)
     if len(mixed) != expected:
         raise ArrangementError("Rebuilt audio failed the original-duration lock")
     sf.write(target, mixed, sr, subtype="FLOAT")
@@ -128,7 +140,8 @@ def rebuild(source, vocals, target, work, seed=0, instrumental=None, cues=()):
         shutil.copy2(license_file, target.parent / "arrangement-license.txt")
     return {**report, **performance, **levels, "mode": "rebuilt-accompaniment", "experimental": True,
             "sample_rate": sr, "vocal_stem_format": stem_format, "samples": expected, "duration_seconds": expected / sr,
-            "soundfont": font.name, "master_format": "32-bit float WAV",
+            "soundfont": font.name if font else None, "master_format": "32-bit float WAV",
+            "backing_target_db_relative_to_vocal": -7.0 if engine == "ace-step" else -10.0,
             "original_recording_unchanged": True, "original_instrumental_reused": False,
             "analysis_sources": {"rhythm": "separated instrumental", "harmony": "separated instrumental",
                                  "melody": "separated vocals"},

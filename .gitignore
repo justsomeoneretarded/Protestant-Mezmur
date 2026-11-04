@@ -14,3 +14,6 @@ dist/
 # Local Google OAuth credentials: never commit or upload these.
 client_secret*.json
 youtube-oauth*.json
+
+# Large local AI backing engine and public model weights.
+.ai-backing/
