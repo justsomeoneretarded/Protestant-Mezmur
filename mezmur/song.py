@@ -576,7 +576,7 @@ def main():
     p.add_argument("--height", type=int, default=1080, choices=[720, 1080])
     p.add_argument("--preset", default="medium")
     p.add_argument("--rebuild-music", action="store_true",
-                   help="Guitar-led acoustic backing; preserves original vocal pitch, timing and duration")
+                   help="Source-conditioned AI worship band; preserves original vocal pitch, timing and duration")
     a = p.parse_args()
     produce(a.input, a.output, a.work, a.separator, a.height, preset=a.preset, rebuild_music=a.rebuild_music)
 
