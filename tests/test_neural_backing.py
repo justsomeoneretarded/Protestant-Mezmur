@@ -65,7 +65,7 @@ def fake_ai(monkeypatch, tmp_path):
     monkeypatch.setattr(neural_backing.subprocess, "run", synth)
     monkeypatch.setattr(neural_backing, "assess_candidate", lambda audio, *a, **k: {
         "source_harmony_affinity": 0.8, "obvious_harmonic_drift": False,
-        "selection_score": float(audio.mean()), "score_is_musical_quality": False})
+        "selection_score": float(audio.mean()) * 2, "score_is_musical_quality": False})
 
     def clean_voice(source, work, **kwargs):
         calls["cleanup"].append((source, kwargs))
@@ -198,3 +198,14 @@ def test_ai_cannot_overwrite_the_actual_reference_even_before_model_loading(tmp_
     with pytest.raises(ArrangementError, match="must not overwrite"):
         neural_backing.compose(source, source, tmp_path / "work", [], {}, 16000, 10)
     assert source.read_bytes() == b"original"
+
+
+def test_style_freedom_wins_over_near_copy_when_harmony_scores_are_close(fake_ai, monkeypatch):
+    monkeypatch.setattr(neural_backing, "assess_candidate", lambda audio, *a, **k: {
+        "source_harmony_affinity": 0.90 if audio.mean() < 0.15 else 0.95,
+        "vocal_clash_proxy": 0.01, "obvious_harmonic_drift": False,
+        "selection_score": 0.90 if audio.mean() < 0.15 else 0.95})
+    neural_backing.compose(fake_ai["reference"], fake_ai["target"], fake_ai["work"], [], {},
+                           fake_ai["sr"], 32)
+    audio = sf.read(fake_ai["target"])[0]
+    assert np.allclose(audio, 0.1, atol=1e-6)

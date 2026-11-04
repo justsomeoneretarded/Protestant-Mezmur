@@ -37,12 +37,14 @@ song underneath an existing performance.
    Source audio supplies the musical context; this is not an unrelated generated
    chord progression or guitar layered over the original full mix.
 5. Generate two candidates for each long coherent phrase, normally at most
-   72 seconds, rather than restarting at every chord. Source context strength is
+   48 seconds, rather than restarting at every chord. Source context strength is
    0.8 and 1.0. Both use the same instrumental-only style and deterministic song seed.
 6. Compare source harmonic affinity and a conservative vocal-clash proxy. Reject
    invalid/silent outputs, material duration changes, very weak harmonic retention
    and identifiable large harmonic displacement. These metrics are **not**
    musical-taste scores, pitch accuracy percentages or a guarantee of a good arrangement.
+   Where fit scores are close and vocal compatibility is comparable, prefer the
+   0.8-strength candidate's greater stylistic freedom over a near-source reconstruction.
 7. Place selected phrases at their original absolute times. Four seconds of shared
    context help continuity, but only a short, original-beat-aligned blend (at most
    0.35 seconds) mixes two backings, avoiding four seconds of doubled drum grooves.
@@ -74,7 +76,7 @@ The model snapshot and each SHA-256 are pinned and checked. There is no LLM,
 RVC voice conversion, external inference service, or model training. Files are
 cached in `.ai-backing/`; the cache is ignored by Git.
 
-CPU work can add significant time per song; generation has a two-hour budget,
+CPU work can add significant time per song; generation has a three-hour budget,
 with a 45-minute per-candidate subprocess timeout. These are failure limits, not
 runtime or quality guarantees. AI batches run at most three songs in parallel.
 The existing video job remains bounded by its overall Actions timeout.

@@ -39,7 +39,7 @@ def engine_root():
     return root, manifest
 
 
-def chunk_windows(duration, cues=(), maximum=72.0, overlap=4.0):
+def chunk_windows(duration, cues=(), maximum=48.0, overlap=4.0):
     """Overlap on the original clock, never concatenate extra bars or restart every chord."""
     if not all(math.isfinite(value) for value in (duration, maximum, overlap)) or duration <= 0 or maximum < 20 or not 0 < overlap < maximum / 3:
         raise ArrangementError("Invalid AI arrangement duration/chunk settings")
@@ -190,8 +190,8 @@ def compose(reference_path, target, work, plan, analysis, sr, duration, cues=(),
         sf.write(source_path, padded, sr, subtype="FLOAT")
         candidates = []
         for attempt in range(2):
-            if time.monotonic() - started > 120 * 60:
-                raise ArrangementError("AI composition exceeded its two-hour budget; no MIDI loop fallback was used")
+            if time.monotonic() - started > 180 * 60:
+                raise ArrangementError("AI composition exceeded its three-hour budget; no MIDI loop fallback was used")
             request = diagnostics / f"chunk-{index:03}-candidate-{attempt}.json"
             params = {"task_type": "cover-nofsq", "lyrics": "[Instrumental]", "caption": style,
                       "bpm": int(round(analysis.get("tempo_bpm", 0))), "duration": len(padded) / sr,
@@ -209,7 +209,7 @@ def compose(reference_path, target, work, plan, analysis, sr, duration, cues=(),
                     subprocess.run([str(root / "source/build/ace-synth"), "--models", str(root / "models"),
                                     "--device", "CPU", "--src-audio", str(source_path), "--request", str(request)],
                                    stdout=log, stderr=subprocess.STDOUT, check=True,
-                                   timeout=min(45 * 60, max(1, 120 * 60 - (time.monotonic() - started))))
+                                   timeout=min(45 * 60, max(1, 180 * 60 - (time.monotonic() - started))))
                 audio, rate = sf.read(generated, dtype="float32", always_2d=True)
                 if abs(len(audio) / rate - len(padded) / sr) > 0.75:
                     raise ArrangementError("AI changed the reference duration; refusing to hide missing musical bars")
@@ -231,7 +231,12 @@ def compose(reference_path, target, work, plan, analysis, sr, duration, cues=(),
             write_json(diagnostics / "candidate-report.json", {"candidates": records})
             raise ArrangementError(f"Neither AI candidate passed phrase {index + 1}; inspect ai-backing logs, "
                                    "no original music or repeating MIDI loop was substituted")
-        _, selected, metrics, attempt = max(candidates, key=lambda item: item[0])
+        best_score = max(candidate[0] for candidate in candidates)
+        lowest_clash = min(candidate[2].get("vocal_clash_proxy", 0) for candidate in candidates)
+        suitable = [candidate for candidate in candidates if candidate[0] >= best_score - 0.10
+                    and candidate[2].get("vocal_clash_proxy", 0) <= lowest_clash + 0.05]
+        # Among musically compatible candidates, favor more prompt freedom over a near-source reconstruction.
+        _, selected, metrics, attempt = min(suitable, key=lambda item: item[3])
         beats = [beat for part in plan for beat in part.get("beats", ())]
         envelope = blend_weights(windows, index, sr, beats, analysis.get("tempo_bpm", 0))[:b - a]
         result[a:b] += selected * envelope[:, None]
@@ -254,8 +259,11 @@ def compose(reference_path, target, work, plan, analysis, sr, duration, cues=(),
     clean_audio = np.pad(clean_audio[:expected], ((0, max(0, expected - len(clean_audio))), (0, 0)))
     if not np.isfinite(clean_audio).all() or float(np.sqrt(np.mean(clean_audio ** 2))) < 1e-5:
         raise ArrangementError("AI instrumental cleanup produced invalid/silent music")
+    cleanup_metrics = assess_candidate(clean_audio, reference, sr, plan)
+    if cleanup_metrics["obvious_harmonic_drift"] or cleanup_metrics["source_harmony_affinity"] < 0.30:
+        raise ArrangementError("Generated-vocal cleanup lost too much accompaniment; no original music was substituted")
     sf.write(target, clean_audio, sr, subtype="FLOAT")
-    write_json(diagnostics / "candidate-report.json", {"candidates": records})
+    write_json(diagnostics / "candidate-report.json", {"candidates": records, "cleanup_metrics": cleanup_metrics})
     write_json(diagnostics / "model-manifest.json", manifest)
     if (root / "model-license.txt").is_file():
         shutil.copy2(root / "model-license.txt", diagnostics / "model-license.txt")
@@ -267,5 +275,5 @@ def compose(reference_path, target, work, plan, analysis, sr, duration, cues=(),
             "source_conditioning": "separated original instrumental, raw VAE cover context",
             "vocal_waveform_enters_model": False, "generated_vocal_cleanup": True, "phrase_count": len(windows), "candidates_per_phrase": 2,
             "ai_generation_seconds": round(time.monotonic() - started, 2), "instrumental_prompt": style,
-            "candidate_metrics_are_accuracy": False, "no_midi_loop_fallback": True, "context_overlap_seconds": 4.0,
+            "candidate_metrics_are_accuracy": False, "cleanup_harmony_metrics": cleanup_metrics, "no_midi_loop_fallback": True, "context_overlap_seconds": 4.0,
             "crossfade_max_seconds": 0.35, "crossfade_alignment": "original beat when available"}
