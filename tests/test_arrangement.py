@@ -22,24 +22,25 @@ def stereo_tone(seconds=6, pitch=220, amplitude=0.12):
     return np.column_stack([wave, wave])
 
 
-def test_rebuild_checkbox_is_typed_opt_in_and_passed_only_when_selected():
-    doc = yaml.safe_load(Path(".github/workflows/generate.yml").read_text())
+def test_generation_workflow_is_original_audio_only():
+    text = Path(".github/workflows/generate.yml").read_text()
+    doc = yaml.safe_load(text)
     events = doc.get("on", doc.get(True))
     for trigger in ("workflow_dispatch", "workflow_call"):
-        assert events[trigger]["inputs"]["rebuild_music"]["type"] == "boolean"
-        assert events[trigger]["inputs"]["rebuild_music"]["default"] is False
+        inputs = events[trigger]["inputs"]
+        assert not {"rebuild_music", "augment_audio", "noise_profile", "space_effect"} & inputs.keys()
+        assert inputs["upload_youtube"]["type"] == "boolean"
+        assert inputs["upload_youtube"]["default"] is True
     job = doc["jobs"]["song"]
-    install = next(s for s in job["steps"] if s.get("name", "").startswith("Install backing arranger"))
-    assert install["if"] == "inputs.rebuild_music == true"
-    assert "setup_ai_backing.py" in install["run"] and ".[arrange]" in install["run"]
-    assert "fluid-soundfont-gm" not in install["run"]
-    assert "AI worship band" in events["workflow_dispatch"]["inputs"]["rebuild_music"]["description"]
+    assert job["strategy"]["max-parallel"] == 10
+    assert "MEZMUR_BACKING_STYLE" not in job["env"]
     render = next(s for s in job["steps"] if s.get("name", "").startswith("Make video"))
-    assert render["env"]["REBUILD_MUSIC"] == "${{ inputs.rebuild_music && 'true' || 'false' }}"
-    assert 'if [ "$REBUILD_MUSIC" = "true" ]; then args+=(--rebuild-music); fi' in render["run"]
-    assert '"${args[@]}"' in render["run"]
-    preflight = next(s for s in doc["jobs"]["fetch"]["steps"] if s.get("name") == "Validate music rebuild settings")
-    assert preflight["if"] == "inputs.rebuild_music == true && inputs.separator == 'none'"
+    assert "python -m mezmur.song" in render["run"]
+    assert "--rebuild-music" not in render["run"]
+    assert "REBUILD_MUSIC" not in render.get("env", {})
+    assert "setup_ai_backing.py" not in text and ".ai-backing" not in text
+    assert ".[arrange]" not in text
+    assert "rebuilt-audio.wav" not in text and "/ai-backing/" not in text
 
 
 def test_required_stem_cannot_disable_separation(monkeypatch, tmp_path):

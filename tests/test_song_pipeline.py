@@ -137,6 +137,12 @@ def test_original_source_drives_every_output_without_effects(clean_pipeline):
     assert meta["audio_processing"]["source"] == "original"
     assert meta["audio_processing"]["effects_applied"] is False
     assert meta["audio_processing"]["loudness_normalization"] is False
+    assert calls["features_source"] == calls["source"]
+    assert calls["require_vocals"] is False
+    assert json.loads((out / "quality.json").read_text())["arrangement"] is None
+    assert not (out / "rebuilt-audio.wav").exists()
+    assert not (out / "arrangement.json").exists()
+    assert not (out / "ai-backing").exists()
     assert meta["lyrics_verification"]["method"] == "acoustic"
     assert not (out / "augmentation.json").exists()
     assert not (calls["work"] / "master.wav").exists()

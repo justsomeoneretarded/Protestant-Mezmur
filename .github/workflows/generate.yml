@@ -34,10 +34,6 @@ on:
         description: Automatically upload finished videos to YouTube (uncheck for artifacts only; OAuth setup required)
         type: boolean
         default: true
-      rebuild_music:
-        description: AI worship band backing (ACE-Step; expressive bass, follows source, keeps singer and timing)
-        type: boolean
-        default: false
   push:
     branches: [main]
     paths: ['corrections/**']
@@ -49,7 +45,6 @@ on:
       resolution: {type: string, default: '1080'}
       debug: {type: string, default: ''}
       upload_youtube: {type: boolean, default: true}
-      rebuild_music: {type: boolean, default: false}
 
 permissions:
   contents: write
@@ -93,11 +88,6 @@ jobs:
           for key in TELEGRAM_API_ID TELEGRAM_API_HASH TELEGRAM_SESSION; do
             [ -n "${!key}" ] || { echo "::error::Missing repository secret: $key"; exit 1; }
           done
-      - name: Validate music rebuild settings
-        if: inputs.rebuild_music == true && inputs.separator == 'none'
-        run: |
-          echo "::error::Music rebuilding requires a vocal separator; do not select none."
-          exit 1
       - name: Check YouTube configuration (only for automatic uploads)
         if: inputs.upload_youtube == true
         env:
@@ -144,7 +134,7 @@ jobs:
     timeout-minutes: 300
     strategy:
       fail-fast: false
-      max-parallel: ${{ inputs.rebuild_music && 3 || 10 }}
+      max-parallel: 10
       matrix:
         id: ${{ fromJSON(needs.fetch.outputs.ids) }}
     env:
@@ -152,7 +142,6 @@ jobs:
       PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
       OMP_NUM_THREADS: '4'
       OPENBLAS_NUM_THREADS: '4'
-      MEZMUR_BACKING_STYLE: ${{ vars.MEZMUR_BACKING_STYLE }}
       LYRICS_CHANNELS: ${{ vars.LYRICS_CHANNELS }}
       MEZMUR_DEBUG: ${{ inputs.diagnostics && '1' || inputs.debug }}
     steps:
@@ -179,19 +168,6 @@ jobs:
           pip install torch==2.5.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cpu
           pip install -e '.[render]'
           python -c "from transformers import AutoProcessor, AutoModelForCTC; import cv2, onnxruntime; print('render env OK')"
-      - uses: actions/cache@v4
-        if: inputs.rebuild_music == true
-        with:
-          path: .ai-backing
-          key: ai-band-cpp-de858d8-666ac70-linux-x64
-      - name: Install backing arranger (only when enabled)
-        if: inputs.rebuild_music == true
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends libopenblas-dev cmake g++
-          pip install -e '.[arrange]'
-          python scripts/setup_ai_backing.py
-          python -c "from transformers import AutoProcessor, AutoModelForCTC; import cv2, librosa, soundfile; print('AI backing/render imports OK')"
       - name: Install vocal separator (isolated)
         if: (inputs.separator || 'UVR-MDX-NET-Voc_FT.onnx') != 'none'
         run: |
@@ -224,16 +200,12 @@ jobs:
           path: inputs
       - name: Make video, lyrics, thumbnails and upload kit
         shell: bash
-        env:
-          REBUILD_MUSIC: ${{ inputs.rebuild_music && 'true' || 'false' }}
         run: |
           out="output/song-${{ matrix.id }}"; mkdir -p "$out"
-          args=()
-          if [ "$REBUILD_MUSIC" = "true" ]; then args+=(--rebuild-music); fi
           set +e
           python -m mezmur.song --input "inputs/song-${{ matrix.id }}" --output "$out" \
             --work ".runtime/work" --separator "${{ inputs.separator || 'UVR-MDX-NET-Voc_FT.onnx' }}" \
-            --height "${{ inputs.resolution || '1080' }}" "${args[@]}" 2>&1 | tee "$out/run.log"
+            --height "${{ inputs.resolution || '1080' }}" 2>&1 | tee "$out/run.log"
           code=${PIPESTATUS[0]}
           if [ "$code" != 0 ]; then
             echo "::error title=Song ${{ matrix.id }} failed::$(tail -n 12 "$out/run.log" | tr '\n' ' ' | cut -c1-900)"
@@ -274,10 +246,6 @@ jobs:
             output/song-${{ matrix.id }}/captions/
             output/song-${{ matrix.id }}/youtube.json
             output/song-${{ matrix.id }}/metadata.json
-            output/song-${{ matrix.id }}/arrangement.json
-            output/song-${{ matrix.id }}/arrangement-plan.json
-            output/song-${{ matrix.id }}/ai-backing/
-            output/song-${{ matrix.id }}/rebuilt-audio.wav
             output/song-${{ matrix.id }}/lyrics.txt
             output/song-${{ matrix.id }}/lyrics.romanized.txt
             output/song-${{ matrix.id }}/UPLOAD.md
