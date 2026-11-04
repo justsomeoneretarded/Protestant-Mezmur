@@ -4,6 +4,7 @@ input folder (written by `mezmur.fetch`):  audio.*, info.json, telegram.json, ph
 output folder: video.mp4, thumbnails, captions, lyrics, YouTube upload kit, diagnostics.
 """
 import argparse
+import gc
 import json
 import re
 import os
@@ -445,6 +446,9 @@ def produce(inp, out, work, separator=None, height=1080, fps=30, preset="medium"
     audio_processing = {"source": "original", "effects_applied": False, "loudness_normalization": False,
                         "encoding": "AAC/MP3 stream copy when supported; otherwise AAC encoding only"}
     if rebuild_music:
+        # Alignment is finished; free the CTC weights before native AI synthesis on a 16 GB runner.
+        asr.load_model.cache_clear()
+        gc.collect()
         t = time.time()
         render_audio = out / "rebuilt-audio.wav"
         reference = instrumental_stem(vocals, work / "instrumental-reference.wav")

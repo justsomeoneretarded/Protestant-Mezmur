@@ -19,10 +19,10 @@ ENGINE_COMMIT = "de858d8e1a94f0e1939cf9bdd8ff7d9631953077"
 MODEL_REVISION = "666ac70204440867d8c01ba4b119cc79c95b370a"
 MODEL_FILES = ("Qwen3-Embedding-0.6B-Q8_0.gguf", MODEL_NAME + ".gguf", "vae-BF16.gguf")
 DEFAULT_STYLE = (
-    "Instrumental Ethiopian gospel worship band. Expressive melodic bass guitar, soulful piano and warm electric "
-    "piano, restrained live drums with tasteful phrase-end fills, spacious pads, occasional electric guitar answers. "
-    "Follow the source harmony, groove, phrasing and section dynamics. Sparse verses, wider choruses, breathing "
-    "instrumental breaks. No vocals, humming or choir. No continuous acoustic strumming, rigid looping or lead doubling."
+    "Instrumental Ethiopian gospel worship band, piano and bass led. Expressive melodic bass guitar, soulful piano "
+    "and warm electric piano, restrained live drums with tasteful phrase-end fills, spacious pads. Electric guitar "
+    "used sparingly for short single-note answers and sustained textures. Follow the source harmony, groove, phrasing "
+    "and section dynamics. Sparse verses, wider choruses, breathing instrumental breaks, intentional rests. Instrumental only."
 )
 
 
@@ -133,11 +133,35 @@ def assess_candidate(audio, reference, sr, plan=(), offset=0.0):
             "score_is_musical_quality": False}
 
 
+def blend_weights(windows, index, sr, beats=(), bpm=0):
+    """Use long overlap as model context, but a short beat-aligned blend to avoid doubled drum grooves."""
+    start, end = windows[index]
+    a, b = int(round(start * sr)), int(round(end * sr))
+    times = np.arange(a, b) / sr
+    envelope = np.ones(b - a)
+    width = min(0.35, max(0.08, 30 / bpm)) if bpm > 0 else 0.25
+
+    def transition(left, right):
+        center = (left + right) / 2
+        candidates = [beat for beat in beats if left + width <= beat <= right - width]
+        if candidates:
+            center = min(candidates, key=lambda beat: abs(beat - center))
+        return np.clip((times - (center - width / 2)) / width, 0, 1)
+
+    if index:
+        envelope *= transition(start, windows[index - 1][1])
+    if index + 1 < len(windows):
+        envelope *= 1 - transition(windows[index + 1][0], end)
+    return envelope
+
+
 def compose(reference_path, target, work, plan, analysis, sr, duration, cues=(), seed=0, diagnostics=None,
             separator_model=None):
     """Generate a fresh instrumental in coherent phrases, crossfaded at original-time positions."""
-    root, manifest = engine_root()
     reference_path, target, work = map(Path, (reference_path, target, work))
+    if reference_path.resolve() == target.resolve():
+        raise ArrangementError("AI output must not overwrite the original instrumental reference")
+    root, manifest = engine_root()
     work.mkdir(parents=True, exist_ok=True)
     diagnostics = Path(diagnostics) if diagnostics is not None else target.parent / "ai-backing"
     diagnostics.mkdir(parents=True, exist_ok=True)
@@ -184,7 +208,8 @@ def compose(reference_path, target, work, plan, analysis, sr, duration, cues=(),
                 with log_path.open("w", encoding="utf-8") as log:
                     subprocess.run([str(root / "source/build/ace-synth"), "--models", str(root / "models"),
                                     "--device", "CPU", "--src-audio", str(source_path), "--request", str(request)],
-                                   stdout=log, stderr=subprocess.STDOUT, check=True, timeout=45 * 60)
+                                   stdout=log, stderr=subprocess.STDOUT, check=True,
+                                   timeout=min(45 * 60, max(1, 120 * 60 - (time.monotonic() - started))))
                 audio, rate = sf.read(generated, dtype="float32", always_2d=True)
                 if abs(len(audio) / rate - len(padded) / sr) > 0.75:
                     raise ArrangementError("AI changed the reference duration; refusing to hide missing musical bars")
@@ -207,13 +232,8 @@ def compose(reference_path, target, work, plan, analysis, sr, duration, cues=(),
             raise ArrangementError(f"Neither AI candidate passed phrase {index + 1}; inspect ai-backing logs, "
                                    "no original music or repeating MIDI loop was substituted")
         _, selected, metrics, attempt = max(candidates, key=lambda item: item[0])
-        envelope = np.ones(b - a)
-        if index:
-            overlap = min(len(envelope), int(round((windows[index - 1][1] - start) * sr)))
-            envelope[:overlap] = np.linspace(0, 1, overlap, endpoint=False)
-        if index + 1 < len(windows):
-            overlap = min(len(envelope), int(round((end - windows[index + 1][0]) * sr)))
-            envelope[-overlap:] = np.linspace(1, 0, overlap, endpoint=False)
+        beats = [beat for part in plan for beat in part.get("beats", ())]
+        envelope = blend_weights(windows, index, sr, beats, analysis.get("tempo_bpm", 0))[:b - a]
         result[a:b] += selected * envelope[:, None]
         weights[a:b] += envelope
         records.append({"chunk": index, "start": start, "end": end, "selected_candidate": attempt, **metrics})
@@ -239,10 +259,13 @@ def compose(reference_path, target, work, plan, analysis, sr, duration, cues=(),
     write_json(diagnostics / "model-manifest.json", manifest)
     if (root / "model-license.txt").is_file():
         shutil.copy2(root / "model-license.txt", diagnostics / "model-license.txt")
+    if (root / "source/LICENSE").is_file():
+        shutil.copy2(root / "source/LICENSE", diagnostics / "engine-license.txt")
     return {"arrangement_style": "source-conditioned-ai-worship-band", "engine": "ACE-Step 1.5 / acestep.cpp",
             "engine_commit": manifest["engine_commit"], "model_revision": manifest["model_revision"],
             "model_name": MODEL_NAME, "instruments": ["AI worship band (prompt-guided, not guaranteed isolated stems)"],
             "source_conditioning": "separated original instrumental, raw VAE cover context",
             "vocal_waveform_enters_model": False, "generated_vocal_cleanup": True, "phrase_count": len(windows), "candidates_per_phrase": 2,
             "ai_generation_seconds": round(time.monotonic() - started, 2), "instrumental_prompt": style,
-            "candidate_metrics_are_accuracy": False, "no_midi_loop_fallback": True}
+            "candidate_metrics_are_accuracy": False, "no_midi_loop_fallback": True, "context_overlap_seconds": 4.0,
+            "crossfade_max_seconds": 0.35, "crossfade_alignment": "original beat when available"}

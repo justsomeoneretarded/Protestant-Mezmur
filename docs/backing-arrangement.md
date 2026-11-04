@@ -43,8 +43,10 @@ song underneath an existing performance.
    invalid/silent outputs, material duration changes, very weak harmonic retention
    and identifiable large harmonic displacement. These metrics are **not**
    musical-taste scores, pitch accuracy percentages or a guarantee of a good arrangement.
-7. Place selected phrases at their original absolute times with four-second backing-only
-   overlap blends. Short final tails remain part of a longer phrase. A sub-ten-second
+7. Place selected phrases at their original absolute times. Four seconds of shared
+   context help continuity, but only a short, original-beat-aligned blend (at most
+   0.35 seconds) mixes two backings, avoiding four seconds of doubled drum grooves.
+   Short final tails remain part of a longer phrase. A sub-ten-second
    input is padded only for the model and trimmed back afterward; no bars are appended.
 8. Separate any synthesized singing/bleed out of the assembled new backing using
    the selected separator. This can also affect instrumental timbre and requires review.

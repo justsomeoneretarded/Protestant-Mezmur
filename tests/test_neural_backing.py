@@ -97,7 +97,8 @@ def test_ai_stitches_on_original_clock_selects_candidates_and_never_receives_rea
         assert data["task_type"] == "cover-nofsq" and data["lyrics"] == "[Instrumental]"
         assert data["bpm"] == 92 and data["peak_clip"] == 0
         assert data["synth_model"] == neural_backing.MODEL_NAME + ".gguf"
-        assert "bass" in data["caption"] and "No continuous acoustic strumming" in data["caption"]
+        assert "bass" in data["caption"] and "used sparingly" in data["caption"]
+        assert "strumming" not in data["caption"]
     assert report["vocal_waveform_enters_model"] is False and report["generated_vocal_cleanup"]
     assert report["no_midi_loop_fallback"] and report["phrase_count"] == 2
     assert case["calls"]["cleanup"][0][0] == case["target"]
@@ -177,3 +178,23 @@ def test_ai_rebuild_uses_no_soundfont_and_keeps_original_voice_and_fractional_du
     assert report["vocal_tempo_factor"] == 1 and report["true_peak_dbfs"] <= -0.999
     assert report["backing_target_db_relative_to_vocal"] == -7.0
     assert hashlib.sha256(voice.read_bytes()).hexdigest() == voice_hash
+
+
+def test_overlap_is_short_beat_aligned_blend_not_four_seconds_of_double_drums():
+    windows = [(0, 20), (16, 32)]
+    sr = 1000
+    left = neural_backing.blend_weights(windows, 0, sr, beats=[17.8, 18.3], bpm=120)
+    right = neural_backing.blend_weights(windows, 1, sr, beats=[17.8, 18.3], bpm=120)
+    assert np.allclose(left[16 * sr:] + right[:4 * sr], 1)
+    mixed = (left[16 * sr:] > 0.01) & (right[:4 * sr] > 0.01)
+    assert mixed.sum() / sr <= 0.35
+    assert left[17 * sr] == 1 and right[3 * sr] == 1
+
+
+def test_ai_cannot_overwrite_the_actual_reference_even_before_model_loading(tmp_path, monkeypatch):
+    source = tmp_path / "reference.wav"
+    source.write_bytes(b"original")
+    monkeypatch.setattr(neural_backing, "engine_root", lambda: pytest.fail("Overwrite check was too late"))
+    with pytest.raises(ArrangementError, match="must not overwrite"):
+        neural_backing.compose(source, source, tmp_path / "work", [], {}, 16000, 10)
+    assert source.read_bytes() == b"original"
