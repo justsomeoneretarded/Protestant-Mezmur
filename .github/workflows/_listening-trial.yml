@@ -1,0 +1,100 @@
+name: Instrumental rearrangement listening trial
+on:
+  push:
+    branches: [feat/neural-worship-band]
+    paths: ['.github/workflows/_listening-trial.yml', 'scripts/_listening_trial.py']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  generate:
+    name: Generate ${{ matrix.profile }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [01-preserve, 02-cover-050, 03-cover-035]
+    env:
+      OMP_NUM_THREADS: '4'
+      OPENBLAS_NUM_THREADS: '4'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Native and analysis dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg libopenblas-dev cmake g++
+          pip install -e '.[arrange]'
+      - uses: actions/cache/restore@v4
+        with:
+          path: .ai-backing
+          key: ai-band-cpp-de858d8-666ac70-linux-x64
+      - name: Check pinned engine and public model hashes
+        run: python scripts/setup_ai_backing.py
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: '41744457184'
+          name: ai-worship-band-listening-probe
+          path: source-kit
+      - name: Generate instrumental test
+        run: python scripts/_listening_trial.py --profile "${{ matrix.profile }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: listening-raw-${{ matrix.profile }}
+          path: trial/
+          retention-days: 3
+          compression-level: 0
+
+  package:
+    name: Level-matched instrumental listening pack
+    needs: generate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      MEZMUR_MODEL_CACHE: ${{ github.workspace }}/.model-cache
+      OMP_NUM_THREADS: '4'
+      OPENBLAS_NUM_THREADS: '4'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Audio and analysis dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          pip install -e '.[arrange]'
+      - uses: actions/cache/restore@v4
+        with:
+          path: .model-cache
+          key: mezmur-models-v3-UVR-MDX-NET-Voc_FT.onnx
+          restore-keys: mezmur-models-v3-
+      - name: Isolated vocal cleanup
+        run: |
+          python -m venv "$RUNNER_TEMP/sep"
+          "$RUNNER_TEMP/sep/bin/pip" install -q torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu
+          "$RUNNER_TEMP/sep/bin/pip" install -q "audio-separator[cpu]>=0.39"
+          echo "AUDIO_SEPARATOR_BIN=$RUNNER_TEMP/sep/bin/audio-separator" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: listening-raw-*
+          path: candidates
+          merge-multiple: true
+      - name: Separate and level-match instrumental comparisons
+        run: python scripts/_listening_trial.py --package
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: instrumental-rearrangement-listening-pack
+          path: listening-pack/
+          retention-days: 3
+          compression-level: 0
