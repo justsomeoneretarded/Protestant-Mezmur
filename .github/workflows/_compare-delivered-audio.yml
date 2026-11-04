@@ -1,0 +1,31 @@
+name: Diagnose delivered original versus AI audio
+on:
+  push:
+    branches: [diagnose/delivered-audio-comparison]
+    paths: ['.github/workflows/_compare-delivered-audio.yml', 'scripts/_compare_delivered_audio.py']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  compare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install numpy==2.2.6 soundfile==0.13.1
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: '41788893708'
+          name: ai-worship-band-production-listening-kit
+          path: kit
+      - name: Compare hashes, PCM samples and gain-matched residual
+        run: python scripts/_compare_delivered_audio.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: delivered-audio-comparison-report
+          path: comparison-report.json
+          retention-days: 3
