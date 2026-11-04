@@ -1,0 +1,1125 @@
+{
+  "mode": "lyrics-aligned",
+  "alignment_timeline": "original",
+  "arrangement": null,
+  "candidates": [
+    {
+      "source": "library",
+      "url": "lyrics library: dawit-getachew/ante-bicha.txt",
+      "similarity": {
+        "trigram_recall": 0.319,
+        "trigram_precision": 0.313,
+        "word_recall": 0.519,
+        "score": 0.388
+      },
+      "phrases": 41,
+      "matched": 41,
+      "null": 20,
+      "matched_share": 0.685,
+      "mean_deficit": 0.237,
+      "complete_share": 0.829,
+      "gain_per_vocal_frame": 0.158,
+      "score": 501.903,
+      "lines_used": 41,
+      "lines_total": 54,
+      "verification": {
+        "method": "acoustic",
+        "identity": {
+          "matched": true,
+          "title_score": 1.0,
+          "artist_matched": true,
+          "recognized_source": true
+        },
+        "checks": {
+          "finite_scores": true,
+          "vocal_coverage": true,
+          "lyric_line_coverage": true,
+          "acoustic_gain": true
+        },
+        "decision_scores": {
+          "matched_share": 0.68,
+          "gain_per_vocal_frame": 0.16,
+          "lines_share": 0.76
+        },
+        "score_decimals": 2,
+        "raw_scores": {
+          "matched_share": 0.684570646595963,
+          "gain_per_vocal_frame": 0.1582328683560865,
+          "lines_share": 0.7592592592592593
+        },
+        "thresholds": {
+          "matched_share": 0.4,
+          "lines_share": 0.4,
+          "gain_per_vocal_frame": 0.07
+        },
+        "acoustic_threshold": 0.07
+      },
+      "lines_share": 0.759,
+      "seconds": 3.2,
+      "accepted": true
+    },
+    {
+      "source": "telegram:channel @SongLegetaLyrics",
+      "url": "https://t.me/SongLegetaLyrics/588",
+      "similarity": {
+        "trigram_recall": 0.158,
+        "trigram_precision": 0.357,
+        "word_recall": 0.296,
+        "score": 0.246
+      },
+      "phrases": 23,
+      "matched": 23,
+      "null": 58,
+      "matched_share": 0.3,
+      "mean_deficit": 0.262,
+      "complete_share": 0.783,
+      "gain_per_vocal_frame": 0.063,
+      "score": 222.49,
+      "lines_used": 16,
+      "lines_total": 16,
+      "verification": {
+        "method": "rejected",
+        "identity": {
+          "matched": false,
+          "title_score": 0.466,
+          "artist_matched": true,
+          "short_artist_name": false,
+          "recognized_source": false,
+          "domain": "t.me"
+        },
+        "checks": {
+          "finite_scores": true,
+          "vocal_coverage": false,
+          "lyric_line_coverage": true,
+          "acoustic_gain": false
+        },
+        "decision_scores": {
+          "matched_share": 0.3,
+          "gain_per_vocal_frame": 0.06,
+          "lines_share": 1.0
+        },
+        "score_decimals": 2,
+        "raw_scores": {
+          "matched_share": 0.3003763256927814,
+          "gain_per_vocal_frame": 0.06264164458791242,
+          "lines_share": 1.0
+        },
+        "thresholds": {
+          "matched_share": 0.4,
+          "lines_share": 0.4,
+          "gain_per_vocal_frame": 0.07
+        },
+        "acoustic_threshold": 0.07
+      },
+      "lines_share": 1.0,
+      "seconds": 1.1,
+      "accepted": false
+    },
+    {
+      "source": "telegram:channel @SongLegetaLyrics",
+      "url": "https://t.me/SongLegetaLyrics/588",
+      "similarity": {
+        "trigram_recall": 0.164,
+        "trigram_precision": 0.268,
+        "word_recall": 0.278,
+        "score": 0.224
+      },
+      "phrases": 32,
+      "matched": 32,
+      "null": 44,
+      "matched_share": 0.422,
+      "mean_deficit": 0.293,
+      "complete_share": 0.938,
+      "gain_per_vocal_frame": 0.072,
+      "score": 251.158,
+      "lines_used": 21,
+      "lines_total": 31,
+      "verification": {
+        "method": "acoustic",
+        "identity": {
+          "matched": false,
+          "title_score": 0.466,
+          "artist_matched": true,
+          "short_artist_name": false,
+          "recognized_source": false,
+          "domain": "t.me"
+        },
+        "checks": {
+          "finite_scores": true,
+          "vocal_coverage": true,
+          "lyric_line_coverage": true,
+          "acoustic_gain": true
+        },
+        "decision_scores": {
+          "matched_share": 0.42,
+          "gain_per_vocal_frame": 0.07,
+          "lines_share": 0.68
+        },
+        "score_decimals": 2,
+        "raw_scores": {
+          "matched_share": 0.42216900444748545,
+          "gain_per_vocal_frame": 0.07244958327370662,
+          "lines_share": 0.6774193548387096
+        },
+        "thresholds": {
+          "matched_share": 0.4,
+          "lines_share": 0.4,
+          "gain_per_vocal_frame": 0.07
+        },
+        "acoustic_threshold": 0.07
+      },
+      "lines_share": 0.677,
+      "seconds": 1.8,
+      "accepted": true
+    },
+    {
+      "source": "telegram:channel @SongLegetaLyrics",
+      "url": "https://t.me/SongLegetaLyrics/588",
+      "similarity": {
+        "trigram_recall": 0.104,
+        "trigram_precision": 0.392,
+        "word_recall": 0.222,
+        "score": 0.203
+      },
+      "phrases": 9,
+      "matched": 9,
+      "null": 74,
+      "matched_share": 0.175,
+      "mean_deficit": 0.158,
+      "complete_share": 1.0,
+      "gain_per_vocal_frame": 0.051,
+      "score": 188.441,
+      "lines_used": 7,
+      "lines_total": 8,
+      "verification": {
+        "method": "rejected",
+        "identity": {
+          "matched": false,
+          "title_score": 0.466,
+          "artist_matched": true,
+          "short_artist_name": false,
+          "recognized_source": false,
+          "domain": "t.me"
+        },
+        "checks": {
+          "finite_scores": true,
+          "vocal_coverage": false,
+          "lyric_line_coverage": true,
+          "acoustic_gain": false
+        },
+        "decision_scores": {
+          "matched_share": 0.18,
+          "gain_per_vocal_frame": 0.05,
+          "lines_share": 0.88
+        },
+        "score_decimals": 2,
+        "raw_scores": {
+          "matched_share": 0.17516250427642832,
+          "gain_per_vocal_frame": 0.05099301717854961,
+          "lines_share": 0.875
+        },
+        "thresholds": {
+          "matched_share": 0.4,
+          "lines_share": 0.4,
+          "gain_per_vocal_frame": 0.07
+        },
+        "acoustic_threshold": 0.07
+      },
+      "lines_share": 0.875,
+      "seconds": 0.7,
+      "accepted": false
+    },
+    {
+      "source": "telegram:nearby -6",
+      "url": "",
+      "similarity": {
+        "trigram_recall": 0.096,
+        "trigram_precision": 0.085,
+        "word_recall": 0.315,
+        "score": 0.171
+      },
+      "phrases": 2,
+      "matched": 2,
+      "null": 89,
+      "matched_share": 0.009,
+      "mean_deficit": 0.14,
+      "complete_share": 0.0,
+      "gain_per_vocal_frame": 0.001,
+      "score": 41.926,
+      "lines_used": 1,
+      "lines_total": 27,
+      "verification": {
+        "method": "rejected",
+        "identity": {
+          "matched": false,
+          "title_score": 0.143,
+          "artist_matched": false,
+          "short_artist_name": false,
+          "recognized_source": false,
+          "domain": ""
+        },
+        "checks": {
+          "finite_scores": true,
+          "vocal_coverage": false,
+          "lyric_line_coverage": false,
+          "acoustic_gain": false
+        },
+        "decision_scores": {
+          "matched_share": 0.01,
+          "gain_per_vocal_frame": 0.0,
+          "lines_share": 0.04
+        },
+        "score_decimals": 2,
+        "raw_scores": {
+          "matched_share": 0.009237085186452275,
+          "gain_per_vocal_frame": 0.000868266904015225,
+          "lines_share": 0.037037037037037035
+        },
+        "thresholds": {
+          "matched_share": 0.4,
+          "lines_share": 0.4,
+          "gain_per_vocal_frame": 0.07
+        },
+        "acoustic_threshold": 0.07
+      },
+      "lines_share": 0.037,
+      "seconds": 1.9,
+      "accepted": false
+    },
+    {
+      "source": "site:mezmuroch.com",
+      "url": "https://mezmuroch.com/lyrics/dawit-getachew/ante-bicha",
+      "similarity": {
+        "trigram_recall": 0.049,
+        "trigram_precision": 0.271,
+        "word_recall": 0.056,
+        "score": 0.096
+      },
+      "phrases": 8,
+      "matched": 8,
+      "null": 76,
+      "matched_share": 0.143,
+      "mean_deficit": 0.194,
+      "complete_share": 0.875,
+      "gain_per_vocal_frame": 0.03,
+      "score": 127.77,
+      "lines_used": 7,
+      "lines_total": 7,
+      "verification": {
+        "method": "rejected",
+        "identity": {
+          "matched": true,
+          "title_score": 0.97,
+          "artist_matched": true,
+          "short_artist_name": false,
+          "recognized_source": true,
+          "domain": "mezmuroch.com"
+        },
+        "checks": {
+          "finite_scores": true,
+          "vocal_coverage": false,
+          "lyric_line_coverage": true,
+          "acoustic_gain": false
+        },
+        "decision_scores": {
+          "matched_share": 0.14,
+          "gain_per_vocal_frame": 0.03,
+          "lines_share": 1.0
+        },
+        "score_decimals": 2,
+        "raw_scores": {
+          "matched_share": 0.14266164899076292,
+          "gain_per_vocal_frame": 0.030236559758715024,
+          "lines_share": 1.0
+        },
+        "thresholds": {
+          "matched_share": 0.4,
+          "lines_share": 0.4,
+          "gain_per_vocal_frame": 0.07
+        },
+        "acoustic_threshold": 0.07
+      },
+      "lines_share": 1.0,
+      "seconds": 0.6,
+      "accepted": false
+    },
+    {
+      "source": "web:mezmuroch.com",
+      "url": "https://mezmuroch.com/lyrics/dagmawi-tilahun/anten-becha-saseb",
+      "similarity": {
+        "trigram_recall": 0.06,
+        "trigram_precision": 0.084,
+        "word_recall": 0.148,
+        "score": 0.096
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "web:mezmuroch.com",
+      "url": "https://mezmuroch.com/lyrics/yoseph-ayalew/temecheny-beth",
+      "similarity": {
+        "trigram_recall": 0.062,
+        "trigram_precision": 0.078,
+        "word_recall": 0.13,
+        "score": 0.089
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "web:onlinemezmur.com (phrase)",
+      "url": "https://www.onlinemezmur.com/song_lyrics.php?song_id=888",
+      "similarity": {
+        "trigram_recall": 0.018,
+        "trigram_precision": 0.092,
+        "word_recall": 0.111,
+        "score": 0.065
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "web:mezmuroch.com",
+      "url": "https://mezmuroch.com/lyrics/dagmawi-tilahun/anten-becha-saseb",
+      "similarity": {
+        "trigram_recall": 0.023,
+        "trigram_precision": 0.11,
+        "word_recall": 0.093,
+        "score": 0.065
+      },
+      "rejected": "not checked"
+    },
+    {
+      "source": "web:onlinemezmur.com (phrase)",
+      "url": "https://www.onlinemezmur.com/song_lyrics.php?song_id=888",
+      "similarity": {
+        "trigram_recall": 0.039,
+        "trigram_precision": 0.174,
+        "word_recall": 0.019,
+        "score": 0.059
+      },
+      "rejected": "text mismatch"
+    },
+    {
+      "source": "web:onlinemezmur.com (phrase)",
+      "url": "https://www.onlinemezmur.com/song_lyrics.php?song_id=8",
+      "similarity": {
+        "trigram_recall": 0.003,
+        "trigram_precision": 0.018,
+        "word_recall": 0.0,
+        "score": 0.005
+      },
+      "rejected": "text mismatch"
+    }
+  ],
+  "lrc_check": null,
+  "alignment": {
+    "phrases": 41,
+    "matched": 41,
+    "null": 20,
+    "matched_share": 0.684570646595963,
+    "mean_deficit": 0.23748780487804877,
+    "complete_share": 0.8292682926829268,
+    "gain_per_vocal_frame": 0.1582328683560865,
+    "score": 501.9028136760246,
+    "lines_used": 41,
+    "lines_total": 54,
+    "verification": {
+      "method": "acoustic",
+      "identity": {
+        "matched": true,
+        "title_score": 1.0,
+        "artist_matched": true,
+        "recognized_source": true
+      },
+      "checks": {
+        "finite_scores": true,
+        "vocal_coverage": true,
+        "lyric_line_coverage": true,
+        "acoustic_gain": true
+      },
+      "decision_scores": {
+        "matched_share": 0.68,
+        "gain_per_vocal_frame": 0.16,
+        "lines_share": 0.76
+      },
+      "score_decimals": 2,
+      "raw_scores": {
+        "matched_share": 0.684570646595963,
+        "gain_per_vocal_frame": 0.1582328683560865,
+        "lines_share": 0.7592592592592593
+      },
+      "thresholds": {
+        "matched_share": 0.4,
+        "lines_share": 0.4,
+        "gain_per_vocal_frame": 0.07
+      },
+      "acoustic_threshold": 0.07
+    },
+    "completion": {
+      "filled_lines": 28,
+      "completed_lines": 2,
+      "estimated_words": 34,
+      "gaps": [
+        {
+          "start": 0.0,
+          "end": 24.32,
+          "after_line": null,
+          "before_line": 1,
+          "action": "examined"
+        },
+        {
+          "start": 0.0,
+          "end": 24.32,
+          "lines": [
+            0
+          ],
+          "singing": 4.68,
+          "needed": 3.06,
+          "ratio": 1.53,
+          "heard": 1.0,
+          "action": "filled"
+        },
+        {
+          "start": 56.36,
+          "end": 65.56,
+          "after_line": 8,
+          "before_line": 11,
+          "action": "examined"
+        },
+        {
+          "start": 56.36,
+          "end": 65.56,
+          "lines": [
+            9,
+            10
+          ],
+          "singing": 8.92,
+          "needed": 6.68,
+          "ratio": 1.33,
+          "heard": 1.0,
+          "action": "filled"
+        },
+        {
+          "start": 66.6,
+          "end": 82.2,
+          "after_line": 11,
+          "before_line": 15,
+          "action": "examined"
+        },
+        {
+          "start": 66.6,
+          "end": 82.2,
+          "lines": [
+            12,
+            13,
+            14
+          ],
+          "singing": 15.32,
+          "needed": 10.02,
+          "ratio": 1.53,
+          "heard": 0.88,
+          "action": "filled"
+        },
+        {
+          "start": 83.8,
+          "end": 103.6,
+          "after_line": 15,
+          "before_line": 16,
+          "action": "examined"
+        },
+        {
+          "start": 83.8,
+          "end": 103.6,
+          "action": "nothing missing (instrumental)"
+        },
+        {
+          "start": 127.16,
+          "end": 132.59,
+          "after_line": 21,
+          "before_line": 23,
+          "action": "examined"
+        },
+        {
+          "start": 140.43,
+          "end": 144.91,
+          "after_line": 24,
+          "before_line": 26,
+          "action": "examined"
+        },
+        {
+          "start": 140.43,
+          "end": 144.91,
+          "lines": [
+            25
+          ],
+          "singing": 4.2,
+          "needed": 3.9,
+          "ratio": 1.08,
+          "heard": 1.0,
+          "action": "filled"
+        },
+        {
+          "start": 150.07,
+          "end": 157.35,
+          "after_line": 27,
+          "before_line": 29,
+          "action": "examined"
+        },
+        {
+          "start": 200.31,
+          "end": 226.51,
+          "after_line": 39,
+          "before_line": 42,
+          "action": "examined"
+        },
+        {
+          "start": 200.31,
+          "end": 226.51,
+          "lines": [
+            40,
+            40,
+            41
+          ],
+          "singing": 19.24,
+          "needed": 7.8,
+          "ratio": 2.47,
+          "heard": 0.33,
+          "action": "filled"
+        },
+        {
+          "start": 228.47,
+          "end": 237.19,
+          "after_line": 42,
+          "before_line": 45,
+          "action": "examined"
+        },
+        {
+          "start": 228.47,
+          "end": 237.19,
+          "lines": [
+            43,
+            43,
+            44
+          ],
+          "singing": 8.44,
+          "needed": 6.4,
+          "ratio": 1.32,
+          "heard": 0.5,
+          "action": "filled"
+        },
+        {
+          "start": 239.71,
+          "end": 245.55,
+          "after_line": 45,
+          "before_line": 47,
+          "action": "examined"
+        },
+        {
+          "start": 239.71,
+          "end": 245.55,
+          "lines": [
+            45,
+            46
+          ],
+          "singing": 5.56,
+          "needed": 5.57,
+          "ratio": 1.0,
+          "heard": 0.33,
+          "action": "filled"
+        },
+        {
+          "start": 248.19,
+          "end": 310.83,
+          "after_line": 47,
+          "before_line": null,
+          "action": "examined"
+        },
+        {
+          "start": 248.19,
+          "end": 310.83,
+          "lines": [
+            47,
+            47,
+            47,
+            48,
+            48,
+            49,
+            50,
+            50,
+            51,
+            52,
+            53,
+            53,
+            53
+          ],
+          "singing": 57.48,
+          "needed": 33.97,
+          "ratio": 1.69,
+          "heard": 0.62,
+          "action": "filled"
+        }
+      ],
+      "recognised_in_gaps": 55
+    }
+  },
+  "phrases": [
+    {
+      "start": 24.32,
+      "end": 27.36,
+      "line": 1,
+      "words": [
+        4,
+        6
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.161
+    },
+    {
+      "start": 27.96,
+      "end": 31.28,
+      "line": 2,
+      "words": [
+        7,
+        8
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.039
+    },
+    {
+      "start": 32.16,
+      "end": 35.48,
+      "line": 3,
+      "words": [
+        9,
+        10
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.117
+    },
+    {
+      "start": 36.84,
+      "end": 39.6,
+      "line": 4,
+      "words": [
+        11,
+        14
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.227
+    },
+    {
+      "start": 41.0,
+      "end": 44.04,
+      "line": 5,
+      "words": [
+        15,
+        16
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.165
+    },
+    {
+      "start": 44.92,
+      "end": 48.04,
+      "line": 6,
+      "words": [
+        17,
+        18
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.283
+    },
+    {
+      "start": 49.12,
+      "end": 52.16,
+      "line": 7,
+      "words": [
+        19,
+        22
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.096
+    },
+    {
+      "start": 53.28,
+      "end": 56.36,
+      "line": 8,
+      "words": [
+        23,
+        25
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.248
+    },
+    {
+      "start": 57.48,
+      "end": 59.12,
+      "line": 9,
+      "words": [
+        26,
+        26
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.146
+    },
+    {
+      "start": 65.56,
+      "end": 66.6,
+      "line": 11,
+      "words": [
+        32,
+        33
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.812
+    },
+    {
+      "start": 74.12,
+      "end": 74.96,
+      "line": 13,
+      "words": [
+        37,
+        37
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.67
+    },
+    {
+      "start": 78.36,
+      "end": 79.92,
+      "line": 14,
+      "words": [
+        40,
+        40
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.11
+    },
+    {
+      "start": 82.2,
+      "end": 83.8,
+      "line": 15,
+      "words": [
+        42,
+        44
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.241
+    },
+    {
+      "start": 103.6,
+      "end": 106.24,
+      "line": 16,
+      "words": [
+        45,
+        46
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.114
+    },
+    {
+      "start": 107.56,
+      "end": 110.52,
+      "line": 17,
+      "words": [
+        47,
+        49
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.073
+    },
+    {
+      "start": 111.76,
+      "end": 114.8,
+      "line": 18,
+      "words": [
+        50,
+        52
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.107
+    },
+    {
+      "start": 115.88,
+      "end": 119.04,
+      "line": 19,
+      "words": [
+        53,
+        54
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.119
+    },
+    {
+      "start": 120.36,
+      "end": 123.68,
+      "line": 20,
+      "words": [
+        55,
+        57
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.139
+    },
+    {
+      "start": 124.44,
+      "end": 127.16,
+      "line": 21,
+      "words": [
+        58,
+        59
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.19
+    },
+    {
+      "start": 129.96,
+      "end": 131.91,
+      "line": 22,
+      "words": [
+        62,
+        62
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.135
+    },
+    {
+      "start": 132.59,
+      "end": 136.19,
+      "line": 23,
+      "words": [
+        63,
+        65
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.105
+    },
+    {
+      "start": 136.75,
+      "end": 140.43,
+      "line": 24,
+      "words": [
+        66,
+        68
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.144
+    },
+    {
+      "start": 144.91,
+      "end": 147.95,
+      "line": 26,
+      "words": [
+        72,
+        74
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.235
+    },
+    {
+      "start": 149.03,
+      "end": 150.07,
+      "line": 27,
+      "words": [
+        75,
+        76
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.647
+    },
+    {
+      "start": 153.47,
+      "end": 154.95,
+      "line": 28,
+      "words": [
+        77,
+        78
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.234
+    },
+    {
+      "start": 157.35,
+      "end": 160.71,
+      "line": 29,
+      "words": [
+        80,
+        82
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.325
+    },
+    {
+      "start": 161.79,
+      "end": 164.79,
+      "line": 30,
+      "words": [
+        83,
+        84
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.263
+    },
+    {
+      "start": 165.71,
+      "end": 167.35,
+      "line": 31,
+      "words": [
+        85,
+        87
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.515
+    },
+    {
+      "start": 170.23,
+      "end": 173.03,
+      "line": 32,
+      "words": [
+        88,
+        90
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.048
+    },
+    {
+      "start": 174.35,
+      "end": 177.23,
+      "line": 33,
+      "words": [
+        91,
+        92
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.118
+    },
+    {
+      "start": 178.75,
+      "end": 182.11,
+      "line": 34,
+      "words": [
+        93,
+        94
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.106
+    },
+    {
+      "start": 182.71,
+      "end": 183.87,
+      "line": 35,
+      "words": [
+        95,
+        96
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.358
+    },
+    {
+      "start": 186.83,
+      "end": 190.55,
+      "line": 36,
+      "words": [
+        97,
+        99
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.081
+    },
+    {
+      "start": 191.27,
+      "end": 194.51,
+      "line": 37,
+      "words": [
+        100,
+        101
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.192
+    },
+    {
+      "start": 195.23,
+      "end": 198.67,
+      "line": 38,
+      "words": [
+        102,
+        103
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.186
+    },
+    {
+      "start": 199.35,
+      "end": 200.31,
+      "line": 39,
+      "words": [
+        104,
+        104
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.495
+    },
+    {
+      "start": 222.59,
+      "end": 223.35,
+      "line": 40,
+      "words": [
+        107,
+        107
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.5
+    },
+    {
+      "start": 226.51,
+      "end": 228.47,
+      "line": 42,
+      "words": [
+        111,
+        113
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.328
+    },
+    {
+      "start": 237.19,
+      "end": 239.71,
+      "line": 45,
+      "words": [
+        119,
+        121
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.109
+    },
+    {
+      "start": 241.39,
+      "end": 243.99,
+      "line": 46,
+      "words": [
+        122,
+        123
+      ],
+      "complete": false,
+      "deficit_per_frame": 0.408
+    },
+    {
+      "start": 245.55,
+      "end": 248.19,
+      "line": 47,
+      "words": [
+        125,
+        127
+      ],
+      "complete": true,
+      "deficit_per_frame": 0.148
+    }
+  ],
+  "draft_text": "ከምድርቻ እስጋጫ ለክብር አዛ ቢሰለ አይበዛ ብህም ቢዘ መርል አያንስ ብህምባንሰ ዋል አንተ ው እግዚአብነ የሚመ ስል ሌለ ለዘላለ ካንተ በላ ብ ር ታ አንተ ብ እግ ቤ በ ን ላቅ ፈ በስትንፋስ ም ሞላ የሚመስል የ ለ ድንቃ አምላክ ነ ሃያላ ት የ ታሉ አን ላ የተማማሉ ደረት ሆነ ታሪ ቸው እስትንፋስ ናቸው አንተ ግ በክብር እስካሆ ን አንዳ ታላቅ ድን ማልደ ድከ ታምር ይሰ ራል ለዘ ለ አለ ም አንተ ብቻ እግዚያ ቤ በጽፋሊ ም አ ያል አምላ ክንዴ ና ሁሉን በጋ ል ፈ ተ በስተንፋሲ ምድ ሞላ የሚመስል የ ለ ድንጋይ አምላ ቅ ነ ከ ፍ ጥረት ጋራ ብ ሬ ድ አ ገር ባ ለው ዝ ማ ሪ ባይመጤ ንህ ምንእንኳ ን ታላ ክ ዝም ከ ማለ ት ል ቅ መትጃ ለው ላ ን ላ ቅ ነትን እያ የ ዘማር አያ ለ አያለ እግዚያህን ክንድ አያ ለ አያለ አ ለ ብጃ ሄ ያለ ብርቱ ነ ብርቱ ብርቱ እ ያላ ዳሞ መን ች ናት ጉስ ስ ጉ ው።",
+  "draft_word_count": 160,
+  "review": {
+    "needs_review": true,
+    "reasons": [
+      "Only 68% of the singing matched the found lyrics; watch for missing lines."
+    ]
+  }
+}
