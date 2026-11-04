@@ -222,7 +222,7 @@ def compose(reference_path, target, work, plan, analysis, sr, duration, cues=(),
                     raise ArrangementError("AI accompaniment did not retain enough source harmony/timing")
                 candidates.append((metrics["selection_score"], audio, metrics, attempt))
                 records.append({"chunk": index, "candidate": attempt, "rejected": False, **metrics})
-            except (subprocess.SubprocessError, OSError, ArrangementError) as error:
+            except (subprocess.SubprocessError, OSError, sf.SoundFileError, ArrangementError) as error:
                 records.append({"chunk": index, "candidate": attempt, "rejected": True,
                                 "reason": type(error).__name__ + ": " + str(error)})
             finally:

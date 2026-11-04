@@ -222,3 +222,13 @@ def test_conflicting_source_and_vocal_rankings_never_leave_an_empty_candidate_se
                                     fake_ai["sr"], 32)
     assert report["phrase_count"] == 2
     assert len(sf.read(fake_ai["target"])[0]) == 32 * fake_ai["sr"]
+
+
+def test_success_exit_without_a_readable_wav_is_a_rejected_candidate_not_a_crash(fake_ai, monkeypatch):
+    monkeypatch.setattr(neural_backing.subprocess, "run", lambda *a, **k: None)
+    with pytest.raises(ArrangementError, match="Neither AI candidate"):
+        neural_backing.compose(fake_ai["reference"], fake_ai["target"], fake_ai["work"], [], {},
+                               fake_ai["sr"], 32)
+    assert not fake_ai["target"].exists()
+    records = json.loads((fake_ai["target"].parent / "ai-backing/candidate-report.json").read_text())["candidates"]
+    assert len(records) == 2 and all(record["rejected"] for record in records)
