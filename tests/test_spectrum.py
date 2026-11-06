@@ -136,7 +136,7 @@ def test_native_encoded_spectrum_moves_with_signal_and_preserves_duration(tmp_pa
     sr = 22050
     sf.write(source, 0.1 * np.sin(2 * np.pi * 220 * np.arange(sr * seconds) / sr), sr)
     write_ass([], ass)
-    render_video(clip, source, ass, out, preset="ultrafast", log=lambda *a: None)
+    render_video(clip, source, ass, out, preset="ultrafast", log=lambda *a, **k: None)
 
     def ink_rows(t):
         result = subprocess.run([
