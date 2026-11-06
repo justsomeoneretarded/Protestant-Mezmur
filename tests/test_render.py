@@ -2,6 +2,7 @@ import json
 import subprocess
 
 import numpy as np
+import pytest
 import scipy.io.wavfile as wav
 from PIL import Image
 
@@ -33,3 +34,41 @@ def test_small_render_with_burned_lyrics(tmp_path):
                                      capture_output=True, text=True, check=True).stdout)
     kinds = {s["codec_type"] for s in info["streams"]}
     assert kinds == {"video", "audio"}
+
+
+@pytest.mark.parametrize("height", [720, 1080])
+def test_native_lyrics_are_larger_with_no_romanized_row_at_both_resolutions(tmp_path, height):
+    from mezmur.subtitles import FONTS
+
+    cues = build_cues([{"word": word, "start": 0.8 + index * 0.3,
+                       "end": 1.0 + index * 0.3, "line": 0}
+                      for index, word in enumerate(["ሃሌሉያ", "ክብር", "ለስሙ"])])
+    width = height * 16 // 9
+
+    def frame(romanized):
+        ass = tmp_path / ("comparison.ass" if romanized else "amharic-only.ass")
+        write_ass(cues, ass, romanized=romanized, preview=False)
+        result = subprocess.run([
+            "ffmpeg", "-nostdin", "-v", "error", "-f", "lavfi",
+            "-i", f"color=c=black:s={width}x{height}:r=10:d=2",
+            "-vf", f"ass='{ass}':fontsdir='{FONTS}'", "-ss", "1.2", "-frames:v", "1",
+            "-threads", "1", "-pix_fmt", "rgb24", "-f", "rawvideo", "pipe:1",
+        ], capture_output=True, check=True)
+        return np.frombuffer(result.stdout, dtype=np.uint8).reshape(height, width, 3)
+
+    current, comparison = frame(False), frame(True)
+    current_mask = current.max(axis=2) > 32
+    comparison_mask = comparison.max(axis=2) > 32
+    main_band = slice(round(height * 0.40), round(height * 0.58))
+
+    def ink_height(mask):
+        rows = np.flatnonzero(mask[main_band].any(axis=1))
+        assert rows.size > 0
+        return rows[-1] - rows[0] + 1
+
+    assert ink_height(current_mask) > ink_height(comparison_mask) * 1.10
+    roman_band = slice(round(height * 0.59), round(height * 0.69))
+    assert not current_mask[roman_band].any()
+    assert comparison_mask[roman_band].sum() > 20
+    margin = round(width * 0.04)
+    assert not current_mask[:, :margin].any() and not current_mask[:, -margin:].any()

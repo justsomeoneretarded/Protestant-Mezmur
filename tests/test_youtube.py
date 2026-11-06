@@ -91,3 +91,23 @@ def test_missing_title_still_has_a_valid_noninvented_upload_title():
     result = titles({"title_latin": "<unknown>", "artist_latin": "Agegnehu Yideg"})
     assert result and "Agegnehu Yideg" in result[0]
     assert all("unknown" not in t.lower() and len(t) <= 100 for t in result)
+
+
+def test_amharic_only_video_keeps_romanized_lyrics_in_description(tmp_path):
+    import copy
+
+    from mezmur.geez import romanize
+    from mezmur.subtitles import build_cues, write_ass
+    from mezmur.youtube import write_kit
+
+    line = "ሃሌሉያ ክብር ለስሙ"
+    cues = build_cues([{"word": word, "start": 1 + index * 0.5,
+                       "end": 1.4 + index * 0.5, "line": 0}
+                      for index, word in enumerate(line.split())])
+    before = copy.deepcopy(cues)
+    write_ass(cues, tmp_path / "lyrics.ass")
+    write_kit(tmp_path, M, [{"lines": [line]}], cues, 30, set(), [], "test", 25, {})
+    text = (tmp_path / "description.txt").read_text(encoding="utf-8")
+    assert line in text and romanize(line) in text
+    assert ",Roman," not in (tmp_path / "lyrics.ass").read_text(encoding="utf-8")
+    assert cues == before and len(text.encode("utf-8")) <= 4900

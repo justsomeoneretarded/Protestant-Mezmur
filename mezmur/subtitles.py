@@ -7,6 +7,7 @@ from .geez import romanize
 from .lyrics import is_amharic_text, safe_ass, timestamp
 
 FONTS = Path(__file__).parent / "assets" / "fonts"
+LYRIC_MAX_SIZE = 112
 LEAD = 0.45          # line appears before its first word
 MAX_WIDTH = 1700     # px at PlayResX 1920
 
@@ -15,10 +16,13 @@ def _measure(font_file, size, text):
     return ImageFont.truetype(str(FONTS / font_file), size).getlength(text)
 
 
-def fit_size(text, font_file="NotoSansEthiopic-Bold.ttf", maximum=92, minimum=56, width=MAX_WIDTH):
+def fit_size(text, font_file="NotoSansEthiopic-Bold.ttf", maximum=LYRIC_MAX_SIZE, minimum=56, width=MAX_WIDTH):
     size = maximum
     while size > minimum and _measure(font_file, size, text) > width:
         size -= 2
+    # Extremely long/unbroken cues must still fit, even below the preferred minimum.
+    while size > 1 and _measure(font_file, size, text) > width:
+        size -= 1
     return size
 
 
@@ -129,9 +133,9 @@ YCbCr Matrix: TV.709
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Lyric,{t["font"]},92,{_ass(t["sung"])},{_ass(t["unsung"])},{_ass(t["outline"])},{back},{b},0,0,0,100,100,1,0,1,{t["outline_w"]},{t["shadow"]},5,60,60,0,1
+Style: Lyric,{t["font"]},{LYRIC_MAX_SIZE},{_ass(t["sung"])},{_ass(t["unsung"])},{_ass(t["outline"])},{back},{b},0,0,0,100,100,0,0,1,{t["outline_w"]},{t["shadow"]},5,60,60,0,1
 Style: Roman,Noto Sans,44,{_ass(t["sung"])},{_ass(roman_unsung)},{_ass(t["outline"])},{back},0,-1,0,0,100,100,1,0,1,{max(2.4, t["outline_w"] * 0.6):.1f},{min(2, t["shadow"])},5,60,60,0,1
-Style: Next,{t["font"]},46,{_ass(t["unsung"], 0x40)},{_ass(t["unsung"], 0x40)},{_ass(t["outline"], 0x50)},{back},0,0,0,0,100,100,1,0,1,{max(2.0, t["outline_w"] * 0.5):.1f},{min(1, t["shadow"])},5,60,60,0,1
+Style: Next,{t["font"]},46,{_ass(t["unsung"], 0x40)},{_ass(t["unsung"], 0x40)},{_ass(t["outline"], 0x50)},{back},0,0,0,0,100,100,0,0,1,{max(2.0, t["outline_w"] * 0.5):.1f},{min(1, t["shadow"])},5,60,60,0,1
 Style: Section,Noto Sans,30,{_ass(t["sung"])},{_ass(t["sung"])},{_ass(t["outline"])},{back},-1,0,0,0,100,100,6,0,1,2,{min(1, t["shadow"])},5,60,60,0,1
 
 [Events]
@@ -149,9 +153,9 @@ YCbCr Matrix: TV.709
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Lyric,Noto Sans Ethiopic,92,&H008CD6FF,&H00FFFFFF,&H00100A04,&H96000000,-1,0,0,0,100,100,1,0,1,4.5,3,5,60,60,0,1
+Style: Lyric,Noto Sans Ethiopic,112,&H008CD6FF,&H00FFFFFF,&H00100A04,&H96000000,-1,0,0,0,100,100,0,0,1,4.5,3,5,60,60,0,1
 Style: Roman,Noto Sans,44,&H00A8DEFF,&H00E6E6E6,&H00100A04,&H96000000,0,-1,0,0,100,100,1,0,1,2.6,2,5,60,60,0,1
-Style: Next,Noto Sans Ethiopic,46,&H50FFFFFF,&H50FFFFFF,&H70100A04,&HC8000000,0,0,0,0,100,100,1,0,1,2,1,5,60,60,0,1
+Style: Next,Noto Sans Ethiopic,46,&H50FFFFFF,&H50FFFFFF,&H70100A04,&HC8000000,0,0,0,0,100,100,0,0,1,2,1,5,60,60,0,1
 Style: Section,Noto Sans,30,&H008CD6FF,&H008CD6FF,&H00100A04,&H96000000,-1,0,0,0,100,100,6,0,1,2,1,5,60,60,0,1
 
 [Events]
@@ -174,7 +178,7 @@ def display_window(cues, index, duration=None):
     return start, end
 
 
-def write_ass(cues, path, romanized=True, preview=True, theme=None, duration=None):
+def write_ass(cues, path, romanized=False, preview=True, theme=None, duration=None):
     theme = theme or choose_theme(0)
     font_file = theme["file"]
     events = []
@@ -183,7 +187,7 @@ def write_ass(cues, path, romanized=True, preview=True, theme=None, duration=Non
         start, end = display_window(cues, i, duration)
         if end <= start:
             continue
-        size = fit_size(cue["text"], font_file=font_file)
+        size = fit_size(cue["text"], font_file=font_file, maximum=92 if romanized else LYRIC_MAX_SIZE)
         fade = "\\fad(180,220)"
         move = f"\\move(960,{578},960,560,0,260)"
         events.append(f"Dialogue: 2,{timestamp(start, True)},{timestamp(end, True)},Lyric,,0,0,0,,"
@@ -194,8 +198,9 @@ def write_ass(cues, path, romanized=True, preview=True, theme=None, duration=Non
                           f"{{\\move(960,{672},960,656,0,260){fade}\\fs{rsize}}}{_karaoke(cue['words'], start, roman=True)}")
         if preview and nxt and nxt["start"] - cue["end"] < 6.0:
             nsize = min(46, fit_size(nxt["text"], font_file=font_file, maximum=46, minimum=30))
+            preview_y = 756 if romanized else 700
             events.append(f"Dialogue: 1,{timestamp(start, True)},{timestamp(end, True)},Next,,0,0,0,,"
-                          f"{{\\pos(960,756){fade}\\fs{nsize}}}{safe_ass(nxt['text'])}")
+                          f"{{\\pos(960,{preview_y}){fade}\\fs{nsize}}}{safe_ass(nxt['text'])}")
         first_of_chorus = cue.get("chorus") and not (i and cues[i - 1].get("chorus") and cue["start"] - cues[i - 1]["end"] < 3)
         if first_of_chorus:
             events.append(f"Dialogue: 3,{timestamp(start, True)},{timestamp(min(end, start + 3.5), True)},Section,,0,0,0,,"

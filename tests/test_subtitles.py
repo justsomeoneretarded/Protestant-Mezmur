@@ -1,4 +1,9 @@
-from mezmur.subtitles import build_cues, write_ass, write_srt
+import re
+
+import pytest
+
+from mezmur.subtitles import (LYRIC_MAX_SIZE, MAX_WIDTH, _measure, build_cues,
+                              choose_theme, fit_size, write_ass, write_srt)
 
 
 def words():
@@ -11,13 +16,14 @@ def words():
     return out
 
 
-def test_one_cue_per_sung_line_with_romanization(tmp_path):
+def test_cues_keep_romanization_but_default_burned_lyrics_are_amharic_only(tmp_path):
     cues = build_cues(words(), chorus_lines={1})
     assert [c["text"] for c in cues] == ["ሲወድ ጌታ እስከ መስቀል ነው", "ሃሌሉያ ክብር ለስሙ"] * 2
     assert cues[0]["romanized"] == "siwed geta eske meskel new"
     write_ass(cues, tmp_path / "x.ass")
     ass = (tmp_path / "x.ass").read_text(encoding="utf-8")
-    assert "\\kf" in ass and ",Roman," in ass and ",Next," in ass and "CHORUS" in ass
+    assert "\\kf" in ass and ",Roman," not in ass and ",Next," in ass and "CHORUS" in ass
+    assert cues[0]["romanized"] not in ass
     write_srt(cues, tmp_path / "x.srt")
     assert (tmp_path / "x.srt").read_text(encoding="utf-8").startswith("1\n00:00:01,000 --> ")
 
@@ -74,3 +80,35 @@ def test_upload_subtitle_writer_is_amharic_script_only_not_romanized(tmp_path):
     with pytest.raises(ValueError, match="Amharic script only"):
         write_srt(cues, tmp_path / "roman.srt", romanized=True, amharic_only=True)
     assert not (tmp_path / "roman.srt").exists()
+
+
+def test_romanized_ass_is_still_an_explicit_development_opt_in(tmp_path):
+    cues = build_cues(words())
+    path = tmp_path / "optional-romanized.ass"
+    write_ass(cues, path, romanized=True)
+    assert ",Roman," in path.read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("seed,bright", [(0, False), (2, False), (0, True), (3, True)])
+def test_larger_main_lyrics_fit_their_band_and_leave_room_for_preview(tmp_path, seed, bright):
+    cues = build_cues(words())
+    theme = choose_theme(seed, bright_background=bright)
+    target = tmp_path / "larger.ass"
+    write_ass(cues, target, theme=theme)
+    text = target.read_text(encoding="utf-8")
+    assert LYRIC_MAX_SIZE == 112
+    events = [line.split(",", 9) for line in text.splitlines() if line.startswith("Dialogue:")]
+    for event in events:
+        if event[3] == "Lyric":
+            size = int(re.search(r"\\fs(\d+)", event[9])[1])
+            assert size > 92 and _measure(theme["file"], size, cues[0]["text"]) <= MAX_WIDTH
+        elif event[3] == "Next":
+            assert r"\pos(960,700)" in event[9]
+    assert all(event[3] != "Roman" for event in events)
+
+
+@pytest.mark.parametrize("text", ["ሃሌሉያ ክብር ለስሙ " * 20, "አ" * 120])
+def test_long_lyric_text_never_overflows_the_available_width(text):
+    size = fit_size(text)
+    assert 1 <= size < LYRIC_MAX_SIZE
+    assert _measure("NotoSansEthiopic-Bold.ttf", size, text) <= MAX_WIDTH
