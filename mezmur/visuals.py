@@ -419,6 +419,8 @@ class Renderer:
         kernel = np.array([1, 2, 3, 2, 1], np.float32) / 9
         target = np.convolve(np.pad(target, 2, mode="edge"), kernel, "valid")
         pulse = float(np.clip(np.nan_to_num(self.f.beat_env[index], nan=0.0), 0, 1))
+        if not np.any(target > 1e-4):
+            pulse = 0.0
         target = np.clip(np.power(target, 0.72) * (1.05 + 0.22 * pulse), 0, 1)
         dt = 1.0 / max(1.0, float(self.fps))
         attack, release = 1 - math.exp(-dt / 0.055), 1 - math.exp(-dt / 0.23)

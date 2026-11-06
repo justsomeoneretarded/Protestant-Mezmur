@@ -92,8 +92,9 @@ def test_bars_and_peak_caps_fall_after_sound_stops():
     assert r.bars.max() < 0.001 and r._spectrum_peaks.max() < 0.02
 
 
-def test_silence_has_only_a_small_still_baseline_not_fake_motion():
-    r = renderer(level=0)
+@pytest.mark.parametrize("pulse", [0.0, 1.0])
+def test_silence_has_only_a_small_still_baseline_not_fake_motion(pulse):
+    r = renderer(level=0, pulse=pulse)
     _, first = settled(r, count=1)
     _, last = settled(r, count=15)
     np.testing.assert_array_equal(first, last)
