@@ -19,10 +19,13 @@ jobs:
           curl -sSL https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz \
             | tar xJ -C "$RUNNER_TEMP/ffmpeg" --strip-components=1
           echo "$RUNNER_TEMP/ffmpeg/bin" >> "$GITHUB_PATH"
-      - name: Native backing renderer and licensed SoundFont
+      - name: Native backing renderer and small test SoundFont
+        timeout-minutes: 5
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends fluidsynth fluid-soundfont-gm
+          sudo apt-get -o Acquire::Retries=1 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 update -qq
+          sudo apt-get -o Acquire::Retries=1 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 install -y --no-install-recommends fluidsynth timgm6mb-soundfont
+          test -s /usr/share/sounds/sf2/TimGM6mb.sf2
+          echo "MEZMUR_SOUNDFONT=/usr/share/sounds/sf2/TimGM6mb.sf2" >> "$GITHUB_ENV"
       - run: pip install -e '.[test,upload,arrange]' opencv-python-headless==4.10.0.84
       - name: Validate Actions workflows
         run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 -shellcheck= -pyflakes= .github/workflows/*.yml
