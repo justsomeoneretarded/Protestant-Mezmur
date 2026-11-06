@@ -154,7 +154,7 @@ def load_subtitle(folder, duration=None):
             "subtitle_cues": len(cues)}
 
 
-def load_kit(folder, thumbnail="b"):
+def load_kit(folder, thumbnail="d"):
     folder = Path(folder)
     kit, meta = _json(folder / "youtube.json"), _json(folder / "metadata.json")
     if not isinstance(kit, dict) or not isinstance(meta, dict):
@@ -526,7 +526,7 @@ def main():
     where.add_argument("--root", type=Path, help="Downloaded artifact folders containing video.mp4")
     parser.add_argument("--visibility", choices=PRIVACIES, default="public",
                         help="Public queues randomized uploads at four-hour intervals; private/unlisted are local-only overrides")
-    parser.add_argument("--thumbnail", choices=tuple(THUMBNAILS), default=os.environ.get("YOUTUBE_THUMBNAIL") or "b")
+    parser.add_argument("--thumbnail", choices=tuple(THUMBNAILS), default=os.environ.get("YOUTUBE_THUMBNAIL") or "d")
     parser.add_argument("--recover-video-id")
     parser.add_argument("--dry-run", action="store_true", help="Validate kits without OAuth, network access or state writes")
     args = parser.parse_args()

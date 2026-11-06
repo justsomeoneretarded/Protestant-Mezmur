@@ -100,6 +100,12 @@ and copyright enforcement still apply. Only process/publish audio you have right
 
 ## Generate and Upload
 
+For automatic generation, use [cron-job.org's external scheduler](external-scheduler.md)
+to send a workflow-dispatch request every three hours. The saved request selects one
+new song and enables uploading. GitHub's built-in cron is intentionally not enabled.
+Repository changes alone do not create or activate the external account's job.
+Manual runs still respect an unchecked Upload box.
+
 In **Actions > Generate Mezmur Videos > Run workflow**, select `main` and leave
 **Automatically upload finished videos to YouTube** (`upload_youtube`) checked.
 It is enabled by default; uncheck it to generate downloadable artifacts without posting.
@@ -109,12 +115,13 @@ song jobs and progress finalization succeed, it calls the publisher. Existing
 video/lyrics/thumbnail artifacts remain available if a later upload fails.
 Unchecked means no YouTube authorization or upload occurs.
 
-Automatic uploads use **thumbnail-b.jpg**, the circular artist-portrait layout.
-Set **YOUTUBE_THUMBNAIL** to **d** to use the frameless left-text / large right-side circular portrait layout instead.
-Other repository-variable values fall back to b, so automatic uploads do not pick
-text-only layouts a/c. All four files remain available in the artifact. If no
-artist photo was confirmed, the renderer's existing text fallback still applies;
-no unverified portrait is invented. Local CLI overrides can still select a/c.
+Every workflow upload explicitly selects **thumbnail-d.jpg**: frameless left-side
+text and a large right-side circular portrait. This applies to external dispatches,
+manual generation, and the upload-only workflow. Repository variable
+`YOUTUBE_THUMBNAIL` cannot change this selection. All four files remain available
+in the artifact. If no artist photo was confirmed, the renderer's existing text
+fallback still applies; no unverified portrait is invented. Standalone local CLI
+uploads default to d; explicit local overrides remain available.
 The workflow always requests the four-hour-interval public queue. A previously configured
 YOUTUBE_PRIVACY variable no longer changes workflow behavior.
 
@@ -140,14 +147,16 @@ Previously saved publication reservations keep their original deadlines; new slo
 use the four-hour gap after the last existing future reservation.
 
 A new batch appends after this channel's last recorded future slot, keeping a
-four-hour gap across batches. Other destination channels have independent queues.
+four-hour gap across batches. Three-hour generation does not change this publishing gap:
+eight successful single-song runs a day can grow a queue that publishes six videos a day.
+Other destination channels have independent queues.
 Completed replays do not consume another slot. The queue only tracks this app's
 saved records; manual changes in Studio or videos scheduled outside the app are
 not automatically synchronized.
 
 Each video, its thumbnail and timed Amharic captions are uploaded and its reserved publishAt is applied
 through YouTube's built-in scheduler. YouTube handles publication; no four-hour
-runner wait or GitHub cron is needed. The Actions summary displays times in EAT
+runner wait or publication cron is needed. The external scheduler only starts new generation/upload runs. The Actions summary displays times in EAT
 (Africa/Nairobi); machine-readable receipts keep UTC timestamps.
 [YouTube requires private status for scheduling](https://developers.google.com/youtube/v3/docs/videos#status.publishAt),
 so an unlisted video cannot simultaneously carry this native schedule.

@@ -179,7 +179,7 @@ async def run(args):
 
 def main():
     p = argparse.ArgumentParser(description="Fetch the next songs from Telegram")
-    p.add_argument("--batch-size", type=int, default=3)
+    p.add_argument("--batch-size", type=int, default=1)
     p.add_argument("--message-ids", default="", help="Comma-separated message IDs to replay (cursor unchanged)")
     p.add_argument("--output", default="inputs")
     asyncio.run(run(p.parse_args()))
