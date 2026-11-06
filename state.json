@@ -558,7 +558,7 @@
       "run_id": "42242775856",
       "created_at": "2026-11-06T15:46:41+00:00",
       "review_warnings": true,
-      "thumbnail_done": false,
+      "thumbnail_done": true,
       "metadata_adjusted": [],
       "caption_file": "subtitle.srt",
       "caption_sha256": "a40cbfd973636516af6f3c1905c0ebf4f5e6f0806129440b20afe5a68cd99227",
@@ -566,7 +566,8 @@
       "caption_name": "Amharic lyrics (Rehoboth Mezmur)",
       "caption_status": "pending",
       "video_id": "dIpLbEVU57Y",
-      "url": "https://youtu.be/dIpLbEVU57Y"
+      "url": "https://youtu.be/dIpLbEVU57Y",
+      "thumbnail_file": "thumbnail-b.jpg"
     }
   }
 }
