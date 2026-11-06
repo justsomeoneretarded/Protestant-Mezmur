@@ -225,6 +225,7 @@ class Renderer:
             self._ink = None
         self._init_particles()
         self.bars = np.zeros(features.bands.shape[1], np.float32)
+        self._spectrum_peaks = np.zeros_like(self.bars)
         self._clock_cache = {}
 
     # ---------- planning ----------
@@ -409,36 +410,75 @@ class Renderer:
         return cv2.add(frame, layer)
 
     def _spectrum(self, frame, t):
-        """Large mirrored spectrum at the bottom; bars rise smoothly and settle slowly."""
-        target = self.f.bands[self.f.at(t)].astype(np.float32)
+        """Tall mirrored bars with fast attacks, falling peak caps and a restrained reflection."""
+        index = self.f.at(t)
+        target = self.f.bands[index].astype(np.float32)
+        if not target.size:
+            return frame
+        target = np.clip(np.nan_to_num(target, nan=0.0, posinf=1.0, neginf=0.0), 0, 1)
         kernel = np.array([1, 2, 3, 2, 1], np.float32) / 9
         target = np.convolve(np.pad(target, 2, mode="edge"), kernel, "valid")
-        self.bars = np.where(target > self.bars, self.bars + 0.28 * (target - self.bars),
-                             np.maximum(target, self.bars * 0.93))
+        pulse = float(np.clip(np.nan_to_num(self.f.beat_env[index], nan=0.0), 0, 1))
+        target = np.clip(np.power(target, 0.72) * (1.05 + 0.22 * pulse), 0, 1)
+        dt = 1.0 / max(1.0, float(self.fps))
+        attack, release = 1 - math.exp(-dt / 0.055), 1 - math.exp(-dt / 0.23)
+        self.bars += np.where(target > self.bars, attack, release) * (target - self.bars)
+        self._spectrum_peaks = np.maximum(self.bars, self._spectrum_peaks * math.exp(-dt / 0.45))
+
         n = len(self.bars)
-        width = int(self.W * 0.80)
+        width = max(1, round(self.W * 0.80))
         x0 = (self.W - width) // 2
-        base = self.H - int(self.H * 0.06)
-        maxh = int(self.H * 0.15)
-        top = base - maxh - 8
-        bottom = min(self.H, base + maxh // 4 + 6)
+        # Keep all drawing, including the halo, below the 700/1080 next-line preview.
+        top, base = round(self.H * 0.71), round(self.H * 0.94)
+        bottom = min(self.H, round(self.H * 0.985))
+        padding = max(1, round(self.H * 0.009))
+        max_height = max(2, min(round(self.H * 0.22), base - top - padding))
+        floor = max(2, round(self.H * 0.003))
+        baseline = base - top
         strip = frame[top:bottom].copy()
-        bw = width / (2 * n)
+        light = np.zeros_like(strip)
+        band_width = width / (2 * n)
         values = np.concatenate([self.bars[::-1], self.bars])
-        r = max(1, int(bw * 0.32))
-        for k, v in enumerate(values):
-            h = int(r * 2 + v * maxh)
-            xa = int(x0 + k * bw + bw * 0.18)
-            xb = max(xa + 1, int(x0 + (k + 1) * bw - bw * 0.18))
-            warm = 0.6 + 0.4 * v
-            r, g, b = self.accent
-            color = (int(b * warm), int(g * warm), int(r * warm))
-            ya = base - h - top + r
-            cv2.rectangle(strip, (xa, ya), (xb, base - top), color, -1, cv2.LINE_AA)
-            cv2.circle(strip, ((xa + xb) // 2, ya), (xb - xa) // 2 + 1, color, -1, cv2.LINE_AA)
-            cv2.rectangle(strip, (xa, base - top + 4), (xb, base - top + 4 + h // 4),
-                          tuple(int(c * 0.3) for c in color), -1)
-        frame[top:bottom] = cv2.addWeighted(frame[top:bottom], 0.40, strip, 0.60, 0)
+        peaks = np.concatenate([self._spectrum_peaks[::-1], self._spectrum_peaks])
+        red, green, blue = self.accent
+        tip_mix = 0.35 + 0.15 * pulse
+        tip = tuple(round(channel * (1 - tip_mix) + 255 * tip_mix) for channel in (blue, green, red))
+        geometry = []
+        for k, (value, peak) in enumerate(zip(values, peaks)):
+            height = round(floor + value * (max_height - floor))
+            left = int(x0 + k * band_width + band_width * 0.18)
+            right = max(left + 1, int(x0 + (k + 1) * band_width - band_width * 0.18))
+            radius = max(1, min((right - left) // 2, height // 2))
+            center = (left + right) // 2
+            y = baseline - height
+            peak_y = round(baseline - floor - peak * (max_height - floor))
+            strength = 0.68 + 0.32 * value
+            color = tuple(int(channel * strength) for channel in (blue, green, red))
+            geometry.append((left, right, center, radius, y, peak_y, color))
+            cv2.rectangle(light, (left, y + radius), (right, baseline), color, -1, cv2.LINE_AA)
+            cv2.circle(light, (center, y + radius), radius, color, -1, cv2.LINE_AA)
+
+        halo = cv2.GaussianBlur(light, (0, 0), max(0.7, self.H * 0.0035))
+        strip = cv2.addWeighted(strip, 1.0, halo, 0.50 + 0.25 * pulse, 0)
+        for left, right, center, radius, y, peak_y, color in geometry:
+            if self.bright:
+                cv2.rectangle(strip, (left - 1, y + radius - 1), (right + 1, baseline + 1),
+                              (22, 22, 22), -1, cv2.LINE_AA)
+                cv2.circle(strip, (center, y + radius), radius + 1, (22, 22, 22), -1, cv2.LINE_AA)
+            cv2.rectangle(strip, (left, y + radius), (right, baseline), color, -1, cv2.LINE_AA)
+            cv2.circle(strip, (center, y + radius), radius, color, -1, cv2.LINE_AA)
+            cv2.line(strip, (left, peak_y), (right, peak_y), tip,
+                     max(1, round(self.H * 0.002)), cv2.LINE_AA)
+
+        reflection_height = min(round(self.H * 0.035), len(strip) - baseline - 2)
+        if reflection_height > 0:
+            reflection = cv2.resize(cv2.flip(light[:baseline + 1], 0), (self.W, reflection_height),
+                                    interpolation=cv2.INTER_AREA).astype(np.float32)
+            alpha = reflection.max(axis=2, keepdims=True) / 255
+            alpha *= np.linspace(0.28, 0.0, reflection_height)[:, None, None]
+            region = strip[baseline + 2:baseline + 2 + reflection_height]
+            region[:] = np.clip(region * (1 - alpha) + reflection * alpha, 0, 255).astype(np.uint8)
+        frame[top:bottom] = strip
         return frame
 
     def _progress(self, frame, t):
