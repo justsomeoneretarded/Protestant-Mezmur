@@ -11,7 +11,7 @@ For every song you get:
 
 | File | What it is |
 | --- | --- |
-| `video.mp4` | 1080p lyric video: larger Amharic-only karaoke lyrics timed word-by-word to the real singing, next line preview, one calm photograph for the whole song (waterfall, mountains, sea, sky, stars, skyline…) with nothing drawn or written on it, never reused for another video, a smooth music spectrum, title card and a clean end-screen area |
+| `video.mp4` | 1080p lyric video: larger Amharic-only karaoke lyrics timed word-by-word to the real singing, next line preview, one calm photograph for the whole song (waterfall, mountains, sea, sky, stars, skyline…) with nothing drawn or written on it, never reused for another video, a taller mirrored music spectrum with beat-responsive bars, falling peak caps and a soft reflection, title card and a clean end-screen area |
 | `thumbnail.jpg`, `thumbnail-b.jpg`, `thumbnail-c.jpg`, `thumbnail-d.jpg` | Four 1280×720 layouts: A centered text with a frame; B centered circular portrait with smaller text and a frame; C text without the frame; D larger right-side circular portrait with vertically centered text at left and no frame. The portrait matches the one in the video. Choose up to three for YouTube's *Test & Compare* |
 | `title.txt` | Title options, first one in the common search style: `Addisalem Assefa siwed geta ሲወድ ጌታ አዲስዓለም አሰፋ lyrics` |
 | `description.txt` | Ready to paste: both scripts, full Amharic lyrics, lyrics in Latin letters, credits, hashtags |
@@ -24,6 +24,11 @@ The video does not display a romanized lyric line. Amharic lyrics use a larger
 112px maximum at the 1920x1080 subtitle canvas, shrinking longer lines to fit.
 Romanized lyrics remain in the description and the optional text/caption files.
 Audio, word timing and the Amharic-only upload SRT are unchanged.
+
+The bottom visualizer keeps the mirrored style used for song 48, with bars reaching
+22% of the frame height. Faster attacks, smooth decay, peak caps and a restrained
+glow strengthen the effect. All drawing stays in the bottom 71%-98.5% of the frame,
+clear of the larger lyric line and next-line preview. Audio is not processed.
 
 ## How the lyrics are made accurate
 
