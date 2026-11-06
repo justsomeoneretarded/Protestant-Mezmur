@@ -6,8 +6,8 @@ on:
       batch_size:
         description: How many new songs (oldest unprocessed first; each renders in parallel)
         type: choice
-        options: ['3', '1', '2', '4', '5', '6', '8', '10']
-        default: '3'
+        options: ['1', '2', '3', '4', '5', '6', '8', '10']
+        default: '1'
       message_ids:
         description: Re-make specific Telegram message IDs, comma-separated (progress is not changed)
         type: string
@@ -39,7 +39,7 @@ on:
     paths: ['corrections/**']
   workflow_call:
     inputs:
-      batch_size: {type: string, default: '3'}
+      batch_size: {type: string, default: '1'}
       message_ids: {type: string, default: ''}
       separator: {type: string, default: UVR-MDX-NET-Voc_FT.onnx}
       resolution: {type: string, default: '1080'}
@@ -117,7 +117,7 @@ jobs:
         id: fetch
         if: github.event_name != 'push' || steps.which.outputs.ids != '' || inputs.batch_size != ''
         run: |
-          python -m mezmur.fetch --batch-size "${{ inputs.batch_size || '3' }}" --message-ids "${{ steps.which.outputs.ids }}" --output inputs
+          python -m mezmur.fetch --batch-size "${{ inputs.batch_size || '1' }}" --message-ids "${{ steps.which.outputs.ids }}" --output inputs
       - uses: actions/upload-artifact@v4
         if: steps.fetch.outputs.has_songs == 'true'
         with:
@@ -320,7 +320,7 @@ jobs:
   publish:
     name: Upload finished videos to YouTube
     needs: [fetch, song, finalize]
-    if: success() && inputs.upload_youtube == true
+    if: success() && needs.fetch.outputs.has_songs == 'true' && inputs.upload_youtube == true
     uses: ./.github/workflows/publish.yml
     with:
       run_id: ${{ format('{0}', github.run_id) }}

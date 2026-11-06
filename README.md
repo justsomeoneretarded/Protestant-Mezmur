@@ -112,9 +112,25 @@ YouTube channel and the web, checking that the faces agree.
 
 ## Running it
 
+For automatic runs, configure **cron-job.org** to dispatch this workflow every three
+hours in `Africa/Nairobi`, with one new song and uploading enabled.
+[Exact one-time setup](docs/external-scheduler.md) and [non-secret request body](docs/cron-dispatch.json).
+GitHub's built-in cron is intentionally not enabled, avoiding two independent triggers.
+The external job is not activated by a repository commit; it must be saved in your cron-job.org account.
+
+External and manual runs share a generation lock. If a run lasts longer than the
+interval, GitHub keeps one running and at most one pending run; newer pending runs
+can replace older ones. The next run reads saved Telegram progress rather than
+skipping songs. When no new songs are found, rendering and publishing are skipped.
+
+YouTube publication remains **four hours apart**, separate from the external trigger.
+Multiple songs or later batches append distinct slots after the recorded future queue.
+Generating every three hours can add eight songs a day while publication handles six;
+the queue can grow. Changes made manually in Studio are not synchronized into this queue.
+
 **Actions → Generate Mezmur Videos → Run workflow**
 
-- `batch_size`: how many new songs (oldest unprocessed first). Videos render in parallel.
+- `batch_size`: how many new songs (oldest unprocessed first), **1 by default**. Larger manual batches render in parallel.
 - `message_ids`: remake specific songs (e.g. `2,3`) without moving your place in the channel.
 - `separator`: vocal-isolation model (default is the fast, accurate UVR-MDX-NET).
 - `upload_youtube`: automatic YouTube upload, **on by default**; uncheck for artifacts only. Requires
@@ -122,7 +138,7 @@ YouTube channel and the web, checking that the faces agree.
   then uses YouTube's built-in scheduler with randomized four-hour slots: four
   new videos get +4, +8, +12 and +16 hours when the queue is empty. New batches
   follow existing queued videos; retries keep their saved order and future slots.
-  Automatic uploads choose portrait thumbnail B (or D when configured); all four
+  Every workflow upload selects thumbnail D: left-side text and a large circular portrait on the right; all four
   designs remain downloadable. Each uploaded video is added to your existing **Mezmurs** playlist automatically.
   The run summary links to Studio for the manual **Best for viewer** and **Most recent upload** end-screen elements;
   the public YouTube Data API cannot create these clickable elements. The timed Amharic-only

@@ -342,7 +342,7 @@ def test_invalid_destination_channel_id_is_rejected(service, value):
         upload.verify_channel(service, value)
 
 
-@pytest.mark.parametrize("missing", ["youtube.json", "metadata.json", "video.mp4", "thumbnail-b.jpg"])
+@pytest.mark.parametrize("missing", ["youtube.json", "metadata.json", "video.mp4", "thumbnail-d.jpg"])
 def test_missing_or_legacy_kits_fail_before_upload(folder, missing):
     (folder / missing).unlink()
     with pytest.raises(upload.UploadError):
@@ -427,7 +427,8 @@ def test_generation_upload_is_default_on_and_after_progress():
     assert events["workflow_call"]["inputs"]["upload_youtube"] == {"type": "boolean", "default": True}
     assert doc["jobs"]["publish"]["needs"] == ["fetch", "song", "finalize"]
     # Explicit false must still disable publishing and its OAuth preflight.
-    assert doc["jobs"]["publish"]["if"] == "success() && inputs.upload_youtube == true"
+    assert doc["jobs"]["publish"]["if"] == ("success() && needs.fetch.outputs.has_songs == 'true' && "
+                                            "inputs.upload_youtube == true")
     preflight = next(s for s in doc["jobs"]["fetch"]["steps"] if s.get("name", "").startswith("Check YouTube configuration"))
     assert preflight["if"] == "inputs.upload_youtube == true"
     assert "YOUTUBE_OAUTH_JSON" not in str(doc["jobs"]["song"].get("env", {}))
@@ -452,8 +453,8 @@ def test_publish_workflow_guards_artifacts_and_keeps_secrets_out_of_receipts():
     step = next(s for s in job["steps"] if s.get("name", "").startswith("Upload videos and thumbnail"))
     assert "--visibility public" in step["run"]
     assert "YOUTUBE_PRIVACY" not in step["env"]
-    assert "== 'd'" in step["env"]["YOUTUBE_THUMBNAIL"]
-    assert "|| 'b'" in step["env"]["YOUTUBE_THUMBNAIL"]
+    assert "--thumbnail d" in step["run"]
+    assert "YOUTUBE_THUMBNAIL" not in step["env"]
 
 
 def test_actual_google_sdk_accepts_upload_and_native_schedule_shapes(folder):
@@ -774,15 +775,15 @@ def test_cli_summary_displays_publication_time_in_east_africa_time(folder, servi
 
 
 
-def test_automatic_thumbnail_defaults_to_the_circular_portrait_layout(folder, service, monkeypatch):
+def test_automatic_thumbnail_defaults_to_the_right_side_portrait_layout(folder, service, monkeypatch):
     monkeypatch.delenv("YOUTUBE_THUMBNAIL", raising=False)
     monkeypatch.setenv("YOUTUBE_CHANNEL_ID", CHANNEL)
     monkeypatch.setattr(sys, "argv", ["mezmur-upload", "--folder", str(folder)])
     monkeypatch.setattr(upload, "youtube_client", lambda: service)
     monkeypatch.setattr(upload, "Store", MemoryStore)
-    assert upload.load_kit(folder)["thumbnail"] == "thumbnail-b.jpg"
+    assert upload.load_kit(folder)["thumbnail"] == "thumbnail-d.jpg"
     upload.main()
-    assert service.thumbnails.return_value.set.call_args.kwargs["media_body"][0] == "thumbnail-b.jpg"
+    assert service.thumbnails.return_value.set.call_args.kwargs["media_body"][0] == "thumbnail-d.jpg"
 
 
 def test_own_upload_is_accepted_even_if_youtube_drops_the_marker_tag(folder, service):
@@ -1192,3 +1193,27 @@ def test_uploaded_srt_rejects_romanized_english_and_mixed_script_lyric_lines(fol
         upload.load_kit(folder)
     service.videos.return_value.insert.assert_not_called()
     service.captions.assert_not_called()
+
+
+def test_single_song_three_hour_batches_keep_distinct_four_hour_publish_slots(folder, monkeypatch):
+    store = MemoryStore()
+    start = datetime(2026, 11, 6, 0, tzinfo=timezone.utc)
+    slots = []
+    for index, mid in enumerate(range(22, 30)):
+        now = start + timedelta(hours=3 * index)
+        monkeypatch.setattr(upload, "utc_now", lambda now=now: now)
+        planned = upload.plan_batch(make_batch(folder, (mid,)), store, CHANNEL, f"cron-{index}")
+        slots.append(upload.publish_time(planned[0]["planned_publish_at"]))
+    assert [int((slot - start).total_seconds() / 3600) for slot in slots] == list(range(4, 33, 4))
+    assert all(b - a == timedelta(hours=4) for a, b in zip(slots, slots[1:]))
+    assert len(store.state["youtube_uploads"]) == 8
+
+
+def test_explicit_workflow_side_portrait_beats_old_thumbnail_environment(folder, service, monkeypatch):
+    monkeypatch.setenv("YOUTUBE_THUMBNAIL", "b")
+    monkeypatch.setenv("YOUTUBE_CHANNEL_ID", CHANNEL)
+    monkeypatch.setattr(sys, "argv", ["mezmur-upload", "--folder", str(folder), "--thumbnail", "d"])
+    monkeypatch.setattr(upload, "youtube_client", lambda: service)
+    monkeypatch.setattr(upload, "Store", MemoryStore)
+    upload.main()
+    assert service.thumbnails.return_value.set.call_args.kwargs["media_body"][0] == "thumbnail-d.jpg"

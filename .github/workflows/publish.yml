@@ -87,12 +87,11 @@ jobs:
         env:
           YOUTUBE_OAUTH_JSON: ${{ secrets.YOUTUBE_OAUTH_JSON }}
           YOUTUBE_CHANNEL_ID: ${{ vars.YOUTUBE_CHANNEL_ID }}
-          YOUTUBE_THUMBNAIL: ${{ vars.YOUTUBE_THUMBNAIL == 'd' && 'd' || 'b' }}
         shell: bash
         run: |
           args=()
           if [ -n "$RECOVER_VIDEO_ID" ]; then args+=(--recover-video-id "$RECOVER_VIDEO_ID"); fi
-          python -m mezmur.upload --root uploads --visibility public "${args[@]}"
+          python -m mezmur.upload --root uploads --visibility public --thumbnail d "${args[@]}"
       - name: Keep upload receipts (never credentials)
         if: always()
         uses: actions/upload-artifact@v4
