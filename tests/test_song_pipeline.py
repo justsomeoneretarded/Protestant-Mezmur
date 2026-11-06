@@ -55,6 +55,7 @@ def clean_pipeline(monkeypatch, tmp_path):
 
     def write_ass(cues, path, **kwargs):
         calls["ass_cues"] = copy.deepcopy(cues)
+        calls["ass_options"] = kwargs
         path.write_text("test subtitles")
 
     def renderer(width, height, fps, seconds, feats, sources, cues, meta, **kwargs):
@@ -122,6 +123,7 @@ def test_original_source_drives_every_output_without_effects(clean_pipeline):
     result = song.produce(calls["input"], calls["output"], calls["work"])
     out = calls["output"]
     assert result["mode"] == "lyrics-aligned"
+    assert calls["ass_options"]["romanized"] is False
     assert calls["events"] == ["separate-original", "recognise-original", "verify-original",
                                "force-complete", "lrc-original", "render"]
     words = json.loads((out / "words.json").read_text())

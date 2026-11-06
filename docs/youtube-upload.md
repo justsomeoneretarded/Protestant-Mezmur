@@ -135,7 +135,8 @@ It contains **Amharic script only**, never English or romanized Amharic lyric li
 and no karaoke styling, next-line preview or title/artist overlays.
 Generation and upload validation both reject non-Ethiopic lyric letters instead of
 silently stripping or translating words. SRT cue numbers, timestamps and punctuation remain.
-The burned-in appearance and word highlighting stay unchanged. Alternative sung-line
+The video burns in larger Amharic lyrics only, retaining word highlighting and the next-line preview.
+Romanized lyrics remain in the description subject to the existing description size limit. Alternative sung-line
 and romanized SRTs remain in `captions/` for manual use; only one Amharic track is
 uploaded automatically. Older complete kits can use `captions/am.srt` as a fallback.
 
