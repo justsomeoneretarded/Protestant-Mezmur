@@ -501,6 +501,28 @@
       "caption_id": "AUieDaZrpiCKGKjGpblHIBgjC-zAcyNmka_2GCmlB4jgqJWVifGoI6xOrKW13RHW_qXXDu38JkbjCSuvOUcNtAzRSQ",
       "privacy": "private",
       "completed_at": "2026-11-05T14:19:46+00:00"
+    },
+    "UCNSSLKyhXrG50l694M48zTQ:4335601101:48": {
+      "status": "queued",
+      "message_id": 48,
+      "telegram_channel_id": "4335601101",
+      "youtube_channel_id": "UCNSSLKyhXrG50l694M48zTQ",
+      "requested_visibility": "public",
+      "held_for_review": false,
+      "batch_id": "42242775856",
+      "queued_at": "2026-11-06T15:46:03+00:00",
+      "publish_at": "2026-11-06T19:46:03Z"
+    },
+    "UCNSSLKyhXrG50l694M48zTQ:4335601101:49": {
+      "status": "queued",
+      "message_id": 49,
+      "telegram_channel_id": "4335601101",
+      "youtube_channel_id": "UCNSSLKyhXrG50l694M48zTQ",
+      "requested_visibility": "public",
+      "held_for_review": false,
+      "batch_id": "42242775856",
+      "queued_at": "2026-11-06T15:46:03+00:00",
+      "publish_at": "2026-11-06T23:46:03Z"
     }
   }
 }
