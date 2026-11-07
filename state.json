@@ -110,7 +110,8 @@
     "commons-img:12221572",
     "commons-img:50820739",
     "commons-img:124804604",
-    "commons-img:150241923"
+    "commons-img:150241923",
+    "commons-img:102807014"
   ],
   "lyrics_channels": [
     "SongLegetaLyrics",
@@ -668,5 +669,55 @@
       "privacy": "private",
       "completed_at": "2026-11-06T21:44:57+00:00"
     }
+  },
+  "telegram_peers": {
+    "mezmurlyrics0": [
+      1211994983,
+      -4173988375809881643
+    ],
+    "mezmur1": [
+      1072271073,
+      -1970030731407191058
+    ],
+    "amharic_spiritual_song_lyrics": [
+      1256049431,
+      3976769966514968111
+    ],
+    "songlegetalyrics": [
+      1350827305,
+      6247065618514191924
+    ],
+    "mezmur_lyrics": [
+      1126045903,
+      -7310353867264948548
+    ],
+    "lyrics_mezmur": [
+      2037958283,
+      -6560482983335346108
+    ],
+    "mezmur_lyrics2": [
+      3955035324,
+      -5968623420478682336
+    ],
+    "mezmur_gitem": [
+      1385964652,
+      5667159596171504824
+    ],
+    "eyesusyiwedenal": [
+      2127671242,
+      -354076175028739534
+    ],
+    "yesemayzega12": [
+      1819692536,
+      749101121512296351
+    ],
+    "protestant_song_lyrics1": [
+      2731399833,
+      3644910871764340045
+    ],
+    "bestprotestant_songs": [
+      3142958403,
+      2718597159829040205
+    ]
   }
 }
