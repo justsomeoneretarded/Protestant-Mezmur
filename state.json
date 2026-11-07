@@ -684,7 +684,7 @@
       "run_id": "42374488133",
       "created_at": "2026-11-07T13:16:16+00:00",
       "review_warnings": true,
-      "thumbnail_done": false,
+      "thumbnail_done": true,
       "metadata_adjusted": [],
       "caption_file": "subtitle.srt",
       "caption_sha256": "b68bfe3e48631d3785e90d8a7992bfa286bab529908a8b6b9214883bedcb5ec7",
@@ -693,7 +693,8 @@
       "caption_status": "pending",
       "initial_privacy": "unlisted",
       "video_id": "ArKX8V7oKZ8",
-      "url": "https://youtu.be/ArKX8V7oKZ8"
+      "url": "https://youtu.be/ArKX8V7oKZ8",
+      "thumbnail_file": "thumbnail-d.jpg"
     }
   },
   "telegram_peers": {
