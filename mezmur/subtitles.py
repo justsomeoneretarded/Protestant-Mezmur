@@ -209,6 +209,8 @@ def write_ass(cues, path, romanized=False, preview=True, theme=None, duration=No
 
 
 def write_srt(cues, path, romanized=False, display_timing=False, duration=None, amharic_only=False):
+    if romanized and amharic_only:
+        raise ValueError("subtitle.srt requires Amharic script only, without English or romanized lyrics")
     blocks = []
     for i, cue in enumerate(cues):
         text = cue["romanized"] if romanized else cue["text"]
