@@ -2,8 +2,8 @@
 
 The normal workflow can generate videos and upload them to your own YouTube
 channel. Uploading is enabled by default for manual and reusable generation runs:
-videos start **private** and are scheduled to become
-**public in randomized order at four-hour intervals**. Google OAuth is required
+videos start **Unlisted**, then switch to **Private** when their native publication
+schedule is applied. They become **public in randomized order at four-hour intervals**. Google OAuth is required
 for uploading; open-source transcription and rendering still run on GitHub Actions.
 An API key or service account cannot replace channel-owner authorization.
 
@@ -125,7 +125,7 @@ uploads default to d; explicit local overrides remain available.
 The workflow always requests the four-hour-interval public queue. A previously configured
 YOUTUBE_PRIVACY variable no longer changes workflow behavior.
 
-Every new video initially uploads as **private**, with the recommended title,
+Every new scheduled video initially uploads as **Unlisted**, with the recommended title,
 description, tags, Music category, Amharic metadata/audio language and the existing
 not-made-for-kids setting. It uploads one selected thumbnail and **automatically uploads
 `subtitle.srt` as a timed Amharic caption track**, named Amharic lyrics (Rehoboth Mezmur).
@@ -160,7 +160,11 @@ through YouTube's built-in scheduler. YouTube handles publication; no four-hour
 runner wait or publication cron is needed. The external scheduler only starts new generation/upload runs. The Actions summary displays times in EAT
 (Africa/Nairobi); machine-readable receipts keep UTC timestamps.
 [YouTube requires private status for scheduling](https://developers.google.com/youtube/v3/docs/videos#status.publishAt),
-so an unlisted video cannot simultaneously carry this native schedule.
+so the sequence is **Unlisted upload -> Private + publication time -> Public**.
+This matches choosing Unlisted first, then scheduling. It does not keep videos
+Unlisted during the scheduled waiting period. `initial_privacy` in new upload
+receipts records the initial request; `privacy` records the final status observed
+when this run completed, not a continuously refreshed Studio status.
 
 Future deadlines remain fixed on retries: songs are not reshuffled and accepted
 schedules are not moved. An expired, unfinished slot moves behind the remaining
@@ -220,8 +224,12 @@ with the upload receipt and retries post-upload failures on the same video.
 Playlist insertion is not automatically retried as a POST: after an uncertain
 response, the next run first checks whether YouTube already added it. External
 API consistency means exactly-once membership cannot be guaranteed in every failure.
-A newly uploaded video stays private if playlist placement or caption upload fails before scheduling.
-Retry Publish Generated Videos with the original artifact to finish it.
+A newly uploaded video can remain **Unlisted** if thumbnail, playlist, caption
+upload or scheduling fails before the native schedule is applied. Anyone with
+the link may watch it; adding it to a public playlist can expose that link.
+Retry Publish Generated Videos with the original artifact to finish scheduling.
+Existing completed uploads are not changed to Unlisted. A standalone local
+`--visibility private` request still starts and remains Private.
 
 A completed older upload missing playlist metadata can also be added when explicitly
 replayed through Publish Generated Videos. This does not upload the video again,

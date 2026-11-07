@@ -63,7 +63,7 @@ def service(monkeypatch):
              "playlists": [{"id": PLAYLIST, "snippet": {"title": "Mezmurs", "channelId": CHANNEL}}],
              "playlist_items": {}, "playlist_insert_count": 0, "playlist_error": False,
              "playlist_lost_response": False, "caption_tracks": {}, "caption_insert_count": 0,
-             "caption_error": False, "caption_lost_response": False, "caption_status": "serving"}
+             "caption_error": False, "caption_lost_response": False, "caption_status": "serving", "visibility_history": []}
 
     def execute(value):
         request = MagicMock()
@@ -78,6 +78,7 @@ def service(monkeypatch):
         state["video"] = {"id": video_id, "snippet": dict(kwargs["body"]["snippet"], channelId=CHANNEL),
                           "status": copy.deepcopy(kwargs["body"]["status"])}
         state["videos"][video_id] = state["video"]
+        state["visibility_history"].append((video_id, state["video"]["status"]["privacyStatus"]))
         request = MagicMock()
 
         def next_chunk(**kwargs):
@@ -97,6 +98,7 @@ def service(monkeypatch):
         state["video"] = state["videos"][kwargs["body"]["id"]]
         if not state["reject_schedule"]:
             state["video"]["status"].update(kwargs["body"]["status"])
+            state["visibility_history"].append((state["video"]["id"], state["video"]["status"]["privacyStatus"]))
         return execute(state["video"])
 
     def thumbnail(**kwargs):
@@ -178,7 +180,7 @@ def test_default_upload_schedules_after_four_hours_with_timed_captions(folder, s
     store = MemoryStore()
     result = upload.upload_song(upload.load_kit(folder, "d"), service, store, CHANNEL)
     body = service.test_state["insert_args"]["body"]
-    assert body["status"] == {"privacyStatus": "private", "selfDeclaredMadeForKids": False}
+    assert body["status"] == {"privacyStatus": "unlisted", "selfDeclaredMadeForKids": False}
     assert body["snippet"]["categoryId"] == "10"
     assert body["snippet"]["defaultLanguage"] == body["snippet"]["defaultAudioLanguage"] == "am"
     assert service.test_state["insert_args"]["notifySubscribers"] is False
@@ -189,6 +191,8 @@ def test_default_upload_schedules_after_four_hours_with_timed_captions(folder, s
     assert schedule["privacyStatus"] == "private" and schedule["publishAt"] == result["publish_at"]
     assert service.test_state["caption_insert_count"] == service.test_state["insert_count"]
     assert result["status"] == "complete" and result["privacy"] == "private"
+    assert result["initial_privacy"] == "unlisted"
+    assert service.test_state["visibility_history"] == [(VIDEO, "unlisted"), (VIDEO, "private")]
     assert json.loads((folder / "youtube-upload.json").read_text())["video_id"] == VIDEO
     assert store.state["channels"]["42"]["last_message_id"] == 22
     assert store.state["used_backgrounds"] == ["old"] and store.state["lyrics_channels"] == ["saved"]
@@ -199,7 +203,9 @@ def test_default_upload_schedules_after_four_hours_with_timed_captions(folder, s
 def test_local_visibility_overrides_still_include_timed_captions(folder, service, visibility):
     result = upload.upload_song(upload.load_kit(folder), service, MemoryStore(), CHANNEL, visibility)
     assert result["privacy"] == visibility and "publish_at" not in result
-    assert service.test_state["insert_args"]["body"]["status"]["privacyStatus"] == "private"
+    assert service.test_state["insert_args"]["body"]["status"]["privacyStatus"] == visibility
+    assert result["initial_privacy"] == visibility
+    assert service.test_state["visibility_history"] == [(VIDEO, visibility)]
     assert service.test_state["caption_insert_count"] == service.test_state["insert_count"]
 
 
@@ -327,7 +333,7 @@ def test_rejected_schedule_is_not_misreported_as_success_or_published_immediatel
     with pytest.raises(upload.UploadError, match="did not accept"):
         upload.upload_song(kit, service, store, CHANNEL)
     assert next(iter(store.state["youtube_uploads"].values()))["status"] == "uploaded"
-    assert service.test_state["video"]["status"]["privacyStatus"] == "private"
+    assert service.test_state["video"]["status"]["privacyStatus"] == "unlisted"
 
 
 def test_oauth_channel_mismatch_prevents_upload(service):
@@ -752,6 +758,7 @@ def test_all_four_uploads_use_youtube_scheduler_and_enforce_metadata_limits(fold
     planned = upload.plan_batch(kits, store, CHANNEL, "batch")
     results = [upload.upload_song(kit, service, store, CHANNEL) for kit in planned]
     assert len({r["video_id"] for r in results}) == 4
+    assert all(item["body"]["status"]["privacyStatus"] == "unlisted" for item in service.test_state["insertions"])
     assert [upload.publish_time(r["publish_at"]) - upload.utc_now() for r in results] == [
         timedelta(hours=h) for h in (4, 8, 12, 16)]
     for video in service.test_state["videos"].values():
@@ -868,7 +875,7 @@ def test_existing_playlist_membership_is_reused_without_another_insert(folder, s
     service.playlistItems.return_value.insert.assert_not_called()
 
 
-def test_failed_playlist_addition_resumes_same_private_video_without_moving_slot(folder, service):
+def test_failed_playlist_addition_resumes_same_unlisted_video_without_moving_slot(folder, service):
     store, kit = MemoryStore(), upload.load_kit(folder)
     kit = upload.plan_batch([kit], store, CHANNEL, "batch")[0]
     service.test_state["playlist_error"] = True
@@ -876,7 +883,7 @@ def test_failed_playlist_addition_resumes_same_private_video_without_moving_slot
         upload.upload_song(kit, service, store, CHANNEL)
     saved = store.state["youtube_uploads"][upload.source_key(kit, CHANNEL)]
     assert saved["status"] == "uploaded" and saved["thumbnail_done"]
-    assert service.test_state["video"]["status"]["privacyStatus"] == "private"
+    assert service.test_state["video"]["status"]["privacyStatus"] == "unlisted"
     service.videos.return_value.update.assert_not_called()
     service.test_state["playlist_error"] = False
     result = upload.upload_song(kit, service, store, CHANNEL)
@@ -917,7 +924,7 @@ def test_empty_playlist_insert_response_does_not_mark_upload_complete(folder, se
     with pytest.raises(upload.UploadError, match="playlist item ID"):
         upload.upload_song(kit, service, store, CHANNEL)
     assert store.state["youtube_uploads"][upload.source_key(kit, CHANNEL)]["status"] == "uploaded"
-    assert service.test_state["video"]["status"]["privacyStatus"] == "private"
+    assert service.test_state["video"]["status"]["privacyStatus"] == "unlisted"
 
 
 def test_completed_uploads_without_playlist_can_be_backfilled_without_touching_schedule(folder, service):
@@ -1043,14 +1050,14 @@ def test_subtitle_beyond_video_end_is_rejected_before_upload(folder):
         upload.load_kit(folder)
 
 
-def test_caption_failure_leaves_video_private_and_retries_same_video(folder, service):
+def test_caption_failure_leaves_video_unlisted_and_retries_same_video(folder, service):
     store, kit = MemoryStore(), upload.load_kit(folder)
     service.test_state["caption_error"] = True
     with pytest.raises(OSError):
         upload.upload_song(kit, service, store, CHANNEL)
     record = store.state["youtube_uploads"][upload.source_key(kit, CHANNEL)]
     assert record["status"] == "uploaded" and record["caption_status"] == "pending"
-    assert service.test_state["video"]["status"]["privacyStatus"] == "private"
+    assert service.test_state["video"]["status"]["privacyStatus"] == "unlisted"
     service.videos.return_value.update.assert_not_called()
     service.test_state["caption_error"] = False
     result = upload.upload_song(kit, service, store, CHANNEL)
@@ -1217,3 +1224,65 @@ def test_explicit_workflow_side_portrait_beats_old_thumbnail_environment(folder,
     monkeypatch.setattr(upload, "Store", MemoryStore)
     upload.main()
     assert service.thumbnails.return_value.set.call_args.kwargs["media_body"][0] == "thumbnail-d.jpg"
+
+
+@pytest.mark.parametrize("failure", ["thumbnail_error", "playlist_error", "caption_error", "schedule_error"])
+def test_unlisted_first_upload_retries_reuse_video_and_keep_publication_slot(folder, service, failure):
+    store, kit = MemoryStore(), upload.load_kit(folder)
+    planned = upload.plan_batch([kit], store, CHANNEL, "unlisted-first-test")[0]
+    service.test_state[failure] = True
+    with pytest.raises(OSError):
+        upload.upload_song(kit, service, store, CHANNEL)
+    key = upload.source_key(kit, CHANNEL)
+    assert store.state["youtube_uploads"][key]["initial_privacy"] == "unlisted"
+    assert store.state["youtube_uploads"][key]["publish_at"] == planned["planned_publish_at"]
+    assert service.test_state["video"]["status"]["privacyStatus"] == "unlisted"
+    service.test_state[failure] = False
+    result = upload.upload_song(kit, service, store, CHANNEL)
+    assert result["status"] == "complete" and result["privacy"] == "private"
+    assert result["publish_at"] == planned["planned_publish_at"]
+    assert service.test_state["insert_count"] == 1
+    assert service.test_state["visibility_history"] == [(VIDEO, "unlisted"), (VIDEO, "private")]
+
+
+def test_initial_privacy_is_saved_before_uncertain_upload_and_recovery_does_not_reinsert(folder, service):
+    store, kit = MemoryStore(), upload.load_kit(folder)
+    service.test_state["next_error"] = OSError("Uncertain upload response")
+    with pytest.raises(OSError):
+        upload.upload_song(kit, service, store, CHANNEL)
+    saved = store.state["youtube_uploads"][upload.source_key(kit, CHANNEL)]
+    assert saved["status"] == "uploading" and saved["initial_privacy"] == "unlisted"
+    service.test_state["next_error"] = None
+    result = upload.upload_song(kit, service, store, CHANNEL, recover_video_id=VIDEO)
+    assert result["privacy"] == "private" and result["initial_privacy"] == "unlisted"
+    assert service.test_state["insert_count"] == 1
+
+
+def test_legacy_private_upload_is_resumed_without_exposing_it_as_unlisted(folder, service):
+    store, kit = MemoryStore(), upload.load_kit(folder)
+    service.test_state["thumbnail_error"] = True
+    with pytest.raises(OSError):
+        upload.upload_song(kit, service, store, CHANNEL)
+    key = upload.source_key(kit, CHANNEL)
+    store.state["youtube_uploads"][key].pop("initial_privacy")
+    service.test_state["video"]["status"]["privacyStatus"] = "private"
+    service.test_state["visibility_history"] = []
+    service.test_state["thumbnail_error"] = False
+    result = upload.upload_song(kit, service, store, CHANNEL)
+    assert result["privacy"] == "private" and "initial_privacy" not in result
+    assert service.test_state["insert_count"] == 1
+    assert service.test_state["visibility_history"] == [(VIDEO, "private")]
+
+
+def test_complete_older_record_is_not_given_a_new_initial_visibility_or_rescheduled(folder, service):
+    store, kit = MemoryStore(), upload.load_kit(folder)
+    record = upload.upload_song(kit, service, store, CHANNEL)
+    key = upload.source_key(kit, CHANNEL)
+    store.state["youtube_uploads"][key].pop("initial_privacy")
+    service.test_state["visibility_history"] = []
+    updates, inserts = service.videos.return_value.update.call_count, service.test_state["insert_count"]
+    result = upload.upload_song(kit, service, store, CHANNEL)
+    assert result["publish_at"] == record["publish_at"] and "initial_privacy" not in result
+    assert service.test_state["visibility_history"] == []
+    assert service.videos.return_value.update.call_count == updates
+    assert service.test_state["insert_count"] == inserts

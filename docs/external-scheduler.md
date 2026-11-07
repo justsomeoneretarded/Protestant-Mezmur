@@ -81,7 +81,8 @@ Open [Generate Mezmur Videos](https://github.com/justsomeoneretarded/Protestant-
 and confirm a new run appears.
 
 A test dispatch starts a **real one-song generation/upload run**. Its video is
-uploaded privately and enters the existing four-hour YouTube publication queue.
+uploaded as Unlisted first, then made Private when its four-hour YouTube publication
+slot is applied. It remains Private until the public release time.
 The HTTP response only confirms GitHub accepted the request, not that rendering
 or uploading finished. cron-job.org cannot monitor the later Actions outcome;
 use the Actions page, existing Telegram notices and run summaries for that.
