@@ -112,3 +112,16 @@ def test_long_lyric_text_never_overflows_the_available_width(text):
     size = fit_size(text)
     assert 1 <= size < LYRIC_MAX_SIZE
     assert _measure("NotoSansEthiopic-Bold.ttf", size, text) <= MAX_WIDTH
+
+
+def test_amharic_subtitle_drops_latin_words_instead_of_failing(tmp_path):
+    from mezmur.lyrics import is_amharic_text
+    from mezmur.subtitles import write_srt
+    cues = [{"start": 1.0, "end": 2.0, "text": "ኧረ ስንቱ x2", "romanized": ""},
+            {"start": 3.0, "end": 4.0, "text": "Chorus", "romanized": ""},
+            {"start": 5.0, "end": 6.0, "text": "ሁሉ ለፍኩብህ (Repeat)", "romanized": ""}]
+    write_srt(cues, tmp_path / "s.srt", amharic_only=True)
+    blocks = (tmp_path / "s.srt").read_text(encoding="utf-8").strip().split("\n\n")
+    texts = [b.splitlines()[2] for b in blocks]
+    assert texts == ["ኧረ ስንቱ", "ሁሉ ለፍኩብህ"]
+    assert all(is_amharic_text(t) for t in texts)

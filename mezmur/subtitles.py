@@ -4,7 +4,7 @@ from pathlib import Path
 from PIL import ImageFont
 
 from .geez import romanize
-from .lyrics import is_amharic_text, safe_ass, timestamp
+from .lyrics import amharic_only_text, is_amharic_text, safe_ass, timestamp
 
 FONTS = Path(__file__).parent / "assets" / "fonts"
 LYRIC_MAX_SIZE = 112
@@ -219,6 +219,9 @@ def write_srt(cues, path, romanized=False, display_timing=False, duration=None, 
         if end <= start:
             continue
         if amharic_only and not is_amharic_text(text):
-            raise ValueError("subtitle.srt requires Amharic script only, without English or romanized lyrics")
+            # Drop stray Latin words ('x2', 'Chorus', romanized words) instead of failing the whole song.
+            text = amharic_only_text(text)
+            if not text:
+                continue
         blocks.append(f"{len(blocks) + 1}\n{timestamp(start)} --> {timestamp(end)}\n{text}")
     Path(path).write_text("\n\n".join(blocks) + "\n", encoding="utf-8")

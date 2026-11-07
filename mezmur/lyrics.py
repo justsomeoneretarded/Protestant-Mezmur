@@ -8,6 +8,21 @@ def is_amharic_text(text):
     return bool(letters) and all(unicodedata.name(char, "").startswith("ETHIOPIC ") for char in letters)
 
 
+def amharic_only_text(text):
+    """Keep only the Amharic words of a lyric line (drops Latin words such as 'x2', 'Chorus', 'Repeat',
+    romanized words); punctuation and numbers between Amharic words are kept. '' if none remain."""
+    kept = []
+    for token in str(text).split():
+        letters = [c for c in token if c.isalpha()]
+        if letters and all(unicodedata.name(c, "").startswith("ETHIOPIC ") for c in letters):
+            kept.append(token)
+        elif not letters and kept:
+            kept.append(token)  # punctuation/number between Amharic words
+    while kept and not any(c.isalpha() for c in kept[-1]):
+        kept.pop()
+    return " ".join(kept)
+
+
 def timestamp(seconds, ass=False):
     precision = 100 if ass else 1000
     ticks = round(max(0.0, seconds) * precision)
