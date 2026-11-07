@@ -144,8 +144,8 @@ the queue can grow. Changes made manually in Studio are not synchronized into th
 - `message_ids`: remake specific songs (e.g. `2,3`) without moving your place in the channel.
 - `separator`: vocal-isolation model (default is the fast, accurate UVR-MDX-NET).
 - `upload_youtube`: automatic YouTube upload, **on by default**; uncheck for artifacts only. Requires
-  `YOUTUBE_OAUTH_JSON` (secret) and `YOUTUBE_CHANNEL_ID` (variable). Uploads privately,
-  then uses YouTube's built-in scheduler with randomized four-hour slots: four
+  `YOUTUBE_OAUTH_JSON` (secret) and `YOUTUBE_CHANNEL_ID` (variable). Uploads as Unlisted first,
+  then switches to Private while using YouTube's built-in scheduler with randomized four-hour slots: four
   new videos get +4, +8, +12 and +16 hours when the queue is empty. New batches
   follow existing queued videos; retries keep their saved order and future slots.
   Every workflow upload selects thumbnail D: left-side text and a large circular portrait on the right; all four

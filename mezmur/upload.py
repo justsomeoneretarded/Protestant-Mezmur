@@ -1,4 +1,4 @@
-"""YouTube publishing with private-first uploads, playlist placement and duplicate protection."""
+"""YouTube publishing with unlisted-first uploads, native scheduling and duplicate protection."""
 import argparse
 import copy
 import hashlib
@@ -425,6 +425,7 @@ def upload_song(kit, service, store, channel, visibility="public", recover_video
                   "thumbnail_done": False, "metadata_adjusted": kit.get("metadata_adjusted", []),
                   "caption_file": kit["subtitle"], "caption_sha256": kit["subtitle_sha256"],
                   "caption_language": CAPTION_LANGUAGE, "caption_name": CAPTION_NAME, "caption_status": "pending"}
+        record["initial_privacy"] = "private" if record["requested_visibility"] == "private" else "unlisted"
         # A durable reservation precedes all upload requests. Unknown outcomes never trigger a fresh insert.
         save_record(store, key, record, previous)
         previous = copy.deepcopy(record)
@@ -432,7 +433,7 @@ def upload_song(kit, service, store, channel, visibility="public", recover_video
         body = {"snippet": {"title": kit["title"], "description": kit["description"],
                             "tags": upload_tags(kit["tags"], marker), "categoryId": "10",
                             "defaultLanguage": "am", "defaultAudioLanguage": "am"},
-                "status": {"privacyStatus": "private", "selfDeclaredMadeForKids": False}}
+                "status": {"privacyStatus": record["initial_privacy"], "selfDeclaredMadeForKids": False}}
         request = service.videos().insert(part="snippet,status", body=body, notifySubscribers=False,
                                           media_body=media(folder / "video.mp4", "video/mp4", resumable=True))
         response = None
