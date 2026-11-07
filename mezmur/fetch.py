@@ -88,7 +88,7 @@ def _title_queries(record):
     return out[:4]
 
 
-async def search_channels(tg, record, channels):
+async def search_channels(tg, record, channels, peers=None):
     """Search known lyrics channels, then every chat this Telegram account has joined."""
     queries = _title_queries(record)
     out, seen = [], set()
@@ -98,11 +98,14 @@ async def search_channels(tg, record, channels):
             seen.add((where, m.id))
             out.append({"where": where, "text": m.raw_text, "link": link})
 
+    from .telegram import PeerCache
+    peers = peers or PeerCache(tg)
     for name in channels:
         try:
-            entity = await tg.get_entity(name)
+            entity = await peers.get(name)
         except Exception as error:
-            print(f"  lyrics channel {name}: {error.__class__.__name__}", flush=True)
+            if not peers.blocked or "rate-limited" not in str(error):
+                print(f"  lyrics channel {name}: {error.__class__.__name__}", flush=True)
             continue
         for q in queries:
             try:
@@ -133,7 +136,10 @@ async def run(args):
     try:
         if not await tg.is_user_authorized():
             raise ValueError("Telegram session expired; generate a new TELEGRAM_SESSION locally")
-        entity = await resolve_channel(tg, required("TELEGRAM_CHANNEL"))
+        from .telegram import PeerCache
+        # Remembered channel ids/access hashes avoid Telegram's rate-limited username lookups.
+        peers = PeerCache(tg, state.setdefault("telegram_peers", {}))
+        entity = await resolve_channel(tg, required("TELEGRAM_CHANNEL"), peers)
         if not getattr(entity, "broadcast", False):
             raise ValueError("TELEGRAM_CHANNEL must resolve to a Telegram broadcast channel")
         key = str(entity.id)
@@ -159,7 +165,7 @@ async def run(args):
             await download(tg, message, folder / f"audio.{_ext(message)}")
             texts, photos = await neighbours(tg, entity, message, folder)
             record = resolve(info)
-            texts += await search_channels(tg, record, channels)
+            texts += await search_channels(tg, record, channels, peers)
             write_json(folder / "info.json", info)
             write_json(folder / "telegram.json", {"texts": texts, "photos": photos})
             write_json(folder / "used_backgrounds.json", used)

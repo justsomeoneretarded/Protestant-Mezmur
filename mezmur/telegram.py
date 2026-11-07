@@ -15,15 +15,73 @@ def client():
     )
 
 
-async def resolve_channel(client, channel):
-    if channel.lstrip("-").isdigit():
-        target = int(channel)
-        # StringSession does not persist the entity/access-hash cache.
-        async for dialog in client.iter_dialogs():
-            if dialog.entity.id == target or get_peer_id(dialog.entity) == target:
-                return dialog.entity
-        raise ValueError("Private channel ID not found among this Telegram account's dialogs")
-    return await client.get_entity(channel)
+class PeerCache:
+    """Find channels with as few Telegram username lookups as possible.
+
+    Telegram rate-limits username lookups (ResolveUsername) per account and answers with long waits
+    when a few runs do many of them. Channels the account has joined come from one dialog listing
+    (no lookups); every other channel is looked up once and remembered in the saved state
+    (id + access hash), so later runs need no lookup at all. After a rate-limit, no further lookups
+    are attempted in this run."""
+
+    def __init__(self, client, saved=None):
+        self.client = client
+        self.saved = saved if isinstance(saved, dict) else {}
+        self.joined = None
+        self.blocked = False
+
+    async def _load_joined(self):
+        if self.joined is not None:
+            return
+        self.joined = {}
+        try:
+            async for dialog in self.client.iter_dialogs():
+                ent = dialog.entity
+                name = (getattr(ent, "username", None) or "").lower()
+                if name:
+                    self.joined[name] = ent
+                self.joined[str(ent.id)] = ent
+                self.joined[str(get_peer_id(ent))] = ent
+        except Exception as error:  # noqa: BLE001 - fall back to lookups
+            print(f"  could not list joined chats: {error.__class__.__name__}", flush=True)
+
+    async def get(self, name):
+        from telethon.errors import FloodWaitError
+        from telethon.tl.types import InputPeerChannel
+        key = str(name).strip().lstrip("@").lower()
+        await self._load_joined()
+        if key in self.joined:
+            return self.joined[key]
+        if key.lstrip("-").isdigit():
+            raise ValueError("Private channel ID not found among this Telegram account's dialogs")
+        hit = self.saved.get(key)
+        if isinstance(hit, list) and len(hit) == 2:
+            return InputPeerChannel(int(hit[0]), int(hit[1]))
+        if self.blocked:
+            raise RuntimeError("Telegram username lookups are rate-limited for now")
+        try:
+            ent = await self.client.get_entity(key)
+        except FloodWaitError as error:
+            self.blocked = True
+            print(f"  Telegram asked to wait {error.seconds // 60} min before more channel lookups; "
+                  "skipping the remaining lookups this run", flush=True)
+            raise
+        if getattr(ent, "access_hash", None) is not None:
+            self.saved[key] = [ent.id, ent.access_hash]
+        return ent
+
+
+async def resolve_channel(client, channel, cache=None):
+    cache = cache or PeerCache(client)
+    try:
+        return await cache.get(channel)
+    except Exception as error:
+        from telethon.errors import FloodWaitError
+        if isinstance(error, FloodWaitError):
+            raise ValueError(f"Telegram temporarily blocked looking up {channel} (wait about "
+                             f"{error.seconds // 60} minutes, then run again). Joining that channel with "
+                             "this Telegram account avoids the lookup completely.") from None
+        raise
 
 
 def is_song(message) -> bool:
