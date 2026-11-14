@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 from mezmur import audio, song
+from mezmur.song import lrc_check as real_lrc_check
 
 
 @pytest.fixture
@@ -273,3 +274,19 @@ def test_accepted_telegram_lyrics_continue_even_with_estimated_timings(clean_pip
     meta = json.loads((calls["output"] / "metadata.json").read_text())
     assert meta["review"]["needs_review"]
     assert "estimated" in " ".join(meta["review"]["reasons"])
+
+
+def test_accepted_lyrics_render_when_real_lrclib_crosscheck_has_no_matching_lines(clean_pipeline, monkeypatch):
+    calls = clean_pipeline
+    calls["candidates"][0].update(
+        source="lrclib", url="https://lrclib.net/api/get/test",
+        synced="[00:00.50] ሌላ ቃል", lrclib_duration=4,
+    )
+    monkeypatch.setattr(song, "lrc_check", real_lrc_check)
+    result = song.produce(calls["input"], calls["output"], calls["work"])
+    assert result["mode"] == "lyrics-aligned" and "render" in calls["events"]
+    quality = json.loads((calls["output"] / "quality.json").read_text())
+    assert quality["lrc_check"] is None
+    assert calls["video_cues"][0]["start"] == 0.5
+    assert calls["features_source"] == calls["source"]
+    assert (calls["output"] / "subtitle.srt").is_file()

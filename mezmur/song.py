@@ -163,8 +163,8 @@ def lrc_check(cues, candidates, duration):
         diffs, used = [], set()
         for cue in cues:
             key = fold(cue["text"])
-            best = min((abs(t - cue["start"]), i) for i, (t, text) in enumerate(marks)
-                       if i not in used and text and (text in key or key in text)) if marks else None
+            best = min(((abs(t - cue["start"]), i) for i, (t, text) in enumerate(marks)
+                        if i not in used and text and (text in key or key in text)), default=None)
             if best and best[0] < 8:
                 used.add(best[1])
                 diffs.append(best[0])
