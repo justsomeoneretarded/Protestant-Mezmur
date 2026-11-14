@@ -820,7 +820,7 @@
       "caption_sha256": "c0ee0a3284c5b3692df3969ed2d327770b5c212b9d760fe0446d1dbc783ccb75",
       "caption_language": "am",
       "caption_name": "Amharic lyrics (Rehoboth Mezmur)",
-      "caption_status": "pending",
+      "caption_status": "serving",
       "initial_privacy": "unlisted",
       "video_id": "k6HiW7Bjpms",
       "url": "https://youtu.be/k6HiW7Bjpms",
@@ -836,7 +836,8 @@
           "most_recent_upload"
         ],
         "studio_url": "https://studio.youtube.com/video/k6HiW7Bjpms/editor"
-      }
+      },
+      "caption_id": "AUieDaYld7Fsf8KLkLkESOZ04fVCAveHOU4Xx-6aoegiiVtZpMqVmUBBwcsaHXSD4t21FKbD6UxgIRZoZzsAnDGlcQ"
     }
   },
   "telegram_peers": {
