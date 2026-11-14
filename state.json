@@ -843,7 +843,7 @@
       "completed_at": "2026-11-14T12:50:56+00:00"
     },
     "UCNSSLKyhXrG50l694M48zTQ:4335601101:61": {
-      "status": "uploading",
+      "status": "uploaded",
       "message_id": 61,
       "telegram_channel_id": "4335601101",
       "youtube_channel_id": "UCNSSLKyhXrG50l694M48zTQ",
@@ -864,7 +864,9 @@
       "caption_language": "am",
       "caption_name": "Amharic lyrics (Rehoboth Mezmur)",
       "caption_status": "pending",
-      "initial_privacy": "unlisted"
+      "initial_privacy": "unlisted",
+      "video_id": "8EPpYRRo4RU",
+      "url": "https://youtu.be/8EPpYRRo4RU"
     }
   },
   "telegram_peers": {
