@@ -939,6 +939,17 @@
       "batch_id": "43671649719",
       "queued_at": "2026-11-15T03:36:51+00:00",
       "publish_at": "2026-11-15T08:35:37Z"
+    },
+    "UCNSSLKyhXrG50l694M48zTQ:4335601101:66": {
+      "status": "queued",
+      "message_id": 66,
+      "telegram_channel_id": "4335601101",
+      "youtube_channel_id": "UCNSSLKyhXrG50l694M48zTQ",
+      "requested_visibility": "public",
+      "held_for_review": false,
+      "batch_id": "43684723190",
+      "queued_at": "2026-11-15T06:42:08+00:00",
+      "publish_at": "2026-11-15T12:35:37Z"
     }
   },
   "telegram_peers": {
