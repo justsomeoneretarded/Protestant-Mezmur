@@ -1051,7 +1051,19 @@
       "initial_privacy": "unlisted",
       "video_id": "_wqexdr-UYQ",
       "url": "https://youtu.be/_wqexdr-UYQ",
-      "thumbnail_file": "thumbnail-d.jpg"
+      "thumbnail_file": "thumbnail-d.jpg",
+      "playlist_id": "PLH-pGXm4uCY8",
+      "playlist_title": "Mezmurs",
+      "playlist_item_id": "UExILXBHWG00dUNZOC5DNzE1RjZEMUZCMjA0RDBB",
+      "playlist_url": "https://www.youtube.com/playlist?list=PLH-pGXm4uCY8",
+      "end_screen": {
+        "status": "manual_required",
+        "elements": [
+          "best_for_viewer",
+          "most_recent_upload"
+        ],
+        "studio_url": "https://studio.youtube.com/video/_wqexdr-UYQ/editor"
+      }
     }
   },
   "telegram_peers": {
