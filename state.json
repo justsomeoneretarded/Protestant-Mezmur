@@ -1111,6 +1111,17 @@
       "caption_id": "AUieDaZLr0bBFREsq2akmLQsnkuA72HCl-PLnoqZhNQLYPuT8S7NWWI87bbo-AWZHny-iiQkPaKF2aRmKe4uFl3TQQ",
       "privacy": "private",
       "completed_at": "2026-11-15T18:35:56+00:00"
+    },
+    "UCNSSLKyhXrG50l694M48zTQ:4335601101:71": {
+      "status": "queued",
+      "message_id": 71,
+      "telegram_channel_id": "4335601101",
+      "youtube_channel_id": "UCNSSLKyhXrG50l694M48zTQ",
+      "requested_visibility": "public",
+      "held_for_review": false,
+      "batch_id": "43762809324",
+      "queued_at": "2026-11-15T21:40:54+00:00",
+      "publish_at": "2026-11-16T04:35:37Z"
     }
   },
   "telegram_peers": {
