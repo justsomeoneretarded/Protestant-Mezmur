@@ -2,8 +2,8 @@
   "version": 1,
   "channels": {
     "4335601101": {
-      "last_message_id": 68,
-      "run_id": "43713040390"
+      "last_message_id": 69,
+      "run_id": "43729001302"
     }
   },
   "used_backgrounds": [
@@ -120,7 +120,8 @@
     "commons-img:90307752",
     "commons-img:150241931",
     "commons-img:196361234",
-    "commons-img:91415426"
+    "commons-img:91415426",
+    "commons-img:18083426"
   ],
   "lyrics_channels": [
     "SongLegetaLyrics",
