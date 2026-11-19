@@ -1242,7 +1242,7 @@
       "completed_at": "2026-11-18T21:41:06+00:00"
     },
     "UCNSSLKyhXrG50l694M48zTQ:4335601101:79": {
-      "status": "uploaded",
+      "status": "complete",
       "message_id": 79,
       "telegram_channel_id": "4335601101",
       "youtube_channel_id": "UCNSSLKyhXrG50l694M48zTQ",
@@ -1279,7 +1279,9 @@
         ],
         "studio_url": "https://studio.youtube.com/video/hNnKyLhvfH4/editor"
       },
-      "caption_id": "AUieDaaxmH9H1zZPBsW_xxAZnLW3cuoXCmxhy8PhEGiSmcSwXjzckdhSt92_X4Yz5Z1lupwRAB7xTKhzj97oE7D9tQ"
+      "caption_id": "AUieDaaxmH9H1zZPBsW_xxAZnLW3cuoXCmxhy8PhEGiSmcSwXjzckdhSt92_X4Yz5Z1lupwRAB7xTKhzj97oE7D9tQ",
+      "privacy": "private",
+      "completed_at": "2026-11-19T06:44:43+00:00"
     }
   },
   "telegram_peers": {
