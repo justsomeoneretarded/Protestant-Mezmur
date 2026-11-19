@@ -1369,6 +1369,17 @@
       "caption_id": "AUieDaYIYIqLgOUy0JHuy7pJG4LbkxhNCcXm6EJLHdsecUv7lQPAfpBPK5mF5Ne3eHAHai-nxXPQPWteiwaLTryMDQ",
       "privacy": "private",
       "completed_at": "2026-11-19T15:43:51+00:00"
+    },
+    "UCNSSLKyhXrG50l694M48zTQ:4335601101:83": {
+      "status": "queued",
+      "message_id": 83,
+      "telegram_channel_id": "4335601101",
+      "youtube_channel_id": "UCNSSLKyhXrG50l694M48zTQ",
+      "requested_visibility": "public",
+      "held_for_review": false,
+      "batch_id": "44586152615",
+      "queued_at": "2026-11-19T18:38:53+00:00",
+      "publish_at": "2026-11-20T00:49:34Z"
     }
   },
   "telegram_peers": {
