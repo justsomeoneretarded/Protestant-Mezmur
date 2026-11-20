@@ -1513,7 +1513,7 @@
       "run_id": "44666658226",
       "created_at": "2026-11-20T03:43:12+00:00",
       "review_warnings": true,
-      "thumbnail_done": false,
+      "thumbnail_done": true,
       "metadata_adjusted": [],
       "caption_file": "subtitle.srt",
       "caption_sha256": "57f1bf19c989244ae1f5c105d97d039260bea3e923cdbe2eb2e0d99719e3fc48",
@@ -1522,7 +1522,8 @@
       "caption_status": "pending",
       "initial_privacy": "unlisted",
       "video_id": "VkvCZArEf04",
-      "url": "https://youtu.be/VkvCZArEf04"
+      "url": "https://youtu.be/VkvCZArEf04",
+      "thumbnail_file": "thumbnail-d.jpg"
     }
   },
   "telegram_peers": {
