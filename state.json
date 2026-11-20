@@ -1710,6 +1710,17 @@
       "caption_id": "AUieDabSOyY5hTVndnWsEAz_C7Sg8jg1bSctx500Bv8nGwW-e5gdil5kHulZZFY88g7jXwquEFS6vqukysl3r5K6ig",
       "privacy": "private",
       "completed_at": "2026-11-20T18:36:41+00:00"
+    },
+    "UCNSSLKyhXrG50l694M48zTQ:4335601101:92": {
+      "status": "queued",
+      "message_id": 92,
+      "telegram_channel_id": "4335601101",
+      "youtube_channel_id": "UCNSSLKyhXrG50l694M48zTQ",
+      "requested_visibility": "public",
+      "held_for_review": false,
+      "batch_id": "44818929538",
+      "queued_at": "2026-11-20T21:41:18+00:00",
+      "publish_at": "2026-11-21T08:49:34Z"
     }
   },
   "telegram_peers": {
