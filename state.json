@@ -2007,6 +2007,17 @@
       "caption_id": "AUieDab_DTF0jC-37s0C1qCmXk9JlvFcLk6qFtj4D13FyVvp_NGS-b9ds8hkNCJykCMTLYJ6V20BUep9znYW5JimHw",
       "privacy": "private",
       "completed_at": "2026-11-21T15:38:05+00:00"
+    },
+    "UCNSSLKyhXrG50l694M48zTQ:4335601101:103": {
+      "status": "queued",
+      "message_id": 103,
+      "telegram_channel_id": "4335601101",
+      "youtube_channel_id": "UCNSSLKyhXrG50l694M48zTQ",
+      "requested_visibility": "public",
+      "held_for_review": false,
+      "batch_id": "44993020731",
+      "queued_at": "2026-11-22T06:37:18+00:00",
+      "publish_at": "2026-11-22T12:49:34Z"
     }
   },
   "telegram_peers": {
