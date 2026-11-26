@@ -2308,7 +2308,7 @@
       "completed_at": "2026-11-26T00:36:59+00:00"
     },
     "UCNSSLKyhXrG50l694M48zTQ:4335601101:119": {
-      "status": "queued",
+      "status": "uploading",
       "message_id": 119,
       "telegram_channel_id": "4335601101",
       "youtube_channel_id": "UCNSSLKyhXrG50l694M48zTQ",
@@ -2316,7 +2316,20 @@
       "held_for_review": false,
       "batch_id": "45747910622",
       "queued_at": "2026-11-26T03:36:43+00:00",
-      "publish_at": "2026-11-26T09:38:00Z"
+      "publish_at": "2026-11-26T09:38:00Z",
+      "video_sha256": "8d94c0ccce839eeb6775480eb829209aff95456265650e9bbf4a36200a0ddd39",
+      "source_marker": "mezmur-source-8ab6b9feba9274b267d5243f",
+      "run_id": "45747910622",
+      "created_at": "2026-11-26T03:36:46+00:00",
+      "review_warnings": true,
+      "thumbnail_done": false,
+      "metadata_adjusted": [],
+      "caption_file": "subtitle.srt",
+      "caption_sha256": "243b2dcef07ce5bd44e8344029ca58cd314cdf76f8837a6efca971062d71e48b",
+      "caption_language": "am",
+      "caption_name": "Amharic lyrics (Rehoboth Mezmur)",
+      "caption_status": "pending",
+      "initial_privacy": "unlisted"
     }
   },
   "telegram_peers": {
