@@ -1,0 +1,35 @@
+name: Recover failed uploads
+
+# Temporary, explicit recovery of finished artifacts. Remove after completion.
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/recover-uploads-2026-11-28.yml
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  recover:
+    name: Recover song ${{ matrix.message_id }}
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        include:
+          - run_id: '46048288126'
+            message_id: '120'
+          - run_id: '46069272316'
+            message_id: '121'
+          - run_id: '46102099458'
+            message_id: '123'
+          - run_id: '46115877327'
+            message_id: '124'
+    uses: ./.github/workflows/publish.yml
+    with:
+      run_id: ${{ matrix.run_id }}
+      message_id: ${{ matrix.message_id }}
+    secrets:
+      YOUTUBE_OAUTH_JSON: ${{ secrets.YOUTUBE_OAUTH_JSON }}
