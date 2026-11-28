@@ -2433,6 +2433,17 @@
       "caption_id": "AUieDaaA6ZmG7ybUjpq9_65lO6T0_N4-fcF2NC6ieVRRhSnv0WldsSfC9T4zZ4wej7yawactATBjwiBxUeXoSzlXPA",
       "privacy": "private",
       "completed_at": "2026-11-28T06:46:19+00:00"
+    },
+    "UCNSSLKyhXrG50l694M48zTQ:4335601101:123": {
+      "status": "queued",
+      "message_id": 123,
+      "telegram_channel_id": "4335601101",
+      "youtube_channel_id": "UCNSSLKyhXrG50l694M48zTQ",
+      "requested_visibility": "public",
+      "held_for_review": false,
+      "batch_id": "46102099458",
+      "queued_at": "2026-11-28T06:46:55+00:00",
+      "publish_at": "2026-11-29T05:00:00Z"
     }
   },
   "telegram_peers": {
