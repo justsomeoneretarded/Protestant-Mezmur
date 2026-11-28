@@ -3,7 +3,7 @@
 The normal workflow can generate videos and upload them to your own YouTube
 channel. Uploading is enabled by default for manual and reusable generation runs:
 videos start **Unlisted**, then switch to **Private** when their native publication
-schedule is applied. They become **public in randomized order at four-hour intervals**. Google OAuth is required
+schedule is applied. They become **public at 05:00, 12:00 and 17:00 GMT each day**, with at most one video per slot. Google OAuth is required
 for uploading; open-source transcription and rendering still run on GitHub Actions.
 An API key or service account cannot replace channel-owner authorization.
 
@@ -66,9 +66,8 @@ real credentials into chat, source files, repository variables or public artifac
     [Advanced settings](https://www.youtube.com/account_advanced) for its **UC... Channel ID**.
 14. In the repository's Actions **Variables** tab, create **YOUTUBE_CHANNEL_ID**
     containing that ID, not the channel name or @handle.
-15. Automatic uploads use portrait layout **b** by default. Optionally set
-    **YOUTUBE_THUMBNAIL** to **d** for the frameless portrait layout.
-    Keep your existing Telegram secrets unchanged.
+15. Automatic workflow uploads always use **thumbnail D**, with text on the left
+    and a large circular portrait on the right. Keep your existing Telegram secrets unchanged.
 16. Run Generate Mezmur Videos on main and leave Automatically upload finished
     videos to YouTube checked (the default). For an initial test, use one song.
 
@@ -101,8 +100,11 @@ and copyright enforcement still apply. Only process/publish audio you have right
 ## Generate and Upload
 
 For automatic generation, use [cron-job.org's external scheduler](external-scheduler.md)
-to send a workflow-dispatch request every three hours. The saved request selects one
-new song and enables uploading. GitHub's built-in cron is intentionally not enabled.
+to send a workflow-dispatch request at 03:00, 10:00 and 15:00 GMT, giving generation
+about two hours before each release. The saved request selects one new song and enables
+uploading. Update the existing job in cron-job.org; a repository commit cannot change its schedule.
+An older three-hour trigger still obeys the three-publications-per-day limit but can grow the queue.
+GitHub's built-in cron is intentionally not enabled.
 Repository changes alone do not create or activate the external account's job.
 Manual runs still respect an unchecked Upload box.
 
@@ -122,7 +124,7 @@ manual generation, and the upload-only workflow. Repository variable
 in the artifact. If no artist photo was confirmed, the renderer's existing text
 fallback still applies; no unverified portrait is invented. Standalone local CLI
 uploads default to d; explicit local overrides remain available.
-The workflow always requests the four-hour-interval public queue. A previously configured
+The workflow always requests the 05:00, 12:00 and 17:00 GMT public queue. A previously configured
 YOUTUBE_PRIVACY variable no longer changes workflow behavior.
 
 Every new scheduled video initially uploads as **Unlisted**, with the recommended title,
@@ -141,38 +143,31 @@ and romanized SRTs remain in `captions/` for manual use; only one Amharic track 
 uploaded automatically. Older complete kits can use `captions/am.srt` as a fallback.
 
 Before the first upload, the uploader shuffles newly selected songs once and saves
-every UTC publishAt slot on mezmur-state with status queued. With an empty queue,
-four selected videos get slots at **+4, +8, +12 and +16 hours** from queue planning.
-The randomized order and timestamps are durable, including on a subset retry.
-Previously saved publication reservations keep their original deadlines; new slots
-use the four-hour gap after the last existing future reservation.
+each distinct UTC publishAt slot on mezmur-state with status queued. The only daily
+release slots are **05:00, 12:00 and 17:00 GMT (UTC)**. One video uses one slot;
+extra songs spill into following days, so a batch cannot publish more than three
+videos in a GMT calendar day. For example, four songs planned at 06:00 GMT get
+12:00 and 17:00 that day, then 05:00 and 12:00 the next day.
 
-A new batch appends after this channel's last recorded future slot, keeping a
-four-hour gap across batches. Three-hour generation does not change this publishing gap:
-eight successful single-song runs a day can grow a queue that publishes six videos a day.
-Other destination channels have independent queues.
-Completed replays do not consume another slot. The queue only tracks this app's
-saved records; manual changes in Studio or videos scheduled outside the app are
-not automatically synchronized.
+New reservations need at least 15 minutes of lead time. A run finishing too late
+for a slot uses the next available one. Batches append after the last saved future
+reservation for this channel, including unfinished uploads. The saved random order
+and future deadlines survive retries; completed replays do not use another slot.
+Other destination channels have independent queues. Previously accepted schedules
+are preserved; Studio changes and videos scheduled outside this app are not synchronized.
 
-Each video, its thumbnail and timed Amharic captions are uploaded and its reserved publishAt is applied
-through YouTube's built-in scheduler. YouTube handles publication; no four-hour
-runner wait or publication cron is needed. The external scheduler only starts new generation/upload runs. The Actions summary displays times in EAT
-(Africa/Nairobi); machine-readable receipts keep UTC timestamps.
+Each video, thumbnail and timed Amharic captions are uploaded before its reserved
+publishAt is applied through **YouTube's built-in scheduler**. YouTube handles the
+release; the Actions runner does not wait until publication. The external scheduler
+starts generation only. Run summaries show GMT and EAT; machine-readable receipts use UTC.
 [YouTube requires private status for scheduling](https://developers.google.com/youtube/v3/docs/videos#status.publishAt),
-so the sequence is **Unlisted upload -> Private + publication time -> Public**.
-This matches choosing Unlisted first, then scheduling. It does not keep videos
-Unlisted during the scheduled waiting period. `initial_privacy` in new upload
-receipts records the initial request; `privacy` records the final status observed
-when this run completed, not a continuously refreshed Studio status.
+so the existing sequence remains **Unlisted upload -> Private + publication time -> Public**.
+Receipt privacy is the status observed when the run finished, not live Studio status.
 
-Future deadlines remain fixed on retries: songs are not reshuffled and accepted
-schedules are not moved. An expired, unfinished slot moves behind the remaining
-future queue (or at least four hours ahead when none remains), never to a past
-time that could publish immediately. This can leave gaps when an upload fails.
-For an uploaded video, the app checks YouTube before moving a missed slot: if
-YouTube already published it, recovery records that outcome without making the
-video private again. Completed uploads are not changed.
+If an unfinished upload misses its deadline, it moves to the next available daily
+slot after the future queue. The uploader never submits a past publishAt that
+could publish immediately. If YouTube already published the video, recovery records
+that outcome without making it private again. Completed uploads are not rescheduled.
 
 Only verified, aligned lyric videos are eligible. Review notes remain in the kit
 but no longer silently cancel automatic scheduling. Older unfinished reservations
@@ -211,9 +206,9 @@ saved track IDs make no caption calls. These costs are in addition to existing v
 thumbnail, playlist and scheduling requests. Captions help accessibility and machine-readable
 lyric discovery, but do not guarantee better SEO placement.
 
-## Mezmurs Playlist and End Screens
+## amlko mezmurs Playlist and End Screens
 
-Every newly uploaded video is added to the existing **Mezmurs** playlist on the
+Every newly uploaded video is added to the existing **amlko mezmurs** playlist on the
 authorized channel. No playlist ID or new OAuth setup is required: the uploader
 finds the playlist by name (case-insensitive, ignoring surrounding whitespace).
 Playlist visibility is not changed. Missing or ambiguous names stop publishing
@@ -276,7 +271,7 @@ song cursor and lyrics library. Both workflows serialize state writes; generatio
 finalizes progress *before* publishing, so upload checkpoints cannot invalidate
 the generation snapshot.
 
-- A randomized batch plan with distinct four-hour slots is saved **before** any video-upload request.
+- A randomized batch plan with distinct daily GMT slots is saved **before** any video-upload request.
 - A queued record is changed to an uploading reservation before a new video insert.
 - The accepted video ID is saved before thumbnail, playlist, caption or scheduling work.
 - Completed songs with a saved caption track are skipped on replays, even when rendered again.

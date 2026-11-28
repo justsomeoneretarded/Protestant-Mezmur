@@ -122,8 +122,10 @@ YouTube channel and the web, checking that the faces agree.
 
 ## Running it
 
-For automatic runs, configure **cron-job.org** to dispatch this workflow every three
-hours in `Africa/Nairobi`, with one new song and uploading enabled.
+For automatic runs, configure **cron-job.org** to dispatch this workflow at
+**03:00, 10:00 and 15:00 GMT** (time zone `Etc/UTC`), with one new song and uploading enabled.
+This prepares each video about two hours before its YouTube release. Edit the existing
+external job; repository changes cannot update its saved schedule.
 [Exact one-time setup](docs/external-scheduler.md) and [non-secret request body](docs/cron-dispatch.json).
 GitHub's built-in cron is intentionally not enabled, avoiding two independent triggers.
 The external job is not activated by a repository commit; it must be saved in your cron-job.org account.
@@ -133,10 +135,12 @@ interval, GitHub keeps one running and at most one pending run; newer pending ru
 can replace older ones. The next run reads saved Telegram progress rather than
 skipping songs. When no new songs are found, rendering and publishing are skipped.
 
-YouTube publication remains **four hours apart**, separate from the external trigger.
-Multiple songs or later batches append distinct slots after the recorded future queue.
-Generating every three hours can add eight songs a day while publication handles six;
-the queue can grow. Changes made manually in Studio are not synchronized into this queue.
+YouTube publication uses **05:00, 12:00 and 17:00 GMT each day**, separate from the
+external trigger. Multiple songs and later batches append distinct slots after the
+recorded future queue; extra songs spill into following days. New reservations need
+15 minutes of lead time. If an older three-hour trigger remains enabled, videos still
+publish at most three times per GMT day, but the waiting queue can grow.
+Changes made manually in Studio are not synchronized into this queue.
 
 **Actions → Generate Mezmur Videos → Run workflow**
 
@@ -145,11 +149,11 @@ the queue can grow. Changes made manually in Studio are not synchronized into th
 - `separator`: vocal-isolation model (default is the fast, accurate UVR-MDX-NET).
 - `upload_youtube`: automatic YouTube upload, **on by default**; uncheck for artifacts only. Requires
   `YOUTUBE_OAUTH_JSON` (secret) and `YOUTUBE_CHANNEL_ID` (variable). Uploads as Unlisted first,
-  then switches to Private while using YouTube's built-in scheduler with randomized four-hour slots: four
-  new videos get +4, +8, +12 and +16 hours when the queue is empty. New batches
-  follow existing queued videos; retries keep their saved order and future slots.
+  then switches to Private while using YouTube's built-in scheduler at **05:00, 12:00 and 17:00 GMT**.
+  New songs are randomized once across the next available slots, with one video per slot.
+  New batches follow existing queued videos; retries keep their saved order and future slots.
   Every workflow upload selects thumbnail D: left-side text and a large circular portrait on the right; all four
-  designs remain downloadable. Each uploaded video is added to your existing **Mezmurs** playlist automatically.
+  designs remain downloadable. Each uploaded video is added to your existing **amlko mezmurs** playlist automatically.
   The run summary links to Studio for the manual **Best for viewer** and **Most recent upload** end-screen elements;
   the public YouTube Data API cannot create these clickable elements. The timed Amharic-only
   `subtitle.srt` is uploaded automatically with the video.

@@ -20,8 +20,9 @@ SCOPES = ["https://www.googleapis.com/auth/youtube.force-ssl"]
 PRIVACIES = ("private", "unlisted", "public")
 THUMBNAILS = {"a": "thumbnail.jpg", "b": "thumbnail-b.jpg",
               "c": "thumbnail-c.jpg", "d": "thumbnail-d.jpg"}
-PUBLISH_DELAY = timedelta(hours=4)
-PLAYLIST_NAME = "Mezmurs"
+PUBLISH_HOURS_UTC = (5, 12, 17)
+MIN_PUBLISH_LEAD = timedelta(minutes=15)
+PLAYLIST_NAME = "amlko mezmurs"
 CAPTION_LANGUAGE = "am"
 CAPTION_NAME = "Amharic lyrics (Rehoboth Mezmur)"
 CAPTION_MAX_BYTES = 100 * 1024 * 1024
@@ -80,9 +81,9 @@ def find_playlist(service, channel):
         if not token:
             break
     if not matches:
-        raise UploadError("The connected channel has no playlist named Mezmurs; create or rename it in Studio before retrying")
+        raise UploadError(f"The connected channel has no playlist named {PLAYLIST_NAME}; create or rename it in Studio before retrying")
     if len(matches) != 1:
-        raise UploadError("More than one playlist is named Mezmurs; rename the duplicate playlists before retrying")
+        raise UploadError(f"More than one playlist is named {PLAYLIST_NAME}; rename the duplicate playlists before retrying")
     return next(iter(matches.values()))
 
 
@@ -229,7 +230,14 @@ def publish_time(value):
 
 
 def next_publish_slot(uploads, channel, now):
-    """Append after all recorded future slots for this channel, including unfinished uploads."""
+    """Reserve the next 05:00, 12:00 or 17:00 GMT slot after this channel's queue.
+
+    A short lead allows the upload to finish. Missed slots roll forward; a retry
+    never sends a past publishAt that would make YouTube publish immediately.
+    """
+    if now.tzinfo is None:
+        raise UploadError("Publication planning requires a timezone-aware current time")
+    now = now.astimezone(timezone.utc)
     if not isinstance(uploads, dict):
         raise UploadError("Saved YouTube upload state is corrupt")
     tail = now
@@ -238,7 +246,14 @@ def next_publish_slot(uploads, channel, now):
             raise UploadError("Saved YouTube upload record is corrupt")
         if record.get("youtube_channel_id") == channel and record.get("publish_at"):
             tail = max(tail, publish_time(record["publish_at"]))
-    return tail + PUBLISH_DELAY
+    earliest = now + MIN_PUBLISH_LEAD
+    day = max(tail, earliest).replace(hour=0, minute=0, second=0, microsecond=0)
+    while True:
+        for hour in PUBLISH_HOURS_UTC:
+            target = day.replace(hour=hour)
+            if target > tail and target >= earliest:
+                return target
+        day += timedelta(days=1)
 
 
 def plan_batch(kits, store, channel, batch_id):
@@ -526,7 +541,7 @@ def main():
     where.add_argument("--folder", type=Path)
     where.add_argument("--root", type=Path, help="Downloaded artifact folders containing video.mp4")
     parser.add_argument("--visibility", choices=PRIVACIES, default="public",
-                        help="Public queues randomized uploads at four-hour intervals; private/unlisted are local-only overrides")
+                        help="Public queues uploads at 05:00, 12:00 and 17:00 GMT; private/unlisted are local-only overrides")
     parser.add_argument("--thumbnail", choices=tuple(THUMBNAILS), default=os.environ.get("YOUTUBE_THUMBNAIL") or "d")
     parser.add_argument("--recover-video-id")
     parser.add_argument("--dry-run", action="store_true", help="Validate kits without OAuth, network access or state writes")
@@ -565,10 +580,11 @@ def main():
             line = f"- Song {kit['message_id']}: [YouTube video]({record['url']}) ({record['privacy']})"
             if record.get("publish_at"):
                 local = publish_time(record["publish_at"]).astimezone(timezone(timedelta(hours=3), "EAT"))
-                line += f" - public publication scheduled for {local:%Y-%m-%d %H:%M %Z}"
+                gmt = publish_time(record["publish_at"])
+                line += f" - public publication scheduled for {gmt:%Y-%m-%d %H:%M} GMT ({local:%Y-%m-%d %H:%M %Z})"
             if record.get("review_warnings"):
                 line += " - review notes remain in the kit"
-            line += f" - playlist: [Mezmurs]({record['playlist_url']})"
+            line += f" - playlist: [{record['playlist_title']}]({record['playlist_url']})"
             line += f" - Amharic timed captions uploaded ({record['caption_status']})"
             line += (f"\n- Song {kit['message_id']} end screen: "
                      f"[Open YouTube Studio]({record['end_screen']['studio_url']}). "
