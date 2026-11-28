@@ -2449,7 +2449,7 @@
       "run_id": "46117962732",
       "created_at": "2026-11-28T06:46:58+00:00",
       "review_warnings": false,
-      "thumbnail_done": false,
+      "thumbnail_done": true,
       "metadata_adjusted": [],
       "caption_file": "subtitle.srt",
       "caption_sha256": "610c1ec3eac702b2a84cb354aae179314ac7a28944783422624a5e7d405e4817",
@@ -2458,7 +2458,8 @@
       "caption_status": "pending",
       "initial_privacy": "unlisted",
       "video_id": "MZ_Qf_OMsac",
-      "url": "https://youtu.be/MZ_Qf_OMsac"
+      "url": "https://youtu.be/MZ_Qf_OMsac",
+      "thumbnail_file": "thumbnail-d.jpg"
     }
   },
   "telegram_peers": {
