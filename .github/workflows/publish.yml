@@ -83,7 +83,7 @@ jobs:
           path: uploads
       - name: Install uploader
         run: pip install -e '.[upload]'
-      - name: Upload videos and thumbnail with timed captions; schedule at 05:00, 12:00 and 17:00 GMT
+      - name: Upload videos and thumbnail with timed captions; schedule at 06:00, 14:00 and 22:00 Ethiopia time
         env:
           YOUTUBE_OAUTH_JSON: ${{ secrets.YOUTUBE_OAUTH_JSON }}
           YOUTUBE_CHANNEL_ID: ${{ vars.YOUTUBE_CHANNEL_ID }}
