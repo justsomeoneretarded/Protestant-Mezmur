@@ -2417,7 +2417,19 @@
       "initial_privacy": "unlisted",
       "video_id": "zglssoQnLic",
       "url": "https://youtu.be/zglssoQnLic",
-      "thumbnail_file": "thumbnail-d.jpg"
+      "thumbnail_file": "thumbnail-d.jpg",
+      "playlist_id": "PLH-pGXm4uCY8",
+      "playlist_title": "Amlko Mezmurs",
+      "playlist_item_id": "UExILXBHWG00dUNZOC5GNjAwN0Y0QTFGOTVDMEMy",
+      "playlist_url": "https://www.youtube.com/playlist?list=PLH-pGXm4uCY8",
+      "end_screen": {
+        "status": "manual_required",
+        "elements": [
+          "best_for_viewer",
+          "most_recent_upload"
+        ],
+        "studio_url": "https://studio.youtube.com/video/zglssoQnLic/editor"
+      }
     }
   },
   "telegram_peers": {
