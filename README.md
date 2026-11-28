@@ -123,7 +123,7 @@ YouTube channel and the web, checking that the faces agree.
 ## Running it
 
 For automatic runs, configure **cron-job.org** to dispatch this workflow at
-**03:00, 10:00 and 15:00 GMT** (time zone `Etc/UTC`), with one new song and uploading enabled.
+**04:00, 12:00 and 20:00 Ethiopia time** (time zone `Africa/Addis_Ababa`), with one new song and uploading enabled.
 This prepares each video about two hours before its YouTube release. Edit the existing
 external job; repository changes cannot update its saved schedule.
 [Exact one-time setup](docs/external-scheduler.md) and [non-secret request body](docs/cron-dispatch.json).
@@ -135,11 +135,13 @@ interval, GitHub keeps one running and at most one pending run; newer pending ru
 can replace older ones. The next run reads saved Telegram progress rather than
 skipping songs. When no new songs are found, rendering and publishing are skipped.
 
-YouTube publication uses **05:00, 12:00 and 17:00 GMT each day**, separate from the
-external trigger. Multiple songs and later batches append distinct slots after the
+YouTube publication uses **06:00, 14:00 and 22:00 Ethiopia time (EAT, UTC+3)**, separate from the
+external trigger, eight hours apart including overnight. Already scheduled videos keep
+their existing release times; the new times apply to future uploads only.
+Multiple songs and later batches append distinct slots after the
 recorded future queue; extra songs spill into following days. New reservations need
 15 minutes of lead time. If an older three-hour trigger remains enabled, videos still
-publish at most three times per GMT day, but the waiting queue can grow.
+publish at most three times per EAT day, but the waiting queue can grow.
 Changes made manually in Studio are not synchronized into this queue.
 
 **Actions → Generate Mezmur Videos → Run workflow**
@@ -149,7 +151,7 @@ Changes made manually in Studio are not synchronized into this queue.
 - `separator`: vocal-isolation model (default is the fast, accurate UVR-MDX-NET).
 - `upload_youtube`: automatic YouTube upload, **on by default**; uncheck for artifacts only. Requires
   `YOUTUBE_OAUTH_JSON` (secret) and `YOUTUBE_CHANNEL_ID` (variable). Uploads as Unlisted first,
-  then switches to Private while using YouTube's built-in scheduler at **05:00, 12:00 and 17:00 GMT**.
+  then switches to Private while using YouTube's built-in scheduler at **06:00, 14:00 and 22:00 EAT**.
   New songs are randomized once across the next available slots, with one video per slot.
   New batches follow existing queued videos; retries keep their saved order and future slots.
   Every workflow upload selects thumbnail D: left-side text and a large circular portrait on the right; all four

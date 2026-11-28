@@ -3,7 +3,7 @@
 The normal workflow can generate videos and upload them to your own YouTube
 channel. Uploading is enabled by default for manual and reusable generation runs:
 videos start **Unlisted**, then switch to **Private** when their native publication
-schedule is applied. They become **public at 05:00, 12:00 and 17:00 GMT each day**, with at most one video per slot. Google OAuth is required
+schedule is applied. They become **public at 06:00, 14:00 and 22:00 Ethiopia time (EAT, UTC+3) each day**, with at most one video per slot. Google OAuth is required
 for uploading; open-source transcription and rendering still run on GitHub Actions.
 An API key or service account cannot replace channel-owner authorization.
 
@@ -100,7 +100,7 @@ and copyright enforcement still apply. Only process/publish audio you have right
 ## Generate and Upload
 
 For automatic generation, use [cron-job.org's external scheduler](external-scheduler.md)
-to send a workflow-dispatch request at 03:00, 10:00 and 15:00 GMT, giving generation
+to send a workflow-dispatch request at 04:00, 12:00 and 20:00 Ethiopia time, giving generation
 about two hours before each release. The saved request selects one new song and enables
 uploading. Update the existing job in cron-job.org; a repository commit cannot change its schedule.
 An older three-hour trigger still obeys the three-publications-per-day limit but can grow the queue.
@@ -124,7 +124,7 @@ manual generation, and the upload-only workflow. Repository variable
 in the artifact. If no artist photo was confirmed, the renderer's existing text
 fallback still applies; no unverified portrait is invented. Standalone local CLI
 uploads default to d; explicit local overrides remain available.
-The workflow always requests the 05:00, 12:00 and 17:00 GMT public queue. A previously configured
+The workflow always requests the 06:00, 14:00 and 22:00 EAT public queue. A previously configured
 YOUTUBE_PRIVACY variable no longer changes workflow behavior.
 
 Every new scheduled video initially uploads as **Unlisted**, with the recommended title,
@@ -144,10 +144,12 @@ uploaded automatically. Older complete kits can use `captions/am.srt` as a fallb
 
 Before the first upload, the uploader shuffles newly selected songs once and saves
 each distinct UTC publishAt slot on mezmur-state with status queued. The only daily
-release slots are **05:00, 12:00 and 17:00 GMT (UTC)**. One video uses one slot;
-extra songs spill into following days, so a batch cannot publish more than three
-videos in a GMT calendar day. For example, four songs planned at 06:00 GMT get
-12:00 and 17:00 that day, then 05:00 and 12:00 the next day.
+release slots for future uploads are **06:00, 14:00 and 22:00 Ethiopia time (EAT, UTC+3)**,
+eight hours apart, including overnight. The API timestamps are 03:00, 11:00 and
+19:00 UTC. One video uses one slot; extra songs spill into following days.
+For example, four new songs planned at 07:00 EAT get 14:00 and 22:00 that day,
+then 06:00 and 14:00 the next day. Already scheduled videos keep their existing
+deadlines; this change applies only to future reservations.
 
 New reservations need at least 15 minutes of lead time. A run finishing too late
 for a slot uses the next available one. Batches append after the last saved future
@@ -159,7 +161,7 @@ are preserved; Studio changes and videos scheduled outside this app are not sync
 Each video, thumbnail and timed Amharic captions are uploaded before its reserved
 publishAt is applied through **YouTube's built-in scheduler**. YouTube handles the
 release; the Actions runner does not wait until publication. The external scheduler
-starts generation only. Run summaries show GMT and EAT; machine-readable receipts use UTC.
+starts generation only. Run summaries show EAT first, followed by GMT; machine-readable receipts use UTC.
 [YouTube requires private status for scheduling](https://developers.google.com/youtube/v3/docs/videos#status.publishAt),
 so the existing sequence remains **Unlisted upload -> Private + publication time -> Public**.
 Receipt privacy is the status observed when the run finished, not live Studio status.
@@ -271,7 +273,7 @@ song cursor and lyrics library. Both workflows serialize state writes; generatio
 finalizes progress *before* publishing, so upload checkpoints cannot invalidate
 the generation snapshot.
 
-- A randomized batch plan with distinct daily GMT slots is saved **before** any video-upload request.
+- A randomized batch plan with distinct daily EAT slots is saved **before** any video-upload request.
 - A queued record is changed to an uploading reservation before a new video insert.
 - The accepted video ID is saved before thumbnail, playlist, caption or scheduling work.
 - Completed songs with a saved caption track are skipped on replays, even when rendered again.

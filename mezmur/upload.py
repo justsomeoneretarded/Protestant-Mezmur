@@ -20,7 +20,8 @@ SCOPES = ["https://www.googleapis.com/auth/youtube.force-ssl"]
 PRIVACIES = ("private", "unlisted", "public")
 THUMBNAILS = {"a": "thumbnail.jpg", "b": "thumbnail-b.jpg",
               "c": "thumbnail-c.jpg", "d": "thumbnail-d.jpg"}
-PUBLISH_HOURS_UTC = (5, 12, 17)
+# Ethiopia uses EAT (UTC+3) year-round: 06:00, 14:00 and 22:00 local time.
+PUBLISH_HOURS_UTC = (3, 11, 19)
 MIN_PUBLISH_LEAD = timedelta(minutes=15)
 PLAYLIST_NAME = "amlko mezmurs"
 CAPTION_LANGUAGE = "am"
@@ -230,7 +231,7 @@ def publish_time(value):
 
 
 def next_publish_slot(uploads, channel, now):
-    """Reserve the next 05:00, 12:00 or 17:00 GMT slot after this channel's queue.
+    """Reserve the next 06:00, 14:00 or 22:00 Ethiopia-time slot after the queue.
 
     A short lead allows the upload to finish. Missed slots roll forward; a retry
     never sends a past publishAt that would make YouTube publish immediately.
@@ -541,7 +542,7 @@ def main():
     where.add_argument("--folder", type=Path)
     where.add_argument("--root", type=Path, help="Downloaded artifact folders containing video.mp4")
     parser.add_argument("--visibility", choices=PRIVACIES, default="public",
-                        help="Public queues uploads at 05:00, 12:00 and 17:00 GMT; private/unlisted are local-only overrides")
+                        help="Public queues uploads at 06:00, 14:00 and 22:00 EAT (UTC+3); private/unlisted are local-only overrides")
     parser.add_argument("--thumbnail", choices=tuple(THUMBNAILS), default=os.environ.get("YOUTUBE_THUMBNAIL") or "d")
     parser.add_argument("--recover-video-id")
     parser.add_argument("--dry-run", action="store_true", help="Validate kits without OAuth, network access or state writes")
@@ -581,7 +582,7 @@ def main():
             if record.get("publish_at"):
                 local = publish_time(record["publish_at"]).astimezone(timezone(timedelta(hours=3), "EAT"))
                 gmt = publish_time(record["publish_at"])
-                line += f" - public publication scheduled for {gmt:%Y-%m-%d %H:%M} GMT ({local:%Y-%m-%d %H:%M %Z})"
+                line += f" - public publication scheduled for {local:%Y-%m-%d %H:%M %Z} ({gmt:%Y-%m-%d %H:%M} GMT)"
             if record.get("review_warnings"):
                 line += " - review notes remain in the kit"
             line += f" - playlist: [{record['playlist_title']}]({record['playlist_url']})"

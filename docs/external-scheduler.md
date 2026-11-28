@@ -29,15 +29,15 @@ Open [cron-job.org Console](https://console.cron-job.org/) and choose **Create c
 | Title | Rehoboth Mezmur - three songs daily |
 | URL | `https://api.github.com/repos/justsomeoneretarded/Protestant-Mezmur/actions/workflows/generate.yml/dispatches` |
 | Request method | **POST** (Advanced/request settings) |
-| Time zone | **Etc/UTC** (GMT) |
-| Schedule | Custom: minute **0**, hours **3, 10, 15**; every day/month/weekday |
+| Time zone | **Africa/Addis_Ababa** (EAT, UTC+3) |
+| Schedule | Custom: minute **0**, hours **4, 12, 20**; every day/month/weekday |
 | HTTP Basic authentication | Off; use the custom Authorization header below |
 | Request timeout | 30 seconds is enough to submit a dispatch; it does not wait for video generation |
 | Notifications | Enable failure and automatic-disable notifications |
 
-This is equivalent to `0 3,10,15 * * *` in GMT/UTC. Edit the existing saved job;
+This is equivalent to `0 4,12,20 * * *` in Ethiopia time (EAT). Edit the existing saved job;
 do not create another one. It prepares one song about two hours before the
-05:00, 12:00 and 17:00 GMT YouTube releases. Generation/upload can take longer;
+06:00, 14:00 and 22:00 EAT YouTube releases. Generation/upload can take longer;
 a missed slot rolls forward. A repository change cannot update your cron-job.org account.
 If the old three-hour trigger stays enabled, publication still uses only these
 three daily slots, but more videos can accumulate in the queue.
@@ -84,7 +84,7 @@ Open [Generate Mezmur Videos](https://github.com/justsomeoneretarded/Protestant-
 and confirm a new run appears.
 
 A test dispatch starts a **real one-song generation/upload run**. Its video is
-uploaded as Unlisted first, then made Private when its next available daily GMT publication
+uploaded as Unlisted first, then made Private when its next available daily EAT publication
 slot is applied. It remains Private until the public release time.
 The HTTP response only confirms GitHub accepted the request, not that rendering
 or uploading finished. cron-job.org cannot monitor the later Actions outcome;
@@ -105,12 +105,12 @@ when necessary and check the cron-job.org job has not been auto-disabled.
 - GitHub allows one active and at most one pending run per group. A newer pending
   run can replace an older pending run; this is not a durable FIFO of every tick.
   Each actual run reads saved Telegram progress. An empty selection skips rendering/upload.
-- YouTube publishes at **05:00, 12:00 and 17:00 GMT**, using its own native scheduler.
+- YouTube publishes at **06:00, 14:00 and 22:00 Ethiopia time**, eight hours apart, using its own native scheduler.
   New batches append distinct slots after the saved future queue. Extra songs
   spill into following days. Existing accepted schedules are not moved.
 - Three one-song generation triggers a day match the three available publication
   slots. Older, more frequent triggers still cannot reserve more than three
-  releases per GMT day, but the waiting queue can grow.
+  releases per EAT day, but the waiting queue can grow.
 - Only this app's saved reservations are tracked. Manual Studio scheduling changes
   and videos uploaded outside this pipeline are not synchronized.
 - The external service and GitHub can both experience delays; neither guarantees
